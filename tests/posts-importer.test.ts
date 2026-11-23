@@ -48,6 +48,8 @@ describe('Posts import', () => {
     const now = new Date().toISOString();
     database.prepare(`INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) VALUES (?, ?, ?, 'posts', 'html', 'discovered', ?)`)
       .run(snapshotId, 'posts/your_posts.html', 'your_posts.html', now);
+    database.prepare(`INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) VALUES (?, ?, ?, 'photos_and_videos', 'image', 'discovered', ?)`)
+      .run(snapshotId, 'photos_and_videos/your_posts/photo.jpg', 'photo.jpg', now);
 
     const result = await importPostsSection(database, snapshotId, root);
     expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, mediaReferences: 1, unsupportedFiles: 0, failedFiles: 0 });

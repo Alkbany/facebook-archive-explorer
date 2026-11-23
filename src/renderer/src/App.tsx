@@ -4,7 +4,8 @@ import type {
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
   MessagesImportSectionResult,
-  ReactionsImportSectionResult
+  ReactionsImportSectionResult,
+  ReactionRecordSummary
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from '../../shared/archive/messages';
@@ -20,6 +21,8 @@ function App() {
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
   const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
+  const [reactionRecords, setReactionRecords] = useState<ReactionRecordSummary[]>([]);
+  const [reactionFilter, setReactionFilter] = useState('');
   const [isImportingReactions, setIsImportingReactions] = useState(false);
   const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
@@ -51,6 +54,8 @@ function App() {
     setFriendsImport(null);
     setMessagesImport(null);
     setReactionsImport(null);
+    setReactionRecords([]);
+    setReactionFilter('');
     setConversations([]);
     setConversationMessages([]);
     setMediaGallery([]);
@@ -134,6 +139,7 @@ function App() {
     try {
       const result = await window.desktopApi.importReactionsForSelectedBackup();
       setReactionsImport(result);
+      setReactionRecords(await window.desktopApi.listReactionsForSelectedBackup());
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Likes & Reactions data could not be imported. Check the local import report.');
@@ -333,6 +339,31 @@ function App() {
                 {reactionsImport.filesAttempted} files checked · {reactionsImport.recordsImported} reactions imported ·
                 {reactionsImport.unsupportedFiles} unsupported · {reactionsImport.failedFiles} failed
               </p>
+            )}
+            {reactionsImport && (
+              <section className="conversation-workspace">
+                <div className="conversation-workspace-heading">
+                  <div>
+                    <p className="eyebrow">YOUR ACTIVITY</p>
+                    <h3>Likes &amp; Reactions</h3>
+                    <p>Original descriptions and exported dates are retained; unrecognized reaction images are left unclassified.</p>
+                  </div>
+                  <span>{reactionRecords.length.toLocaleString()} records</span>
+                </div>
+                <input className="conversation-filter" value={reactionFilter} onChange={(event) => setReactionFilter(event.target.value)} placeholder="Filter reactions…" />
+                <div className="media-gallery-list">
+                  {reactionRecords.filter((record) => [record.reactionType, record.descriptionRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(reactionFilter.trim().toLocaleLowerCase())).map((record) => (
+                    <article className="media-gallery-item" key={record.id}>
+                      <div className="media-gallery-icon">{record.reactionType === 'love' ? '♥' : record.reactionType === 'haha' ? '☺' : '●'}</div>
+                      <div className="media-gallery-copy">
+                        <strong>{record.reactionType ?? 'Unclassified reaction'}</strong>
+                        <span>{record.descriptionRaw ?? 'No description in export'}</span>
+                        <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
             )}
             {messagesImport && (
               <p className="friends-import-result">

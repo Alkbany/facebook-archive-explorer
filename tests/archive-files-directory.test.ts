@@ -47,7 +47,7 @@ describe('Archive file directory repository', () => {
         file_size_bytes, status, record_count, safe_error_code, discovered_at, processed_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      snapshotId, data.path, data.path.split('/').at(-1), data.section, data.format,
+      snapshotId, data.path, data.path.slice(data.path.lastIndexOf('/') + 1), data.section, data.format,
       (index + 1) * 1024, data.status, index, data.error ?? null, timestamp,
       data.status === 'completed' || data.status === 'unsupported' || data.status === 'failed' ? timestamp : null
     );

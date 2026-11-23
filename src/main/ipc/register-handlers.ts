@@ -1,5 +1,5 @@
 import { app, dialog, ipcMain } from 'electron';
-import { basename } from 'node:path';
+import { basename, extname } from 'node:path';
 import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
@@ -14,6 +14,7 @@ import {
   listArchiveSnapshots
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
+import { inspectArchiveZip } from '../import/discovery/zip-inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importAllSupportedData } from '../import/pipeline/import-all';
 import { importPostsSection } from '../import/pipeline/posts-importer';
@@ -29,6 +30,7 @@ import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots } from '../database/comparison-repository';
 
 let selectedBackupDirectory: string | null = null;
+let selectedBackupKind: 'directory' | 'zip' | null = null;
 let selectedAccountId: string | null = null;
 let selectedSnapshotId: string | null = null;
 
@@ -54,19 +56,30 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       }
 
       const result = await dialog.showOpenDialog({
-        title: 'Choose your Facebook export folder',
-        buttonLabel: 'Select folder',
-        properties: ['openDirectory', 'dontAddToRecent']
+        title: 'Choose your Facebook export folder or ZIP file',
+        buttonLabel: 'Select backup',
+        properties: ['openDirectory', 'openFile', 'dontAddToRecent'],
+        filters: [{ name: 'Facebook ZIP archive', extensions: ['zip'] }]
       });
 
       if (result.canceled || result.filePaths.length === 0) {
         selectedBackupDirectory = null;
+        selectedBackupKind = null;
         selectedAccountId = null;
         selectedSnapshotId = null;
         return { status: 'cancelled' };
       }
 
-      selectedBackupDirectory = result.filePaths[0];
+      const selectedPath = result.filePaths[0];
+      const selectedStats = await stat(selectedPath);
+      if (selectedStats.isDirectory()) {
+        selectedBackupKind = 'directory';
+      } else if (selectedStats.isFile() && extname(selectedPath).toLocaleLowerCase() === '.zip') {
+        selectedBackupKind = 'zip';
+      } else {
+        throw new Error('Choose a Facebook export folder or a .zip archive.');
+      }
+      selectedBackupDirectory = selectedPath;
       selectedAccountId = getOrCreateAccount(database, accountName);
       selectedSnapshotId = null;
 
@@ -94,12 +107,17 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     try {
       verifiedRoot = await realpath(snapshot.sourcePath);
       const rootStats = await stat(verifiedRoot);
-      if (!rootStats.isDirectory()) throw new Error('Not a directory.');
+      const isZip = snapshot.sourceKind === 'zip';
+      const validSource = isZip
+        ? rootStats.isFile() && extname(verifiedRoot).toLocaleLowerCase() === '.zip'
+        : rootStats.isDirectory();
+      if (!validSource) throw new Error('The backup source type has changed.');
     } catch {
-      throw new Error('The original backup folder is unavailable. It may have been moved, renamed, or disconnected.');
+      throw new Error('The original backup folder or ZIP file is unavailable. It may have been moved, renamed, or disconnected.');
     }
 
     selectedBackupDirectory = verifiedRoot;
+    selectedBackupKind = snapshot.sourceKind;
     selectedAccountId = snapshot.accountId;
     selectedSnapshotId = snapshot.id;
     return {
@@ -120,20 +138,25 @@ export function registerIpcHandlers(database: DatabaseSync): void {
 
   ipcMain.handle(IPC_CHANNELS.inspectSelectedBackup, async () => {
     if (!selectedBackupDirectory || !selectedAccountId) {
-      throw new Error('Select an archive folder before inspecting it.');
+      throw new Error('Select a backup folder or ZIP file before inspecting it.');
     }
 
     selectedSnapshotId = null;
     const sourcePath = selectedBackupDirectory;
-    const archiveName = basename(sourcePath);
-    const session = beginDiscoverySession(database, selectedAccountId, archiveName, sourcePath);
+    const sourceKind = selectedBackupKind ?? 'directory';
+    const archiveName = sourceKind === 'zip' ? basename(sourcePath, extname(sourcePath)) : basename(sourcePath);
+    const session = beginDiscoverySession(database, selectedAccountId, archiveName, sourcePath, sourceKind);
 
     try {
-      const report = await inspectArchiveDirectory(sourcePath, {
+      const discoveryOptions = {
         snapshotId: session.snapshotId,
         accountId: session.accountId,
-        onFilesFound: (files) => insertDiscoveredFiles(database, session.snapshotId, files)
-      });
+        onFilesFound: (files: Parameters<typeof insertDiscoveredFiles>[2]) =>
+          insertDiscoveredFiles(database, session.snapshotId, files)
+      };
+      const report = sourceKind === 'zip'
+        ? await inspectArchiveZip(sourcePath, discoveryOptions)
+        : await inspectArchiveDirectory(sourcePath, discoveryOptions);
 
       completeDiscoverySession(database, session, report.totalFiles);
       indexDiscoveredMediaAssets(database, session.snapshotId);

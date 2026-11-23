@@ -10,7 +10,7 @@
 6. **Normalization** — preserve original values and generate separate normalized search values.
 7. **Persistence** — save records and source references transactionally.
 8. **Indexing** — add eligible text to FTS5 according to sensitivity policy.
-9. **Reporting** — summarize processed, unsupported, empty, skipped, and failed files.
+9. **Reporting** — summarize processed, unsupported, empty, skipped, and failed files. A snapshot-scoped Import Diagnostics view lists safe issue messages by severity, source file, and card index (latest 250 shown; counts cover the full report).
 
 ## ZIP discovery and reads
 
@@ -63,6 +63,10 @@ The sampled Posts and Comments card structures have DOM-based parsers and snapsh
 ## Unified media indexing
 
 After directory or ZIP discovery, every file classified as image, video, or audio is registered in `media_assets` using its discovered source-file row. This does not open or copy media bytes. The media browser shows both unlinked files and associations created by supported record importers. Image previews remain bounded; audio and video use the local byte-range protocol where the browser supports the codec.
+
+## Import diagnostics
+
+The local Import Diagnostics report is scoped to the active snapshot. It joins issue records to their import run and source file, shows only the stored safe message and source-relative path, and extracts a source-card index when the parser recorded one. It does not display raw message text, raw archive payloads, or the full issue context JSON. The UI shows the latest 250 issues while severity totals are calculated across the full snapshot.
 
 ## Search and comparison
 

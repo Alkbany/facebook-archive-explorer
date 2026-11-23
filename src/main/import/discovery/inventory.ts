@@ -1,4 +1,4 @@
-import { readdir, realpath } from 'node:fs/promises';
+import { opendir, realpath } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import { basename, extname, join, relative, sep } from 'node:path';
 import type { ArchiveInspectionReport } from '../../../shared/archive/inspection';
@@ -6,9 +6,9 @@ import { getArchiveSection } from '../../../shared/archive/section-registry';
 
 const MAX_ENTRIES = 100_000;
 const MEDIA_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic',
-  '.mp4', '.mov', '.m4v', '.webm', '.avi', '.mkv', '.mp3',
-  '.m4a', '.aac', '.wav', '.ogg', '.opus', '.pdf'
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic', '.tif', '.tiff', '.jfif',
+  '.mp4', '.mov', '.m4v', '.webm', '.avi', '.mkv', '.3gp', '.3gpp',
+  '.mp3', '.m4a', '.aac', '.wav', '.ogg', '.opus', '.flac'
 ]);
 
 function sectionForPath(relativePath: string): string {
@@ -29,6 +29,8 @@ function formatForFile(fileName: string): keyof ArchiveInspectionReport['filesBy
 /**
  * Inventories names and file types only. It does not read file contents,
  * follow symlinks, extract ZIPs, or modify the selected source directory.
+ * Directories are iterated incrementally to avoid loading a huge folder listing
+ * into memory. The total number of entries is bounded for safety.
  */
 export async function inspectArchiveDirectory(
   selectedDirectory: string
@@ -54,46 +56,50 @@ export async function inspectArchiveDirectory(
     const currentDirectory = stack.pop();
     if (!currentDirectory) continue;
 
-    let entries: Dirent[];
+    let directory;
     try {
-      entries = await readdir(currentDirectory, { withFileTypes: true });
+      directory = await opendir(currentDirectory);
     } catch {
       report.unreadableDirectories += 1;
       continue;
     }
 
-    for (const entry of entries) {
-      visitedEntries += 1;
-      if (visitedEntries > MAX_ENTRIES) {
-        report.truncated = true;
-        stack.length = 0;
-        break;
+    try {
+      for await (const entry of directory) {
+        visitedEntries += 1;
+        if (visitedEntries > MAX_ENTRIES) {
+          report.truncated = true;
+          stack.length = 0;
+          break;
+        }
+
+        if (entry.isSymbolicLink()) {
+          report.skippedSymlinks += 1;
+          continue;
+        }
+
+        const absolutePath = join(currentDirectory, entry.name);
+        const relativePath = relative(root, absolutePath).split(sep).join('/');
+
+        if (entry.isDirectory()) {
+          report.totalDirectories += 1;
+          stack.push(absolutePath);
+          continue;
+        }
+
+        if (!entry.isFile()) continue;
+
+        report.totalFiles += 1;
+        const sectionKey = sectionForPath(relativePath);
+        report.sectionFileCounts[sectionKey] = (report.sectionFileCounts[sectionKey] ?? 0) + 1;
+        report.filesByFormat[formatForFile(entry.name)] += 1;
+
+        if (entry.name.toLocaleLowerCase() === 'no-data.txt') {
+          noDataSections.add(sectionKey);
+        }
       }
-
-      if (entry.isSymbolicLink()) {
-        report.skippedSymlinks += 1;
-        continue;
-      }
-
-      const absolutePath = join(currentDirectory, entry.name);
-      const relativePath = relative(root, absolutePath).split(sep).join('/');
-
-      if (entry.isDirectory()) {
-        report.totalDirectories += 1;
-        stack.push(absolutePath);
-        continue;
-      }
-
-      if (!entry.isFile()) continue;
-
-      report.totalFiles += 1;
-      const sectionKey = sectionForPath(relativePath);
-      report.sectionFileCounts[sectionKey] = (report.sectionFileCounts[sectionKey] ?? 0) + 1;
-      report.filesByFormat[formatForFile(entry.name)] += 1;
-
-      if (entry.name.toLocaleLowerCase() === 'no-data.txt') {
-        noDataSections.add(sectionKey);
-      }
+    } catch {
+      report.unreadableDirectories += 1;
     }
   }
 

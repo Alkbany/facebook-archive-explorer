@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importMessagesSection } from '../src/main/import/pipeline/messages-importer';
+import { getMessageConversation, listMessageConversations } from '../src/main/database/messages-repository';
 
 describe('Messages conversation import', () => {
   let database: DatabaseSync;
@@ -107,6 +108,26 @@ describe('Messages conversation import', () => {
     ]);
     const links = database.prepare('SELECT COUNT(*) AS count FROM record_media').get() as { count: number };
     expect(links.count).toBe(2);
+
+    const conversations = listMessageConversations(database, snapshotId);
+    expect(conversations).toHaveLength(1);
+    expect(conversations[0]).toMatchObject({
+      relativePath: 'messages/inbox/thread-1/thread.html',
+      conversationType: 'inbox',
+      messageCount: 1,
+      participants: ['Synthetic Sender']
+    });
+    const displayedMessages = getMessageConversation(database, snapshotId, conversations[0].sourceFileId);
+    expect(displayedMessages[0]).toMatchObject({
+      sender: 'Synthetic Sender',
+      body: expect.stringContaining('Message Search Exclusion Needle'),
+      timestampRaw: 'Raw message date',
+      reactions: ['Like'],
+      media: expect.arrayContaining([
+        expect.objectContaining({ mediaKind: 'audio' }),
+        expect.objectContaining({ mediaKind: 'image' })
+      ])
+    });
 
     const indexed = database.prepare(
       "SELECT record_id FROM record_search WHERE record_search MATCH 'exclusion'"

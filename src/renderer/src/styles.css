@@ -714,3 +714,22 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   transition: width .18s ease-out;
 }
 .import-progress-note { margin: 8px 0 0; color: #989daf; font-size: 8px; }
+
+
+.import-capability-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px 6px;
+  border: 1px solid #e8ebf2;
+  border-radius: 5px;
+  color: #81879a;
+  background: #fafbfe;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .15px;
+}
+.import-capability-known-html { color: #47836c; border-color: #dceee5; background: #f4fbf7; }
+.import-capability-sampled-html { color: #587da4; border-color: #e1ebf5; background: #f7fbff; }
+.import-capability-media-index-only { color: #7568b1; border-color: #e9e5f7; background: #faf9ff; }
+.import-capability-not-implemented { color: #9297a8; border-color: #eceef3; background: #f9fafc; }

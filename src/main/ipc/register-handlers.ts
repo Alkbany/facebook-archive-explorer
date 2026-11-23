@@ -20,6 +20,8 @@ let selectedBackupDirectory: string | null = null;
 let selectedAccountId: string | null = null;
 let selectedSnapshotId: string | null = null;
 
+export function getSelectedSnapshotId(): string | null { return selectedSnapshotId; }
+
 export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
     appName: app.getName(),

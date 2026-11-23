@@ -87,8 +87,9 @@ export function insertDiscoveredFiles(
 
   const insert = database.prepare(`
     INSERT INTO source_files (
-      snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      snapshot_id, relative_path, file_name, section_key, detected_format,
+      file_size_bytes, status, discovered_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(snapshot_id, relative_path) DO NOTHING
   `);
 
@@ -104,6 +105,7 @@ export function insertDiscoveredFiles(
         file.fileName,
         file.sectionKey,
         file.detectedFormat,
+        file.fileSizeBytes ?? null,
         status,
         timestamp
       );

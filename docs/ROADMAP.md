@@ -79,5 +79,7 @@
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
 - [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
-- [ ] Code-sign the installer before public distribution; current test installers are unsigned.
+- [x] Add secure CI support for a trusted Windows code-signing certificate and require signature verification before version-tag release.
+- [ ] Configure a trusted signing identity; no certificate is currently available in repository secrets.
+- [ ] Complete code-signing provider onboarding and verify Smart App Control behavior on a clean Windows 11 device.
 - [ ] Final privacy/security review and release checklist.

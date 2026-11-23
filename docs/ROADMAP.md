@@ -15,23 +15,25 @@
 - [x] Inventory filenames and basic file formats without opening file contents.
 - [x] Persist account labels, independent backup snapshots, discovery runs, and source-file metadata.
 - [x] Show saved backup inventories from the local database.
-- [ ] Add ZIP selection and streaming ZIP entry discovery.
-- [ ] Add symlink-aware canonical path validation at file-open time.
+- [x] Validate each file-open path component and reject symbolic links.
 - [x] Add SQLite driver, migration runner, and repositories.
-- [ ] Add resumable import state and integrity reporting.
+- [ ] Add resumable multi-section import orchestration and full integrity reporting.
+- [ ] Add ZIP selection and streaming ZIP entry discovery.
 
 ## Milestone 2 — First reliable parsers
 
+- [x] Implement and test the five known Friends HTML file structures.
+- [x] Add synthetic, non-personal HTML fixtures for the Friends parser and importer.
+- [x] Store Friends records with source-card provenance; keep optional contact details outside FTS5.
+- [x] Report missing-name cards and unrecognized Friends page structures.
 - [ ] Implement and test the observed message HTML structure.
-- [ ] Implement the observed friends and activity-card structures.
-- [ ] Add fixture tests using synthetic, redacted HTML only.
-- [ ] Report unsupported and changed structures without silent data loss.
+- [ ] Implement parsers for posts, comments, reactions, and other activity-card sections.
+- [ ] Add parser fixtures for all remaining supported sections.
 
 ## Milestone 3 — Media and remaining activity
 
 - [ ] Photos, albums, video, audio, stickers, and attachments.
-- [ ] Posts, comments, reactions, pages, groups, and events.
-- [ ] Remaining sections through independent parser modules.
+- [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
 
 ## Milestone 4 — Browsing and search
 

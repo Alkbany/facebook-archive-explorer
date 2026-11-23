@@ -29,7 +29,7 @@ import { listArchiveFiles } from '../database/archive-files-repository';
 import { listFallbackArchiveRecords, listFallbackRecordSections } from '../database/fallback-records-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
-import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets } from '../database/media-indexer';
+import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscoveredVideoDurations } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
@@ -331,7 +331,10 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async () => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing media.');
     indexDiscoveredMediaAssets(database, selectedSnapshotId);
-    if (selectedBackupDirectory) await indexDiscoveredImageDimensions(database, selectedSnapshotId, selectedBackupDirectory);
+    if (selectedBackupDirectory) {
+      await indexDiscoveredImageDimensions(database, selectedSnapshotId, selectedBackupDirectory);
+      await indexDiscoveredVideoDurations(database, selectedSnapshotId, selectedBackupDirectory);
+    }
     return listArchiveMediaGallery(database, selectedSnapshotId);
   });
 

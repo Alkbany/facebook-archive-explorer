@@ -1,6 +1,7 @@
-import { lstat, readFile, realpath } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
+import { lstat, readFile, realpath, stat } from 'node:fs/promises';
+import { extname, join, relative, sep } from 'node:path';
 import { resolveArchivePath } from './safe-path';
+import { readZipEntryBuffer, ZipArchiveError } from './zip-archive';
 
 export type ArchiveReadErrorCode =
   | 'INVALID_RELATIVE_PATH'
@@ -44,14 +45,43 @@ export async function resolveSafeArchiveFile(archiveRoot: string, relativePath: 
   return canonicalFile;
 }
 
-/** Reads a UTF-8 text file beneath the selected archive root. */
+async function readZipEntry(
+  archivePath: string,
+  relativePath: string,
+  maxBytes: number
+): Promise<Buffer> {
+  try {
+    return await readZipEntryBuffer(archivePath, relativePath, maxBytes);
+  } catch (error) {
+    if (error instanceof ZipArchiveError) throw new ArchiveReadError(error.code);
+    throw error;
+  }
+}
+
+/** Reads a UTF-8 text file from a directory archive or a ZIP entry. */
 export async function readArchiveUtf8File(archiveRoot: string, relativePath: string, maxBytes = 50 * 1024 * 1024): Promise<string> {
+  try {
+    const sourceStats = await stat(archiveRoot);
+    if (sourceStats.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
+      return (await readZipEntry(archiveRoot, relativePath, maxBytes)).toString('utf8');
+    }
+  } catch {
+    // Let the directory reader below report a stable, safe ArchiveReadError.
+  }
   const filePath = await resolveSafeArchiveFile(archiveRoot, relativePath, maxBytes);
   return readFile(filePath, 'utf8');
 }
 
-/** Reads bounded binary data after checking every path component and rejecting symlinks. */
+/** Reads bounded binary data from a directory archive or ZIP entry. */
 export async function readArchiveBinaryFile(archiveRoot: string, relativePath: string, maxBytes: number): Promise<Buffer> {
+  try {
+    const sourceStats = await stat(archiveRoot);
+    if (sourceStats.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
+      return await readZipEntry(archiveRoot, relativePath, maxBytes);
+    }
+  } catch {
+    // Let the directory reader below report a stable, safe ArchiveReadError.
+  }
   const filePath = await resolveSafeArchiveFile(archiveRoot, relativePath, maxBytes);
   return readFile(filePath);
 }

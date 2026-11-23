@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { inspectArchiveZip } from '../src/main/import/discovery/zip-inventory';
 import { readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
+import { readArchiveBinaryFile, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
 
 interface ZipFixtureEntry { name: string; content: Buffer; externalAttributes?: number; }
 
@@ -80,6 +81,10 @@ describe('ZIP archive reader and inventory', () => {
         .resolves.toEqual(Buffer.from('<html>synthetic</html>'));
       await expect(readZipEntryBuffer(zipPath, 'posts/your_posts.html', 4))
         .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+      await expect(readArchiveUtf8File(zipPath, 'posts/your_posts.html', 1024))
+        .resolves.toBe('<html>synthetic</html>');
+      await expect(readArchiveBinaryFile(zipPath, 'posts/your_posts.html', 1024))
+        .resolves.toEqual(Buffer.from('<html>synthetic</html>'));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

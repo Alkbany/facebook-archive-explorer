@@ -28,6 +28,7 @@ import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredMediaAssets } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots } from '../database/comparison-repository';
+import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -36,7 +37,65 @@ let selectedSnapshotId: string | null = null;
 
 export function getSelectedSnapshotId(): string | null { return selectedSnapshotId; }
 
-export function registerIpcHandlers(database: DatabaseSync): void {
+export function registerIpcHandlers(
+  database: DatabaseSync,
+  databasePath: string,
+  supportedSchemaVersion: number
+): void {
+  ipcMain.handle(IPC_CHANNELS.exportLocalDatabaseBackup, async () => {
+    const selection = await dialog.showSaveDialog({
+      title: 'Export application database backup',
+      defaultPath: 'facebook-archive-explorer-backup.sqlite',
+      buttonLabel: 'Export backup',
+      filters: [{ name: 'SQLite database backup', extensions: ['sqlite', 'sqlite3', 'db'] }]
+    });
+    if (selection.canceled || !selection.filePath) return { status: 'cancelled' as const };
+
+    const exported = await exportDatabaseBackup(database, selection.filePath, supportedSchemaVersion);
+    return { status: 'saved' as const, ...exported };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.restoreLocalDatabaseBackup, async () => {
+    const selection = await dialog.showOpenDialog({
+      title: 'Choose an application database backup',
+      buttonLabel: 'Validate backup',
+      properties: ['openFile', 'dontAddToRecent'],
+      filters: [{ name: 'SQLite database backup', extensions: ['sqlite', 'sqlite3', 'db'] }]
+    });
+    if (selection.canceled || selection.filePaths.length === 0) {
+      return { status: 'cancelled' as const };
+    }
+
+    const selectedPath = selection.filePaths[0];
+    await validateDatabaseBackup(selectedPath, supportedSchemaVersion);
+    const confirmation = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Restore application database?',
+      message: 'This will replace the current local archive library and restart the application.',
+      detail: 'The current database is preserved as a recovery copy. This backup contains archive indexes and imported records, not the original Facebook export folders, ZIP files, or media. Those original files must remain at their existing paths.',
+      buttons: ['Restore and restart', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true
+    });
+    if (confirmation.response !== 0) return { status: 'cancelled' as const };
+
+    try {
+      await restoreDatabaseBackup(database, selectedPath, databasePath, supportedSchemaVersion);
+    } catch (error) {
+      if (!database.isOpen) {
+        app.relaunch();
+        app.exit(1);
+        return { status: 'restarting' as const };
+      }
+      throw error;
+    }
+
+    app.relaunch();
+    app.exit(0);
+    return { status: 'restarting' as const };
+  });
+
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
     appName: app.getName(),
     appVersion: app.getVersion(),

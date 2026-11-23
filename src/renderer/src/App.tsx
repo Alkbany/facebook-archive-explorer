@@ -171,7 +171,7 @@ function App() {
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setInspection(null);
-      setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the folder again to create a fresh inventory.');
+      setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the original folder or ZIP again to create a fresh inventory.');
     } finally {
       setIsChoosingFolder(false);
     }
@@ -444,8 +444,8 @@ function App() {
             <p className="panel-kicker">GET STARTED</p>
             <h2>Bring your archive into focus.</h2>
             <p>
-              Choose the Facebook export folder on your computer. The first pass only
-              inventories filenames and file types; it does not open archive contents.
+              Choose a Facebook export folder or ZIP archive. The first pass inventories filenames
+              and file types only; it does not open or extract archive contents.
             </p>
 
             <label className="account-field">

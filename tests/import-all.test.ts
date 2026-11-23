@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importAllSupportedData } from '../src/main/import/pipeline/import-all';
+import type { ImportProgressEvent } from '../src/shared/archive/inspection';
 
 describe('Import all supported data', () => {
   let database: DatabaseSync;
@@ -57,7 +58,18 @@ describe('Import all supported data', () => {
   });
 
   it('runs every reviewed importer sequentially and reports unsupported structures', async () => {
-    const result = await importAllSupportedData(database, snapshotId, root);
+    const progress: ImportProgressEvent[] = [];
+    const result = await importAllSupportedData(database, snapshotId, root, (event) => progress.push(event));
+    expect(progress.filter((event) => event.phase === 'started').map((event) => event.sectionKey)).toEqual([
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions'
+    ]);
+    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(5);
+    expect(progress.filter((event) => event.phase === 'completed').map((event) => event.sectionKey)).toEqual([
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions'
+    ]);
+    expect(progress.find((event) => event.sectionKey === 'posts' && event.phase === 'progress')).toMatchObject({
+      filesCompleted: 1, filesTotal: 1, recordsImported: 0, unsupportedFiles: 1, failedFiles: 0
+    });
     expect(result.totals).toEqual({
       filesAttempted: 5,
       recordsImported: 0,
@@ -77,6 +89,14 @@ describe('Import all supported data', () => {
     const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
       .get(snapshotId) as { status: string };
     expect(snapshot.status).toBe('partial');
+  });
+
+  it('continues importing if a progress listener throws', async () => {
+    await expect(importAllSupportedData(database, snapshotId, root, () => {
+      throw new Error('Renderer progress listener is unavailable');
+    })).resolves.toMatchObject({
+      totals: { filesAttempted: 5, unsupportedFiles: 5, failedFiles: 0 }
+    });
   });
 
   it('skips completed files on a second import pass', async () => {

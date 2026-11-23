@@ -48,6 +48,12 @@
       "package.json"
     ],
     "win": {
+      "signExts": [
+        ".dll",
+        ".node",
+        ".sys",
+        ".ocx"
+      ],
       "target": [
         {
           "target": "nsis",

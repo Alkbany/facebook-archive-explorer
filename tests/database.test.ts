@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, openAppDatabase } from '../src/main/database/connection';
 import {
-  beginDiscoverySession,
+  beginDiscoverySession,\n  getOrCreateAccount,
   completeDiscoverySession,
   insertDiscoveredFiles
 } from '../src/main/database/archive-repository';
@@ -83,8 +83,8 @@ describe('local SQLite storage', () => {
     `).run('snapshot-1', sourceFileId, 'sensitive synthetic value', 'sensitive synthetic value', timestamp)).toThrow();
   });
 
-  it('persists a discovery session and every discovered source file', () => {
-    const session = beginDiscoverySession(database, 'Synthetic export', '/tmp/synthetic-export');
+  it('creates separate accounts by label and reuses an existing label', () => {\n    const personalId = getOrCreateAccount(database, 'Personal');\n    const samePersonalId = getOrCreateAccount(database, ' personal  ');\n    const secondId = getOrCreateAccount(database, 'Family account');\n\n    expect(samePersonalId).toBe(personalId);\n    expect(secondId).not.toBe(personalId);\n  });\n\n  it('persists a discovery session and every discovered source file', () => {
+    const accountId = getOrCreateAccount(database, 'Test Facebook account');\n    const session = beginDiscoverySession(database, accountId, 'Synthetic export', '/tmp/synthetic-export');
 
     insertDiscoveredFiles(database, session.snapshotId, [
       {

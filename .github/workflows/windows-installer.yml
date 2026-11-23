@@ -15,6 +15,7 @@ on:
       - 'electron.vite.config.ts'
       - 'tsconfig*.json'
       - '.github/workflows/windows-installer.yml'
+      - 'docs/CODE-SIGNING.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

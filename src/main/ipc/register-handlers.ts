@@ -29,6 +29,7 @@ import { indexDiscoveredMediaAssets } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
+import { listImportIssues } from '../database/import-issues-repository';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -159,6 +160,11 @@ export function registerIpcHandlers(
     IPC_CHANNELS.listArchiveSnapshots,
     () => listArchiveSnapshots(database)
   );
+
+  ipcMain.handle(IPC_CHANNELS.listImportIssuesForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Open a backup before viewing its import report.');
+    return listImportIssues(database, selectedSnapshotId);
+  });
 
   ipcMain.handle(IPC_CHANNELS.openSavedSnapshot, async (_event, requestedSnapshotId: unknown): Promise<ArchiveInspectionView> => {
     if (typeof requestedSnapshotId !== 'string' || !requestedSnapshotId.trim()) {

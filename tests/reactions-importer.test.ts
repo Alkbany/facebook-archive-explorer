@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importReactionsSection } from '../src/main/import/pipeline/reactions-importer';
+import { listReactionRecords } from '../src/main/database/activity-repository';
 
 describe('Likes & Reactions import', () => {
   let database: DatabaseSync;
@@ -53,6 +54,9 @@ describe('Likes & Reactions import', () => {
       event_time_raw: 'Raw reaction date'
     });
     expect(record.payload_json).toContain('reaction/love.png');
+    const visible = listReactionRecords(database, snapshotId);
+    expect(visible).toHaveLength(1);
+    expect(visible[0]).toMatchObject({ reactionType: 'love', descriptionRaw: 'Synthetic reaction description', dateRaw: 'Raw reaction date' });
   });
 
   it('marks unrecognized reaction pages as unsupported', async () => {

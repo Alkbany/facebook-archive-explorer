@@ -446,8 +446,16 @@ function App() {
 
   function navigateToSection(section: string, targetId: string) {
     setActiveNavigation(section);
+    const fallbackTargets: Record<string, string> = {
+      friends: 'import-actions',
+      conversations: 'conversation-import-action',
+      photos: 'photo-import-action',
+      activity: 'activity-tools',
+      search: 'unified-search-panel',
+      overview: 'welcome-panel'
+    };
     const target = document.getElementById(targetId)
-      ?? document.getElementById('import-actions')
+      ?? document.getElementById(fallbackTargets[section] ?? 'import-actions')
       ?? document.getElementById('welcome-panel');
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1034,7 +1042,7 @@ function App() {
               </section>
             )}
 
-            <div className="friends-import-action">
+            <div className="friends-import-action" id="conversation-import-action">
               <div>
                 <strong>Messages</strong>
                 <span>Import recognized conversation HTML from inbox, archived, filtered, and request folders. Messages stay out of search indexing by default.</span>
@@ -1084,7 +1092,7 @@ function App() {
               </section>
             )}
 
-                    <div className="friends-import-action">
+                    <div className="friends-import-action" id="photo-import-action">
                       <div>
                         <strong>Photos &amp; Videos</strong>
                         <span>Import the album index and only detail pages explicitly linked from it. Original media files stay in place.</span>

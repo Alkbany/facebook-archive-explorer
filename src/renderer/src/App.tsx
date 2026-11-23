@@ -86,7 +86,18 @@ function App() {
     setIsLoadingConversation(true);
     try {
       const messages = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId);
-      setConversationMessages(messages);
+      const withPreviews = await Promise.all(messages.map(async (message) => ({
+        ...message,
+        media: await Promise.all(message.media.map(async (media) => {
+          if (media.mediaKind !== 'image' && media.mediaKind !== 'sticker') return media;
+          try {
+            return { ...media, previewDataUrl: await window.desktopApi.getMessageImagePreview(media.id) };
+          } catch {
+            return media;
+          }
+        }))
+      })));
+      setConversationMessages(withPreviews);
     } catch {
       setError('This conversation could not be opened from the selected backup.');
       setConversationMessages([]);
@@ -346,10 +357,13 @@ function App() {
                                   {message.media.length > 0 && (
                                     <div className="message-attachments">
                                       {message.media.map((media) => (
-                                        <span key={media.relativePath} title={media.relativePath}>
-                                          {media.mediaKind === 'image' || media.mediaKind === 'sticker' ? '▧' : media.mediaKind === 'video' ? '▶' : '♫'}
-                                          {' '}{media.mediaKind}
-                                        </span>
+                                        <div className="message-attachment" key={media.id} title={media.relativePath}>
+                                          {media.previewDataUrl ? (
+                                            <img src={media.previewDataUrl} alt={media.mediaKind === 'sticker' ? 'Message sticker' : 'Message attachment'} loading="lazy" />
+                                          ) : (
+                                            <span>{media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'} {media.mediaKind}</span>
+                                          )}
+                                        </div>
                                       ))}
                                     </div>
                                   )}

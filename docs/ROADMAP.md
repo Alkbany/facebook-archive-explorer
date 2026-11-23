@@ -56,7 +56,8 @@
 - [x] Unified local full-text search with section filtering across eligible records.
 - [ ] Date filters after raw Facebook date formats have safe, evidence-backed parsers.
 - [x] Searchable Likes & Reactions activity panel with snapshot-scoped results.
-- [ ] Timeline and album browsing.
+- [x] Sampled Photos & Videos root album index import, searchable album summaries, and cover-image association.
+- [ ] Full album-detail and per-photo browsing.
 - [x] Aggregate archive comparison for imported records from two snapshots of the same account.
 - [x] Snapshot-scoped Import Diagnostics with severity counts, safe messages, and source-file/card references.
 - [x] Per-section Import Coverage separating content processing states from media inventory.

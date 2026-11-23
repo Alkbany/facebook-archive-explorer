@@ -51,7 +51,7 @@ const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapabili
   posts: 'sampled-html',
   comments: 'sampled-html',
   likes_and_reactions: 'sampled-html',
-  photos_and_videos: 'media-index-only'
+  photos_and_videos: 'sampled-html'
 };
 
 /** Describes actual importer scope; filename evidence alone never implies parser support. */

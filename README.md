@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends and Messages importers, and a local conversation browser with bounded in-app media previews. Posts, JSON exports, ZIP archives, and streaming playback for large media are still pending.
+> **Status: active early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends, Messages, Likes & Reactions, and sampled Posts importers, with local activity browsers and streamed audio/video. Posts, JSON exports, ZIP archives, and streaming playback for large media are still pending.
 
 ## Product decisions
 
@@ -53,18 +53,20 @@ The development dependency installation requires an internet connection. The app
 - Explicit **Import Friends** action that stores records locally, preserves duplicate names and raw dates, and records unsupported structures as issues.
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
 - DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
+- DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.
+- Searchable local Posts and Likes & Reactions activity panels, scoped to the selected backup.
 - Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
 - A message media library with image, sticker, video, and audio filters, linked back to sender and conversation context (first 300 references shown).
-- In-app image and sticker preview plus on-demand audio/video playback controls; images are limited to 4 MB and audio/video to 24 MB per preview. Larger media remains untouched in the original backup.
+- In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking; images use bounded previews while original media remains in place.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
 - Arabic-aware search normalization and FTS5 schema are in place.
 
 ## Not implemented yet
 
-- Parsers and importers for posts, comments, reactions, photos, videos, groups, and other export sections.
+- Comments, photos/albums as standalone sections, groups, events, Marketplace, saved items, and other export sections.
 - JSON import, ZIP discovery/import, resumable large-scale import orchestration, and full integrity reporting.
-- Full media gallery and streaming playback for large original attachments, unified search UI, archive comparison, and selected-data export.
+- Unified search UI, archive comparison, and selected-data export.
 - Optional local embeddings and local LLM integration.
 
 Follow [the roadmap](docs/ROADMAP.md) for implementation status.

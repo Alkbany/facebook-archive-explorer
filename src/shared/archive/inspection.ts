@@ -44,6 +44,13 @@ export interface FriendsImportSectionResult {
   failedFiles: number;
 }
 
+export interface ReactionsImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
 export interface MessagesImportSectionResult {
   filesAttempted: number;
   recordsImported: number;

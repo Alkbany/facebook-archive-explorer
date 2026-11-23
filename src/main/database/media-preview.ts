@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { extname } from 'node:path';
 import { readArchiveBinaryFile } from '../import/discovery/read-archive-file';
 
-const MAX_IMAGE_PREVIEW_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_PREVIEW_BYTES = 4 * 1024 * 1024;
 const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
   '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp'

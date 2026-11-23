@@ -30,6 +30,7 @@ import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
+import { getImportCoverage } from '../database/import-coverage-repository';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -164,6 +165,11 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC_CHANNELS.listImportIssuesForSelectedBackup, () => {
     if (!selectedSnapshotId) throw new Error('Open a backup before viewing its import report.');
     return listImportIssues(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.getImportCoverageForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Open a backup before viewing its import coverage.');
+    return getImportCoverage(database, selectedSnapshotId);
   });
 
   ipcMain.handle(IPC_CHANNELS.openSavedSnapshot, async (_event, requestedSnapshotId: unknown): Promise<ArchiveInspectionView> => {

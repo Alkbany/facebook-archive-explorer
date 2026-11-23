@@ -31,6 +31,7 @@ import { compareArchiveSnapshots } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
 import { getImportCoverage } from '../database/import-coverage-repository';
+import { assertNoImportInProgress, runExclusiveImport } from './import-operation-lock';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -45,6 +46,7 @@ export function registerIpcHandlers(
   supportedSchemaVersion: number
 ): void {
   ipcMain.handle(IPC_CHANNELS.exportLocalDatabaseBackup, async () => {
+    assertNoImportInProgress('export the application database');
     const selection = await dialog.showSaveDialog({
       title: 'Export application database backup',
       defaultPath: 'facebook-archive-explorer-backup.sqlite',
@@ -58,6 +60,7 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.restoreLocalDatabaseBackup, async () => {
+    assertNoImportInProgress('restore the application database');
     const selection = await dialog.showOpenDialog({
       title: 'Choose an application database backup',
       buttonLabel: 'Validate backup',
@@ -108,6 +111,7 @@ export function registerIpcHandlers(
   ipcMain.handle(
     IPC_CHANNELS.selectBackupDirectory,
     async (_event, requestedAccountName: unknown): Promise<DirectorySelectionResult> => {
+      assertNoImportInProgress('select a different backup');
       if (typeof requestedAccountName !== 'string') {
         throw new Error('Enter an account label before selecting a backup.');
       }
@@ -173,6 +177,7 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.openSavedSnapshot, async (_event, requestedSnapshotId: unknown): Promise<ArchiveInspectionView> => {
+    assertNoImportInProgress('open a different backup');
     if (typeof requestedSnapshotId !== 'string' || !requestedSnapshotId.trim()) {
       throw new Error('Choose a saved backup to open.');
     }
@@ -213,6 +218,7 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.inspectSelectedBackup, async () => {
+    assertNoImportInProgress('inspect a backup');
     if (!selectedBackupDirectory || !selectedAccountId) {
       throw new Error('Select a backup folder or ZIP file before inspecting it.');
     }
@@ -321,10 +327,12 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.importPostsForSelectedBackup, async (event) => {
-    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Posts data.');
-    return importPostsSection(database, selectedSnapshotId, selectedBackupDirectory, (progress: ImportProgressEvent) => {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) throw new Error('Inspect an archive folder before importing Posts data.');
+    return runExclusiveImport('Posts', () => importPostsSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    });
+    }));
   });
 
   ipcMain.handle(IPC_CHANNELS.listCommentsForSelectedBackup, () => {
@@ -333,10 +341,12 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.importCommentsForSelectedBackup, async (event) => {
-    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Comments data.');
-    return importCommentsSection(database, selectedSnapshotId, selectedBackupDirectory, (progress: ImportProgressEvent) => {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) throw new Error('Inspect an archive folder before importing Comments data.');
+    return runExclusiveImport('Comments', () => importCommentsSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    });
+    }));
   });
 
   ipcMain.handle(IPC_CHANNELS.listReactionsForSelectedBackup, () => {
@@ -345,37 +355,45 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.importReactionsForSelectedBackup, async (event) => {
-    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Likes & Reactions data.');
-    return importReactionsSection(database, selectedSnapshotId, selectedBackupDirectory, (progress: ImportProgressEvent) => {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) throw new Error('Inspect an archive folder before importing Likes & Reactions data.');
+    return runExclusiveImport('Likes & Reactions', () => importReactionsSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    });
+    }));
   });
 
   ipcMain.handle(IPC_CHANNELS.importMessagesForSelectedBackup, async (event) => {
-    if (!selectedBackupDirectory || !selectedSnapshotId) {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) {
       throw new Error('Inspect an archive folder before importing Messages data.');
     }
-    return importMessagesSection(database, selectedSnapshotId, selectedBackupDirectory, (progress: ImportProgressEvent) => {
+    return runExclusiveImport('Messages', () => importMessagesSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    });
+    }));
   });
 
   ipcMain.handle(IPC_CHANNELS.importAllSupportedDataForSelectedBackup, async (event) => {
-    if (!selectedBackupDirectory || !selectedSnapshotId) {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) {
       throw new Error('Inspect an archive folder before importing supported data.');
     }
-    return importAllSupportedData(database, selectedSnapshotId, selectedBackupDirectory, (progress: ImportProgressEvent) => {
+    return runExclusiveImport('Import All', () => importAllSupportedData(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    });
+    }));
   });
 
   ipcMain.handle(IPC_CHANNELS.importFriendsForSelectedBackup, async (event) => {
-    if (!selectedBackupDirectory || !selectedSnapshotId) {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) {
       throw new Error('Inspect an archive folder before importing Friends data.');
     }
 
-    return importFriendsSection(database, selectedSnapshotId, selectedBackupDirectory, (progress: ImportProgressEvent) => {
+    return runExclusiveImport('Friends', () => importFriendsSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    });
+    }));
   });
 }

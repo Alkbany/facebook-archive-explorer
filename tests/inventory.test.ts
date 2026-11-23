@@ -45,6 +45,42 @@ describe('inspectArchiveDirectory', () => {
     expect(report.truncated).toBe(false);
   });
 
+  it('emits predictable metadata batches without loading file contents', async () => {
+    for (let index = 0; index < 5; index += 1) {
+      await writeFile(join(root, 'file-' + index + '.html'), '<html>synthetic ' + index + '</html>');
+    }
+
+    const batchSizes: number[] = [];
+    const report = await inspectArchiveDirectory(root, {
+      snapshotId: 'snapshot-batches',
+      accountId: 'account-batches',
+      batchSize: 2,
+      onFilesFound: (files) => batchSizes.push(files.length)
+    });
+
+    expect(report.totalFiles).toBe(5);
+    expect(report.truncated).toBe(false);
+    expect(batchSizes).toEqual([2, 2, 1]);
+  });
+
+  it('honors a reduced entry cap and marks the inventory as truncated', async () => {
+    for (let index = 0; index < 5; index += 1) {
+      await writeFile(join(root, 'capped-' + index + '.html'), '<html>synthetic</html>');
+    }
+
+    const discovered: string[] = [];
+    const report = await inspectArchiveDirectory(root, {
+      snapshotId: 'snapshot-capped',
+      accountId: 'account-capped',
+      maxEntries: 3,
+      onFilesFound: (files) => discovered.push(...files.map((file) => file.relativePath))
+    });
+
+    expect(report.totalFiles).toBe(3);
+    expect(discovered).toHaveLength(3);
+    expect(report.truncated).toBe(true);
+  });
+
   it('records explicit no-data markers without treating them as parsed content', async () => {
     await mkdir(join(root, 'location'), { recursive: true });
     await mkdir(join(root, 'your_places'), { recursive: true });

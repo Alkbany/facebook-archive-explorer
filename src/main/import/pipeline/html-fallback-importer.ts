@@ -111,11 +111,11 @@ function insertIssue(
   message: string,
   context: Record<string, number | string | null> = {}
 ): void {
-  database.prepare(\`
+  database.prepare(`
     INSERT INTO import_issues (
       import_run_id, source_file_id, severity, issue_code, safe_message, context_json, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  \`).run(runId, sourceFileId, severity, code, message, JSON.stringify(context), new Date().toISOString());
+  `).run(runId, sourceFileId, severity, code, message, JSON.stringify(context), new Date().toISOString());
 }
 
 function safeFailure(error: unknown): { code: string; message: string } {
@@ -133,14 +133,14 @@ async function importHtmlFile(
 ): Promise<number> {
   const runId = randomUUID();
   const startedAt = new Date().toISOString();
-  database.prepare(\`
+  database.prepare(`
     INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at, files_discovered)
     VALUES (?, ?, 'import', 'running', ?, 1)
-  \`).run(runId, snapshotId, startedAt);
-  database.prepare(\`
+  `).run(runId, snapshotId, startedAt);
+  database.prepare(`
     UPDATE source_files SET status = 'processing', safe_error_code = NULL
     WHERE id = ? AND snapshot_id = ?
-  \`).run(file.id, snapshotId);
+  `).run(file.id, snapshotId);
 
   database.exec('SAVEPOINT html_fallback_file');
   try {
@@ -153,7 +153,7 @@ async function importHtmlFile(
     const sensitivity = section?.sensitivity ?? 'sensitive';
     const searchEnabled = sensitivity === 'sensitive' ? 0 : 1;
     const createdAt = new Date().toISOString();
-    const insertRecord = database.prepare(\`
+    const insertRecord = database.prepare(`
       INSERT INTO records (
         snapshot_id, source_file_id, source_record_index, section_key, record_type,
         title, body_text, normalized_text, event_time_raw, event_time_utc,
@@ -171,7 +171,7 @@ async function importHtmlFile(
         search_enabled = excluded.search_enabled,
         payload_json = excluded.payload_json,
         created_at = excluded.created_at
-    \`);
+    `);
 
     for (const [index, item] of items.entries()) {
       const payload = JSON.stringify({ element: item.element, text: item.text });
@@ -186,22 +186,22 @@ async function importHtmlFile(
     }
 
     const timestamp = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       UPDATE source_files
       SET status = ?, parser_key = 'html_fallback', record_count = ?,
         safe_error_code = NULL, processed_at = ?
       WHERE id = ? AND snapshot_id = ?
-    \`).run(items.length === 0 ? 'empty' : 'completed', items.length, timestamp, file.id, snapshotId);
+    `).run(items.length === 0 ? 'empty' : 'completed', items.length, timestamp, file.id, snapshotId);
 
     if (items.length >= MAX_HTML_RECORDS_PER_FILE) {
       insertIssue(database, runId, file.id, 'warning', 'HTML_RECORD_LIMIT_REACHED',
         'The HTML file exceeded the maximum number of text blocks imported from one source file.',
         { maximumRecords: MAX_HTML_RECORDS_PER_FILE });
     }
-    database.prepare(\`
+    database.prepare(`
       UPDATE import_runs SET status = 'completed', finished_at = ?, files_processed = 1,
         records_imported = ? WHERE id = ?
-    \`).run(timestamp, items.length, runId);
+    `).run(timestamp, items.length, runId);
     database.exec('RELEASE html_fallback_file');
     return items.length;
   } catch (error) {
@@ -209,15 +209,15 @@ async function importHtmlFile(
     database.exec('RELEASE html_fallback_file');
     const failure = safeFailure(error);
     const timestamp = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       UPDATE source_files SET status = 'failed', safe_error_code = ?, processed_at = ?
       WHERE id = ? AND snapshot_id = ?
-    \`).run(failure.code, timestamp, file.id, snapshotId);
+    `).run(failure.code, timestamp, file.id, snapshotId);
     insertIssue(database, runId, file.id, 'error', failure.code, failure.message);
-    database.prepare(\`
+    database.prepare(`
       UPDATE import_runs SET status = 'failed', finished_at = ?, files_processed = 1, errors_count = 1
       WHERE id = ?
-    \`).run(timestamp, runId);
+    `).run(timestamp, runId);
     throw new Error('An HTML file could not be imported. See the local import report.');
   }
 }
@@ -233,7 +233,7 @@ export async function importHtmlFallbackFilesSection(
   archiveRoot: string,
   onProgress?: ImportProgressReporter
 ): Promise<HtmlFallbackImportSectionResult> {
-  const files = database.prepare(\`
+  const files = database.prepare(`
     SELECT id, relative_path, file_size_bytes, section_key
     FROM source_files
     WHERE snapshot_id = ? AND detected_format = 'html'
@@ -242,7 +242,7 @@ export async function importHtmlFallbackFilesSection(
         'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
       )
     ORDER BY section_key COLLATE NOCASE, relative_path COLLATE NOCASE
-  \`).all(snapshotId) as unknown as HtmlSourceFile[];
+  `).all(snapshotId) as unknown as HtmlSourceFile[];
 
   const summary: HtmlFallbackImportSectionResult = {
     filesAttempted: 0, recordsImported: 0, unsupportedFiles: 0, failedFiles: 0

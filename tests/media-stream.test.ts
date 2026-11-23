@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSingleByteRange } from '../src/main/database/media-stream';
+import { parseSingleByteRange } from '../src/main/database/media-range';
 
 describe('media byte ranges', () => {
   it('returns null when the client requests the complete file', () => {

@@ -41,7 +41,7 @@ describe('archive-wide media, search, and comparison', () => {
     const row = database.prepare(`
       INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, discovered_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(snapshotId, path, path.split('/').pop(), section, format, now);
+    `).run(snapshotId, path, path.split('/').pop() ?? path, section, format, now);
     return Number(row.lastInsertRowid);
   }
 

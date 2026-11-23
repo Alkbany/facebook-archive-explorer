@@ -51,7 +51,7 @@ export function listImportIssues(
     WHERE runs.snapshot_id = ?
     ORDER BY issues.created_at DESC, issues.id DESC
     LIMIT ?
-  `).all(snapshotId, limit) as ImportIssueReport['items'];
+  `).all(snapshotId, limit) as unknown as ImportIssueReport['items'];
 
   return {
     items,

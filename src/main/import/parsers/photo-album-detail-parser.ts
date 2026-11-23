@@ -51,7 +51,7 @@ function isSafePhotoPath(value: string): boolean {
     segments.every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
-function getCommentText($: cheerio.CheerioAPI, element: cheerio.Cheerio<Element>): string | null {
+function getCommentText(element: cheerio.Cheerio<Element>): string | null {
   const copy = element.clone();
   copy.find('span._3-8_._2oao').remove();
   copy.find('div._67gx').remove();
@@ -65,7 +65,7 @@ function parseComments($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>)
   content.children(COMMENT_SELECTOR).each((_index, element) => {
     const comment = $(element);
     const authorRaw = cleanText(comment.find('span._3-8_._2oao').first().text()) || null;
-    const bodyRaw = getCommentText($, comment);
+    const bodyRaw = getCommentText(comment);
     const dateRaw = rawText(comment.find('div._67gx').first().text()) || null;
     if (!authorRaw && !bodyRaw && !dateRaw) return;
     comments.push({ authorRaw, bodyRaw, dateRaw });

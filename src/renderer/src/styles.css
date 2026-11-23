@@ -539,3 +539,66 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .database-safety-tools { align-items: stretch; flex-direction: column; }
   .database-safety-actions { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+
+.import-issues-panel {
+  margin-top: 16px;
+  padding: 17px 19px;
+  border: 1px solid #e7e9f1;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 4px 15px #3d426006;
+}
+.import-issues-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+.import-issues-heading .eyebrow { margin: 0 0 5px; font-size: 8px; }
+.import-issues-heading h3 { margin: 0 0 5px; color: #30354d; font-size: 14px; }
+.import-issues-heading p:not(.eyebrow) { margin: 0; color: #9296a7; font-size: 9px; line-height: 1.55; }
+.import-issue-counts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+.import-issue-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid #eceef3;
+  border-radius: 7px;
+  color: #777d90;
+  background: #fbfcfe;
+  font-size: 9px;
+}
+.import-issue-counts strong { color: #43495f; font-size: 12px; }
+.import-issue-count-error { border-color: #f0dddd !important; background: #fff9f9 !important; }
+.import-issue-count-error strong { color: #aa5555; }
+.import-issue-count-warning { border-color: #f0e7d5 !important; background: #fffcf6 !important; }
+.import-issue-count-warning strong { color: #a57a38; }
+.import-issues-empty { margin: 13px 0 0; color: #9297a8; font-size: 10px; }
+.import-issues-list { display: flex; flex-direction: column; gap: 7px; margin-top: 13px; }
+.import-issue-item { min-width: 0; padding: 10px 11px; border: 1px solid #edf0f5; border-radius: 8px; background: #fdfdff; }
+.import-issue-topline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.import-issue-topline code { color: #555b72; font-size: 8px; }
+.import-issue-topline time { margin-left: auto; color: #a0a4b1; font-size: 8px; }
+.import-issue-severity {
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: #687184;
+  background: #f0f2f6;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.import-issue-severity-error { color: #a84f4f; background: #fff0f0; }
+.import-issue-severity-warning { color: #9d7434; background: #fff6e6; }
+.import-issue-severity-info { color: #4c789d; background: #eef7ff; }
+.import-issue-item > p { margin: 7px 0; color: #575d70; font-size: 10px; line-height: 1.5; }
+.import-issue-source { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: #8c92a3; font-size: 8px; }
+.import-issue-source span { min-width: 0; overflow-wrap: anywhere; }
+.import-issue-source small { color: #a2a6b3; }
+.import-issues-truncated { margin: 11px 0 0; color: #9297a8; font-size: 8px; text-align: right; }
+@media (max-width: 760px) {
+  .import-issues-heading { align-items: stretch; flex-direction: column; }
+  .import-issues-heading > button { width: 100%; }
+}

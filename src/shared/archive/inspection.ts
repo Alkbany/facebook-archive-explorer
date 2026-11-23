@@ -44,6 +44,24 @@ export interface FriendsImportSectionResult {
   failedFiles: number;
 }
 
+export interface PostsImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  mediaReferences: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
+export interface PostRecordSummary {
+  id: number;
+  sourcePath: string;
+  sourceCardIndex: number;
+  authorRaw: string | null;
+  bodyRaw: string | null;
+  dateRaw: string | null;
+  mediaCount: number;
+}
+
 export interface ReactionsImportSectionResult {
   filesAttempted: number;
   recordsImported: number;

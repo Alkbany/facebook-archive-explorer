@@ -42,7 +42,7 @@
 - [x] In-app preview for supported image and sticker attachments (4 MB per-image limit and eight automatic previews per conversation).
 - [x] On-demand in-app image/audio/video viewer with native playback controls (24 MB audio/video preview limit).
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).
-- [ ] Streaming playback for larger media files.
+- [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
 - [ ] Unified search with section and date filters.
 - [ ] Timeline and album browsing.
 - [ ] Archive comparison and selected-data export.

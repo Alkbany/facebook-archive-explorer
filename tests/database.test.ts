@@ -109,13 +109,15 @@ describe('local SQLite storage', () => {
         relativePath: 'friends/friends.html',
         fileName: 'friends.html',
         sectionKey: 'friends',
-        detectedFormat: 'html'
+        detectedFormat: 'html',
+        fileSizeBytes: 24576
       },
       {
         relativePath: 'location/no-data.txt',
         fileName: 'no-data.txt',
         sectionKey: 'location',
-        detectedFormat: 'text'
+        detectedFormat: 'text',
+        fileSizeBytes: 0
       }
     ]);
 
@@ -128,14 +130,14 @@ describe('local SQLite storage', () => {
       'SELECT run_type, status, files_discovered FROM import_runs WHERE id = ?'
     ).get(session.importRunId) as { run_type: string; status: string; files_discovered: number };
     const files = database.prepare(
-      'SELECT relative_path, status FROM source_files WHERE snapshot_id = ? ORDER BY relative_path'
-    ).all(session.snapshotId) as Array<{ relative_path: string; status: string }>;
+      'SELECT relative_path, status, file_size_bytes FROM source_files WHERE snapshot_id = ? ORDER BY relative_path'
+    ).all(session.snapshotId) as Array<{ relative_path: string; status: string; file_size_bytes: number | null }>;
 
     expect(snapshot.status).toBe('discovered');
     expect(run).toMatchObject({ run_type: 'discovery', status: 'completed', files_discovered: 2 });
     expect(files).toEqual([
-      { relative_path: 'friends/friends.html', status: 'discovered' },
-      { relative_path: 'location/no-data.txt', status: 'empty' }
+      { relative_path: 'friends/friends.html', status: 'discovered', file_size_bytes: 24576 },
+      { relative_path: 'location/no-data.txt', status: 'empty', file_size_bytes: 0 }
     ]);
 
     expect(listArchiveSnapshots(database)).toEqual([

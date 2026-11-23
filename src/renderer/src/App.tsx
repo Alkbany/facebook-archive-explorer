@@ -229,6 +229,9 @@ function App() {
     setImportIssueReport(null);
     setImportCoverage(null);
     setArchiveFileDirectory(null);
+    setFallbackSections([]);
+    setFallbackSectionKey('');
+    setFallbackRecords(null);
     setArchiveFileStatus('all');
     setArchiveFileSection('all');
     setArchiveFileQuery('');
@@ -419,24 +422,6 @@ function App() {
       setError('The preserved archive records could not be loaded.');
     } finally {
       setIsLoadingFallbackRecords(false);
-    }
-  }
-
-  async function refreshFallbackArchiveRecords() {
-    try {
-      const sections = await window.desktopApi.listFallbackRecordSectionsForSelectedBackup();
-      setFallbackSections(sections);
-      const nextSection = sections.some((section) => section.sectionKey === fallbackSectionKey)
-        ? fallbackSectionKey
-        : sections[0]?.sectionKey ?? '';
-      if (nextSection) {
-        await loadFallbackArchiveRecords(nextSection, 1);
-      } else {
-        setFallbackSectionKey('');
-        setFallbackRecords(null);
-      }
-    } catch {
-      setError('The list of preserved archive records could not be refreshed.');
     }
   }
 

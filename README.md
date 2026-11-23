@@ -120,3 +120,6 @@ ZIP backups can be selected, inventoried, reopened, and read on demand without e
 - Audio/video: supported local files stream from directory or ZIP backups with byte-range seeking; deflated ZIP entries are decompressed as a stream when seeking.
 
 The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.
+
+
+Generic fallback records are browsable in the local **Other data** workspace, grouped by source section and paginated. Sensitive sections can be viewed there but remain excluded from global full-text search.

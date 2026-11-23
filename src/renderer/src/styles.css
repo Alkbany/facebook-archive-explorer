@@ -733,3 +733,27 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 .import-capability-sampled-html { color: #587da4; border-color: #e1ebf5; background: #f7fbff; }
 .import-capability-media-index-only { color: #7568b1; border-color: #e9e5f7; background: #faf9ff; }
 .import-capability-not-implemented { color: #9297a8; border-color: #eceef3; background: #f9fafc; }
+
+
+.photo-albums-workspace .conversation-workspace-heading .secondary-button { flex: 0 0 auto; }
+.photo-album-photos { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.photo-album-photo { padding: 13px 14px; border: 1px solid #eceef4; border-radius: 10px; background: #fcfcfe; }
+.photo-album-photo-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.photo-album-photo-heading .media-gallery-copy { min-width: 0; }
+.photo-album-photo-heading .media-gallery-copy strong { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.photo-album-photo-heading .media-gallery-copy small { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.photo-album-image-missing { color: #a87937; font-size: 9px; white-space: nowrap; }
+.photo-album-comments { margin-top: 11px; padding-top: 10px; border-top: 1px solid #eceef4; }
+.photo-album-comments > strong { color: #646a80; font-size: 9px; }
+.photo-album-comments > span { margin-left: 8px; color: #969bad; font-size: 9px; }
+.photo-album-comment-list { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.photo-album-comment { padding: 8px 10px; border: 1px solid #eff0f5; border-radius: 8px; background: #fff; }
+.photo-album-comment > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.photo-album-comment > div strong { color: #5e55b7; font-size: 9px; }
+.photo-album-comment small { color: #9a9eae; font-size: 8px; }
+.photo-album-comment p { margin: 6px 0 0; color: #555b70; font-size: 10px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.photo-album-empty { margin: 13px 0 0; padding: 13px; border-radius: 8px; background: #f8f9fc; color: #858a9d; font-size: 10px; line-height: 1.6; }
+@media (max-width: 760px) {
+  .photo-album-photo-heading { align-items: flex-start; flex-direction: column; }
+  .photo-album-comment > div { align-items: flex-start; flex-direction: column; gap: 4px; }
+}

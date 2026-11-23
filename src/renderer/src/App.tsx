@@ -14,7 +14,8 @@ import type {
   ImportIssueReport,
   ImportCoverageReport,
   ImportProgressEvent,
-  PhotoAlbumRecordSummary
+  PhotoAlbumRecordSummary,
+  PhotoAlbumDetailView
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -66,6 +67,9 @@ function App() {
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
   const [photoAlbums, setPhotoAlbums] = useState<PhotoAlbumRecordSummary[]>([]);
   const [albumFilter, setAlbumFilter] = useState('');
+  const [selectedPhotoAlbum, setSelectedPhotoAlbum] = useState<PhotoAlbumRecordSummary | null>(null);
+  const [photoAlbumDetail, setPhotoAlbumDetail] = useState<PhotoAlbumDetailView | null>(null);
+  const [isLoadingPhotoAlbum, setIsLoadingPhotoAlbum] = useState(false);
   const [mediaFilter, setMediaFilter] = useState('all');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
@@ -110,6 +114,9 @@ function App() {
     setMediaGallery([]);
     setPhotoAlbums([]);
     setAlbumFilter('');
+    setSelectedPhotoAlbum(null);
+    setPhotoAlbumDetail(null);
+    setIsLoadingPhotoAlbum(false);
     setImportAllSummary(null);
     setFriendsImport(null);
     setPostsImport(null);
@@ -166,6 +173,9 @@ function App() {
     setMediaGallery([]);
     setPhotoAlbums([]);
     setAlbumFilter('');
+    setSelectedPhotoAlbum(null);
+    setPhotoAlbumDetail(null);
+    setIsLoadingPhotoAlbum(false);
     setImportAllSummary(null);
     setFriendsImport(null);
     setPostsImport(null);
@@ -216,6 +226,26 @@ function App() {
     } finally {
       setIsChoosingFolder(false);
     }
+  }
+
+  async function openPhotoAlbum(album: PhotoAlbumRecordSummary) {
+    setSelectedPhotoAlbum(album);
+    setPhotoAlbumDetail(null);
+    setIsLoadingPhotoAlbum(true);
+    try {
+      const detail = await window.desktopApi.getPhotoAlbumDetailForSelectedBackup(album.id);
+      setPhotoAlbumDetail(detail);
+    } catch {
+      setError('This photo album could not be opened from the selected backup.');
+    } finally {
+      setIsLoadingPhotoAlbum(false);
+    }
+  }
+
+  function closePhotoAlbum() {
+    setSelectedPhotoAlbum(null);
+    setPhotoAlbumDetail(null);
+    setIsLoadingPhotoAlbum(false);
   }
 
   async function refreshMediaGallery() {
@@ -386,6 +416,8 @@ function App() {
   async function importAllSupportedData() {
     setIsImportingAll(true);
     setImportAllSummary(null);
+    setSelectedPhotoAlbum(null);
+    setPhotoAlbumDetail(null);
     setError(null);
     try {
       const result = await window.desktopApi.importAllSupportedDataForSelectedBackup();

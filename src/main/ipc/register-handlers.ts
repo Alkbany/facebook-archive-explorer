@@ -14,7 +14,7 @@ import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { getMessageConversation, listMessageConversations } from '../database/messages-repository';
-import { getMessageImagePreview } from '../database/media-preview';
+import { getMessageMediaPreview } from '../database/media-preview';
 
 let selectedBackupDirectory: string | null = null;
 let selectedAccountId: string | null = null;
@@ -108,12 +108,12 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     return getMessageConversation(database, selectedSnapshotId, sourceFileId as number);
   });
 
-  ipcMain.handle(IPC_CHANNELS.getMessageImagePreview, async (_event, mediaAssetId: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.getMessageMediaPreview, async (_event, mediaAssetId: unknown) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before previewing attachments.');
     if (!Number.isSafeInteger(mediaAssetId) || (mediaAssetId as number) < 1) {
       throw new Error('Invalid attachment selection.');
     }
-    return getMessageImagePreview(database, selectedSnapshotId, mediaAssetId as number);
+    return getMessageMediaPreview(database, selectedSnapshotId, mediaAssetId as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.importMessagesForSelectedBackup, async () => {

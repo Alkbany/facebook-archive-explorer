@@ -77,6 +77,8 @@ function App() {
   const [databaseBackupStatus, setDatabaseBackupStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions;
+
   useEffect(() => window.desktopApi.onImportProgress(setImportProgress), []);
 
   useEffect(() => {
@@ -552,11 +554,11 @@ function App() {
                 onChange={(event) => setAccountName(event.target.value)}
                 maxLength={100}
                 placeholder="My Facebook account"
-                disabled={isChoosingFolder}
+                disabled={isChoosingFolder || isAnyImporting}
               />
             </label>
 
-            <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder || !accountName.trim()}>
+            <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder || isAnyImporting || !accountName.trim()}>
               <span className="button-icon">＋</span>
               {isChoosingFolder ? 'Inspecting backup…' : 'Choose backup folder or ZIP'}
             </button>
@@ -628,7 +630,7 @@ function App() {
               <button
                 className="primary-button import-all-button"
                 onClick={() => void importAllSupportedData()}
-                disabled={isImportingAll || isChoosingFolder || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                disabled={isAnyImporting || isChoosingFolder}
               >
                 {isImportingAll ? 'Importing supported data…' : 'Import All Supported Data'}
               </button>
@@ -1153,7 +1155,7 @@ function App() {
                   <button
                     className="saved-backup-open"
                     onClick={() => void openSavedBackup(backup.id)}
-                    disabled={isChoosingFolder}
+                    disabled={isChoosingFolder || isAnyImporting}
                   >
                     {isChoosingFolder ? 'Opening…' : inspection?.snapshotId === backup.id ? 'Opened' : 'Open'}
                   </button>

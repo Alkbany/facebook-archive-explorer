@@ -5,7 +5,7 @@ import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive
 import {
   parseFriendsExport,
   type FriendParseIssue
-} from './friends-parser';
+} from '../parsers/friends-parser';
 
 interface SourceFileRow {
   relative_path: string;

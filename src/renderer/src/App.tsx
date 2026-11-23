@@ -319,6 +319,7 @@ function App() {
       setCommentsImport(result);
       setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());
       await refreshMediaGallery();
+      await refreshImportIssues();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Comments data could not be imported. Check the local import report.');
@@ -430,6 +431,7 @@ function App() {
       setReactionsImport(result);
       setReactionRecords(await window.desktopApi.listReactionsForSelectedBackup());
       await refreshMediaGallery();
+      await refreshImportIssues();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Likes & Reactions data could not be imported. Check the local import report.');

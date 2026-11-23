@@ -114,6 +114,25 @@ export interface MessagesImportSectionResult {
   mediaReferences: number;
 }
 
+
+export interface ImportIssueSummary {
+  id: number;
+  severity: 'info' | 'warning' | 'error';
+  issueCode: string;
+  safeMessage: string;
+  sourceFileName: string | null;
+  sourcePath: string | null;
+  sourceCardIndex: number | null;
+  createdAt: string;
+}
+
+export interface ImportIssueReport {
+  items: ImportIssueSummary[];
+  total: number;
+  hasMore: boolean;
+  counts: { info: number; warning: number; error: number };
+}
+
 export interface ImportAllSupportedDataResult {
   sections: {
     friends: FriendsImportSectionResult;

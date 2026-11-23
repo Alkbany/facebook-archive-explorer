@@ -84,6 +84,10 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 - Album metadata enrichment (dimensions, duration, thumbnails, membership).
 - Advanced raw-date parsing and date filters.
 
+## Import progress events
+
+Each section importer emits a start event, a progress event after each attempted file, and a completion event. The event contains only the section key, phase, file counts, record count, and unsupported/failed counts; it never includes archive paths, message text, or file contents. The main process forwards these events to the invoking renderer over a dedicated IPC channel. A disconnected progress listener cannot interrupt an import.
+
 ## One-click import and resume behavior
 
 The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, and Likes & Reactions sequentially. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.

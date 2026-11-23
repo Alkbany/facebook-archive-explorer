@@ -16,7 +16,7 @@ import {
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { inspectArchiveZip } from '../import/discovery/zip-inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
-import { importAllSupportedData } from '../import/pipeline/import-all';
+import { importAllSupportedData, importPhotosAndVideosSection } from '../import/pipeline/import-all';
 import { importPostsSection } from '../import/pipeline/posts-importer';
 import { importCommentsSection } from '../import/pipeline/comments-importer';
 import { listPostRecords, listCommentActivities, listPhotoAlbums, getPhotoAlbumDetail } from '../database/activity-repository';
@@ -424,6 +424,19 @@ export function registerIpcHandlers(
     return runExclusiveImport('Import All', () => importAllSupportedData(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
       if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
     }));
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importPhotosAndVideosForSelectedBackup, async (event) => {
+    const archiveRoot = selectedBackupDirectory;
+    const snapshotId = selectedSnapshotId;
+    if (!archiveRoot || !snapshotId) {
+      throw new Error('Inspect an archive folder before importing Photos & Videos data.');
+    }
+    return runExclusiveImport('Photos & Videos', () =>
+      importPhotosAndVideosSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
+      })
+    );
   });
 
   ipcMain.handle(IPC_CHANNELS.importFriendsForSelectedBackup, async (event) => {

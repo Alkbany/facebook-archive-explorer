@@ -6,11 +6,13 @@ import {
   beginDiscoverySession,
   completeDiscoverySession,
   failDiscoverySession,
+  getOrCreateAccount,
   insertDiscoveredFiles
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 
-let selectedBackupDirectory: string | null = null;\nlet selectedAccountId: string | null = null;
+let selectedBackupDirectory: string | null = null;
+let selectedAccountId: string | null = null;
 
 export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
@@ -22,6 +24,15 @@ export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(
     IPC_CHANNELS.selectBackupDirectory,
     async (_event, requestedAccountName: unknown): Promise<DirectorySelectionResult> => {
+      if (typeof requestedAccountName !== 'string') {
+        throw new Error('Enter an account label before selecting a backup.');
+      }
+
+      const accountName = requestedAccountName.trim().replace(/\s+/gu, ' ');
+      if (!accountName || accountName.length > 100 || /[\u0000-\u001F\u007F]/u.test(accountName)) {
+        throw new Error('Account label must contain 1 to 100 printable characters.');
+      }
+
       const result = await dialog.showOpenDialog({
         title: 'Choose your Facebook export folder',
         buttonLabel: 'Select folder',
@@ -30,13 +41,17 @@ export function registerIpcHandlers(database: DatabaseSync): void {
 
       if (result.canceled || result.filePaths.length === 0) {
         selectedBackupDirectory = null;
+        selectedAccountId = null;
         return { status: 'cancelled' };
       }
 
       selectedBackupDirectory = result.filePaths[0];
+      selectedAccountId = getOrCreateAccount(database, accountName);
+
       return {
         status: 'selected',
-        folderName: basename(selectedBackupDirectory)
+        folderName: basename(selectedBackupDirectory),
+        accountName
       };
     }
   );

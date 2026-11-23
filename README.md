@@ -64,6 +64,7 @@ The development dependency installation requires an internet connection. The app
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
 - Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, and Likes & Reactions, with section filtering and JSON export of search results.
 - Snapshot comparison for two backups of the same account, matching section, source-relative path, and original card index and reporting aggregate changes.
+- Verified local application-database export and restore, using SQLite's online backup API, integrity/foreign-key/schema checks, a pre-restore recovery copy, and interrupted-swap recovery. The database backup contains indexes and imported records, not the original Facebook media.
 
 ## Not implemented yet
 

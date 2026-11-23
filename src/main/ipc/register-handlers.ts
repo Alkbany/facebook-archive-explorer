@@ -3,7 +3,7 @@ import { basename, extname } from 'node:path';
 import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
-import type { ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
+import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -24,6 +24,7 @@ import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
 import { listFriendDirectory } from '../database/friends-repository';
+import { listArchiveFiles } from '../database/archive-files-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredMediaAssets } from '../database/media-indexer';
@@ -261,6 +262,24 @@ export function registerIpcHandlers(
       failDiscoverySession(database, session);
       throw error;
     }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listArchiveFilesForSelectedBackup, (_event, status: unknown, sectionKey: unknown, query: unknown, page: unknown) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing its files.');
+    const validStatuses = ['all', 'discovered', 'queued', 'processing', 'completed', 'empty', 'unsupported', 'failed', 'skipped'];
+    if (typeof status !== 'string' || !validStatuses.includes(status)) {
+      throw new Error('Invalid archive file status filter.');
+    }
+    if (typeof sectionKey !== 'string' || (sectionKey !== 'all' && !/^[a-z0-9_]{1,80}$/u.test(sectionKey))) {
+      throw new Error('Invalid archive file section filter.');
+    }
+    if (typeof query !== 'string' || query.length > 120) {
+      throw new Error('Invalid archive file search.');
+    }
+    if (!Number.isSafeInteger(page) || (page as number) < 1) {
+      throw new Error('Invalid archive file page.');
+    }
+    return listArchiveFiles(database, selectedSnapshotId, status as ArchiveFileStatus, sectionKey, query, page as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.listFriendsDirectoryForSelectedBackup, (_event, filter: unknown, query: unknown, page: unknown) => {

@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
+import type { ArchiveInspectionReport } from '../../shared/archive/inspection';
+import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
+
+const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
 
 function App() {
   const [version, setVersion] = useState('0.1.0');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,16 +20,25 @@ function App() {
   async function chooseFolder() {
     setIsChoosingFolder(true);
     setError(null);
+    setInspection(null);
 
     try {
-      const result = await window.desktopApi.selectBackupDirectory();
-      if (result.status === 'selected') setSelectedFolder(result.absolutePath);
+      const selection = await window.desktopApi.selectBackupDirectory();
+      if (selection.status === 'cancelled') return;
+
+      setSelectedFolder(selection.folderName);
+      const report = await window.desktopApi.inspectSelectedBackup();
+      setInspection(report);
     } catch {
-      setError('The folder picker could not be opened. Please try again.');
+      setError('The selected folder could not be inspected. Check that it is accessible and try again.');
     } finally {
       setIsChoosingFolder(false);
     }
   }
+
+  const sectionCounts = inspection
+    ? Object.entries(inspection.sectionFileCounts).sort((a, b) => b[1] - a[1]).slice(0, 8)
+    : [];
 
   return (
     <div className="app-shell">
@@ -66,20 +80,20 @@ function App() {
             <p className="panel-kicker">GET STARTED</p>
             <h2>Bring your archive into focus.</h2>
             <p>
-              Choose the Facebook export folder on your computer. The import workflow
-              will inspect its structure before reading any records.
+              Choose the Facebook export folder on your computer. The first pass only
+              inventories filenames and file types; it does not open archive contents.
             </p>
             <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder}>
               <span className="button-icon">＋</span>
-              {isChoosingFolder ? 'Opening folder picker…' : 'Choose backup folder'}
+              {isChoosingFolder ? 'Inspecting folder…' : 'Choose backup folder'}
             </button>
 
             {selectedFolder && (
               <div className="selected-folder">
                 <span className="selected-folder-icon">✓</span>
                 <div>
-                  <strong>Folder selected</strong>
-                  <span>{selectedFolder}</span>
+                  <strong>Folder selected: {selectedFolder}</strong>
+                  <span>Only file and folder names were inspected.</span>
                 </div>
               </div>
             )}
@@ -103,6 +117,54 @@ function App() {
             <div className="art-card card-bottom">▧　 ▰</div>
           </div>
         </section>
+
+        {inspection && (
+          <section className="inspection-panel">
+            <div className="inspection-heading">
+              <div>
+                <p className="eyebrow">FIRST LOOK</p>
+                <h2>Folder inventory</h2>
+                <p>Names and file types only. No HTML, JSON, messages, or media contents were opened.</p>
+              </div>
+              <span className="inspection-date">
+                {new Date(inspection.inspectedAt).toLocaleString()}
+              </span>
+            </div>
+
+            <div className="inventory-stats">
+              <div><strong>{inspection.totalFiles.toLocaleString()}</strong><span>Files found</span></div>
+              <div><strong>{inspection.totalDirectories.toLocaleString()}</strong><span>Folders</span></div>
+              <div><strong>{inspection.filesByFormat.html.toLocaleString()}</strong><span>HTML</span></div>
+              <div><strong>{inspection.filesByFormat.json.toLocaleString()}</strong><span>JSON</span></div>
+              <div><strong>{inspection.filesByFormat.media.toLocaleString()}</strong><span>Media files</span></div>
+              <div><strong>{inspection.filesByFormat.other.toLocaleString()}</strong><span>Other files</span></div>
+            </div>
+
+            <div className="section-counts">
+              <h3>Files by section</h3>
+              <div className="section-count-list">
+                {sectionCounts.map(([key, count]) => (
+                  <div className="section-count" key={key}>
+                    <span>{SECTION_TITLES.get(key) ?? key}</span>
+                    <strong>{count.toLocaleString()}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {inspection.noDataSections.length > 0 && (
+              <p className="inventory-note">
+                Explicit no-data markers: {inspection.noDataSections.join(', ')}
+              </p>
+            )}
+            {(inspection.skippedSymlinks > 0 || inspection.unreadableDirectories > 0 || inspection.truncated) && (
+              <p className="inventory-warning">
+                {inspection.skippedSymlinks} symbolic links skipped · {inspection.unreadableDirectories} unreadable folders
+                {inspection.truncated ? ' · Inventory reached the safety limit and is incomplete' : ''}
+              </p>
+            )}
+          </section>
+        )}
 
         <section className="section-heading">
           <div>

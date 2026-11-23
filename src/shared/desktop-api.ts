@@ -14,7 +14,8 @@ import type {
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
   ReactionRecordSummary,
-  ImportAllSupportedDataResult
+  ImportAllSupportedDataResult,
+  ImportIssueReport
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -40,6 +41,7 @@ export const IPC_CHANNELS = {
   selectBackupDirectory: 'archive:select-directory',
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
+  listImportIssuesForSelectedBackup: 'archive:list-import-issues',
   openSavedSnapshot: 'archive:open-saved-snapshot',
   importFriendsForSelectedBackup: 'archive:import-friends',
   importAllSupportedDataForSelectedBackup: 'archive:import-all-supported-data',
@@ -67,6 +69,7 @@ export interface DesktopApi {
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
+  listImportIssuesForSelectedBackup(): Promise<ImportIssueReport>;
   openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionView>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;

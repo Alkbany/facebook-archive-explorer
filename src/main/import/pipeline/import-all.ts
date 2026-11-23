@@ -13,6 +13,8 @@ import type { ImportProgressReporter } from './import-progress';
  * Per-file import runs are intentionally retained as the audit trail.
  */
 export function recoverInterruptedImports(database: DatabaseSync, snapshotId: string): void {
+  database.exec('SAVEPOINT startup_import_recovery');
+  try {
   const timestamp = new Date().toISOString();
   const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
     .get(snapshotId) as { status: string } | undefined;
@@ -99,6 +101,11 @@ export function recoverInterruptedImports(database: DatabaseSync, snapshotId: st
       UPDATE archive_snapshots SET status = 'partial', updated_at = ?
       WHERE id = ? AND status NOT IN ('failed', 'cancelled')
     `).run(timestamp, snapshotId);
+    database.exec('RELEASE startup_import_recovery');
+  } catch (error) {
+    database.exec('ROLLBACK TO startup_import_recovery');
+    database.exec('RELEASE startup_import_recovery');
+    throw error;
   }
 }
 

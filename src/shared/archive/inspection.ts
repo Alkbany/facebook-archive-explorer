@@ -243,3 +243,30 @@ export interface ImportAllSupportedDataResult {
     failedFiles: number;
   };
 }
+
+export type FriendRecordType = 'friend' | 'received' | 'sent' | 'rejected' | 'removed';
+export type FriendDirectoryFilter = 'all' | FriendRecordType;
+
+export interface FriendDirectoryRecord {
+  id: number;
+  nameRaw: string;
+  recordType: FriendRecordType;
+  dateRaw: string | null;
+  sourcePath: string;
+  sourceCardIndex: number;
+}
+
+export interface FriendDirectoryView {
+  records: FriendDirectoryRecord[];
+  counts: {
+    all: number;
+    friends: number;
+    received: number;
+    sent: number;
+    rejected: number;
+    removed: number;
+  };
+  total: number;
+  page: number;
+  pageSize: number;
+}

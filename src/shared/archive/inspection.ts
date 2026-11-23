@@ -43,3 +43,11 @@ export interface FriendsImportSectionResult {
   unsupportedFiles: number;
   failedFiles: number;
 }
+
+export interface MessagesImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+  mediaReferences: number;
+}

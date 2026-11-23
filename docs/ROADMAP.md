@@ -50,6 +50,7 @@
 ## Milestone 4 — Browsing and search
 
 - [x] Initial conversation list, local filter, and source-order message timeline.
+- [x] Paginated Friends directory with category filters, name/date/path search, and functional workspace navigation.
 - [x] In-app preview for supported image and sticker attachments (4 MB per-image limit and eight automatic previews per conversation).
 - [x] On-demand in-app image/audio/video viewer with native playback controls (24 MB audio/video preview limit).
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).

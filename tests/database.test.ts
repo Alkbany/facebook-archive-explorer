@@ -169,6 +169,7 @@ describe('local SQLite storage', () => {
       accountName: 'Reopenable account',
       backupName: 'Reopenable export',
       sourcePath: '/tmp/reopenable-export',
+      sourceKind: 'directory',
       createdAt: expect.any(String),
       totalFiles: 4,
       filesByFormat: { html: 1, json: 1, media: 1, other: 1 },
@@ -176,6 +177,19 @@ describe('local SQLite storage', () => {
       noDataSections: ['location']
     });
     expect(getArchiveSnapshotOpenDetails(database, 'missing-snapshot')).toBeNull();
+  });
+
+  
+  it('persists ZIP backups as a distinct source kind', () => {
+    const accountId = getOrCreateAccount(database, 'ZIP account');
+    const session = beginDiscoverySession(database, accountId, 'Facebook export', '/tmp/facebook-export.zip', 'zip');
+    completeDiscoverySession(database, session, 0);
+    expect(getArchiveSnapshotOpenDetails(database, session.snapshotId)).toMatchObject({
+      id: session.snapshotId,
+      sourceKind: 'zip',
+      sourcePath: '/tmp/facebook-export.zip',
+      backupName: 'Facebook export'
+    });
   });
 
 });

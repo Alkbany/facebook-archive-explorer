@@ -43,7 +43,8 @@ export function beginDiscoverySession(
   database: DatabaseSync,
   accountId: string,
   archiveName: string,
-  sourcePath: string
+  sourcePath: string,
+  sourceKind: 'directory' | 'zip' = 'directory'
 ): DiscoverySession {
   const account = database.prepare(
     'SELECT id FROM accounts WHERE id = ?'
@@ -60,8 +61,8 @@ export function beginDiscoverySession(
     database.prepare(`
       INSERT INTO archive_snapshots (
         id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
-      ) VALUES (?, ?, ?, 'directory', ?, 'importing', ?, ?)
-    `).run(snapshotId, accountId, archiveName, sourcePath, timestamp, timestamp);
+      ) VALUES (?, ?, ?, ?, ?, 'importing', ?, ?)
+    `).run(snapshotId, accountId, archiveName, sourceKind, sourcePath, timestamp, timestamp);
 
     database.prepare(`
       INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at)
@@ -173,6 +174,7 @@ export interface ArchiveSnapshotOpenDetails {
   accountName: string;
   backupName: string;
   sourcePath: string;
+  sourceKind: 'directory' | 'zip';
   createdAt: string;
   totalFiles: number;
   filesByFormat: { html: number; json: number; media: number; other: number };
@@ -184,7 +186,8 @@ export function getArchiveSnapshotOpenDetails(database: DatabaseSync, snapshotId
   const snapshot = database.prepare(`
     SELECT snapshots.id AS id, snapshots.account_id AS accountId,
       accounts.display_name AS accountName, snapshots.display_name AS backupName,
-      snapshots.source_path AS sourcePath, snapshots.created_at AS createdAt
+      snapshots.source_path AS sourcePath, snapshots.source_kind AS sourceKind,
+      snapshots.created_at AS createdAt
     FROM archive_snapshots AS snapshots
     INNER JOIN accounts ON accounts.id = snapshots.account_id
     WHERE snapshots.id = ?

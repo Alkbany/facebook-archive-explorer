@@ -66,7 +66,7 @@ After directory or ZIP discovery, every file classified as image, video, or audi
 
 ## Import diagnostics
 
-The local Import Diagnostics report is scoped to the active snapshot. It joins issue records to their import run and source file, shows only the stored safe message and source-relative path, and extracts a source-card index when the parser recorded one. It does not display raw message text, raw archive payloads, or the full issue context JSON. The UI shows the latest 250 issues while severity totals are calculated across the full snapshot.
+Startup recovery records an `IMPORT_INTERRUPTED` error for each recovered source file (or an archive-level issue when a run has no active file), links the issue to its import run, and keeps raw paths and archive contents out of the safe message. The local Import Diagnostics report is scoped to the active snapshot. It joins issue records to their import run and source file, shows only the stored safe message and source-relative path, and extracts a source-card index when the parser recorded one. It does not display raw message text, raw archive payloads, or the full issue context JSON. The UI shows the latest 250 issues while severity totals are calculated across the full snapshot.
 
 ## Import coverage
 

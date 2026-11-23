@@ -83,6 +83,11 @@ export async function forEachZipEntry(
       await onEntry(entry);
     }
     return { entriesRead: Math.min(entriesRead, maxEntries), truncated };
+  } catch (error) {
+    if (error instanceof Error && /invalid relative path/iu.test(error.message)) {
+      throw new ZipArchiveError('INVALID_RELATIVE_PATH');
+    }
+    throw error;
   } finally {
     zip.close();
   }
@@ -93,13 +98,20 @@ async function findZipEntry(
   relativePath: string
 ): Promise<Entry> {
   const requested = normalizeZipEntryName(relativePath);
-  for await (const entry of zip.eachEntry()) {
-    if (isZipDirectoryEntry(entry)) continue;
-    const safePath = getSafeZipEntryPath(entry);
-    if (safePath === requested) {
-      if (isZipSymbolicLinkEntry(entry)) throw new ZipArchiveError('SYMLINK_NOT_ALLOWED');
-      return entry;
+  try {
+    for await (const entry of zip.eachEntry()) {
+      if (isZipDirectoryEntry(entry)) continue;
+      const safePath = getSafeZipEntryPath(entry);
+      if (safePath === requested) {
+        if (isZipSymbolicLinkEntry(entry)) throw new ZipArchiveError('SYMLINK_NOT_ALLOWED');
+        return entry;
+      }
     }
+  } catch (error) {
+    if (error instanceof Error && /invalid relative path/iu.test(error.message)) {
+      throw new ZipArchiveError('INVALID_RELATIVE_PATH');
+    }
+    throw error;
   }
   throw new ZipArchiveError('FILE_NOT_FOUND');
 }

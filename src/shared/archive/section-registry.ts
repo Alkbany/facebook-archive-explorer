@@ -42,3 +42,19 @@ export const ARCHIVE_SECTIONS: readonly ArchiveSectionDefinition[] = [
 export function getArchiveSection(key: string): ArchiveSectionDefinition | undefined {
   return ARCHIVE_SECTIONS.find((section) => section.key === key);
 }
+
+export type SectionImportCapability = 'known-html' | 'sampled-html' | 'media-index-only' | 'not-implemented';
+
+const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapability>> = {
+  friends: 'known-html',
+  messages: 'sampled-html',
+  posts: 'sampled-html',
+  comments: 'sampled-html',
+  likes_and_reactions: 'sampled-html',
+  photos_and_videos: 'media-index-only'
+};
+
+/** Describes actual importer scope; filename evidence alone never implies parser support. */
+export function getArchiveImportCapability(key: string): SectionImportCapability {
+  return SECTION_IMPORT_CAPABILITIES[key] ?? 'not-implemented';
+}

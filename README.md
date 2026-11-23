@@ -52,6 +52,7 @@ The development dependency installation requires an internet connection. The app
 - DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
 - Explicit **Import Friends** action and one-click **Import All Supported Data** workflow, which sequentially runs the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
 - The combined import reports file/record/media/error totals; completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
+- The combined import recovers source files left in a `processing` state after an interrupted run and makes them eligible for retry; full crash-safe orchestration and integrity reporting remain planned.
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
 - DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
 - DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.

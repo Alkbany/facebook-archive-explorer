@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import {
   parseFriendsExport,
@@ -258,7 +259,8 @@ export interface FriendsImportSectionResult {
 export async function importFriendsSection(
   database: DatabaseSync,
   snapshotId: string,
-  archiveRoot: string
+  archiveRoot: string,
+  onProgress?: ImportProgressReporter
 ): Promise<FriendsImportSectionResult> {
   const placeholders = FRIENDS_EXPORT_FILES.map(() => '?').join(', ');
   const files = database.prepare(`
@@ -279,6 +281,17 @@ export async function importFriendsSection(
     failedFiles: 0
   };
 
+  const emitProgress = (phase: 'started' | 'progress' | 'completed') => reportImportProgress(onProgress, {
+    sectionKey: 'friends',
+    phase,
+    filesCompleted: summary.filesAttempted,
+    filesTotal: files.length,
+    recordsImported: summary.recordsImported,
+    unsupportedFiles: summary.unsupportedFiles,
+    failedFiles: summary.failedFiles
+  });
+  emitProgress('started');
+
   for (const file of files) {
     summary.filesAttempted += 1;
     try {
@@ -288,7 +301,9 @@ export async function importFriendsSection(
     } catch {
       summary.failedFiles += 1;
     }
+    emitProgress('progress');
   }
 
+  emitProgress('completed');
   return summary;
 }

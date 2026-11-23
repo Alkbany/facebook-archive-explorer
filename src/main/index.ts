@@ -1,9 +1,12 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, protocol } from 'electron';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { openAppDatabase } from './database/connection';
 import { DATABASE_MIGRATIONS } from './database/migrations';
-import { registerIpcHandlers } from './ipc/register-handlers';
+import { getSelectedSnapshotId, registerIpcHandlers } from './ipc/register-handlers';
+import { registerArchiveMediaProtocol } from './database/media-stream';
+
+protocol.registerSchemesAsPrivileged([{ scheme: 'archive-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
 let mainWindow: BrowserWindow | null = null;
 let database: DatabaseSync | null = null;
@@ -63,6 +66,7 @@ app.whenReady().then(() => {
     DATABASE_MIGRATIONS
   );
   registerIpcHandlers(database);
+  registerArchiveMediaProtocol(database, () => getSelectedSnapshotId());
   createMainWindow();
 
   app.on('activate', () => {

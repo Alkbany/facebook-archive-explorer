@@ -47,7 +47,7 @@ The development dependency installation requires an internet connection. The app
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.
 - Native selection of a local export directory or ZIP archive and a user-defined account label.
 - Bounded, streaming inventory of directory and ZIP central-directory entries; discovery does not open file contents or extract ZIP entries.
-- Independent backup snapshots persisted in SQLite, with a saved-backup history view.
+- Independent backup snapshots persisted in SQLite, with a complete saved-backup history view (no fixed 20-snapshot limit).
 - A symlink-aware archive text reader with path containment and file-size checks for directory and ZIP sources.
 - DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
 - Explicit **Import Friends** action and one-click **Import All Supported Data** workflow, which sequentially runs the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.

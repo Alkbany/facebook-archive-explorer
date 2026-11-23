@@ -11,7 +11,9 @@ const desktopApi: DesktopApi = {
   importMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importMessagesForSelectedBackup),
   listMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessagesForSelectedBackup),
   getMessagesForSelectedConversation: (sourceFileId) =>
-    ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId)
+    ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId),
+  getMessageImagePreview: (mediaAssetId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.getMessageImagePreview, mediaAssetId)
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

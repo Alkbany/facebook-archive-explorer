@@ -19,7 +19,7 @@ import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importAllSupportedData } from '../import/pipeline/import-all';
 import { importPostsSection } from '../import/pipeline/posts-importer';
 import { importCommentsSection } from '../import/pipeline/comments-importer';
-import { listPostRecords, listCommentActivities } from '../database/activity-repository';
+import { listPostRecords, listCommentActivities, listPhotoAlbums } from '../database/activity-repository';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
@@ -331,6 +331,11 @@ export function registerIpcHandlers(
       throw new Error('Invalid attachment selection.');
     }
     return getMessageMediaPreview(database, selectedSnapshotId, mediaAssetId as number);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listPhotoAlbumsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing photo albums.');
+    return listPhotoAlbums(database, selectedSnapshotId);
   });
 
   ipcMain.handle(IPC_CHANNELS.listPostsForSelectedBackup, () => {

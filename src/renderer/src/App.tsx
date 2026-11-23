@@ -719,7 +719,7 @@ function App() {
             <div className="friends-import-action import-all-action">
               <div>
                 <strong>Import all supported data</strong>
-                <span>Run Friends, Messages, Posts, Comments, and Likes &amp; Reactions importers in sequence. Already completed files are skipped; failed or unsupported files remain retryable.</span>
+                <span>Run Friends, Messages, Posts, Comments, Likes &amp; Reactions, and Photos &amp; Videos album importers in sequence. Completed files are skipped; failed or unsupported files remain retryable.</span>
                 {importAllSummary && (
                   <span className="import-all-summary">
                     {importAllSummary.filesAttempted} files checked · {importAllSummary.recordsImported} records imported ·
@@ -1583,7 +1583,7 @@ function App() {
             <p className="eyebrow">YOUR ARCHIVE, ORGANIZED</p>
             <h2>Explore by what matters</h2>
           </div>
-          <span className="section-caption">Modules are added as import support is completed</span>
+          <span className="section-caption">Use the left sidebar to jump between the available archive sections.</span>
         </section>
 
         <section className="feature-grid">
@@ -1591,13 +1591,13 @@ function App() {
             <div className="feature-icon icon-violet">✉</div>
             <h3>Conversations</h3>
             <p>Messages, participants, attachments, and conversation timelines.</p>
-            <span className="feature-status">In development</span>
+            <span className="feature-status">Available · sampled export structure</span>
           </article>
           <article className="feature-card">
             <div className="feature-icon icon-blue">▧</div>
             <h3>Photos &amp; videos</h3>
-            <p>Albums, media details, captions, and original local files.</p>
-            <span className="feature-status">Planned</span>
+            <p>Album browsing, captions, comments, and local media previews.</p>
+            <span className="feature-status">Available · sampled album pages</span>
           </article>
           <article className="feature-card">
             <div className="feature-icon icon-amber">◷</div>

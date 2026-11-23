@@ -66,8 +66,7 @@ export function listFallbackArchiveRecords(
     'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?) ' +
     'ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC ' +
     'LIMIT ? OFFSET ?'
-  ).all(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES, PAGE_SIZE, (page - 1) * PAGE_SIZE)
-    as unknown as FallbackArchiveRecord[];
+  ).all(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES, PAGE_SIZE, (page - 1) * PAGE_SIZE) as unknown as FallbackArchiveRecord[];
 
   return { records, total, page, pageSize: PAGE_SIZE };
 }

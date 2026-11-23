@@ -72,7 +72,10 @@
 
 ## Milestone 6 — Windows release
 
-- [x] Add a Windows NSIS installer workflow that runs checks and publishes the installer as a GitHub Actions artifact (workflow configured; release artifact not yet generated).
+- [x] Build and upload a Windows NSIS test-installer artifact from `main` after type-checking, unit tests, and packaging.
+- [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
-- [ ] Large-archive performance tests and end-to-end database backup/restore validation on Windows.
-- [ ] Privacy/security review and final release checklist.
+- [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup.
+- [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
+- [ ] Code-sign the installer before public distribution; current test installers are unsigned.
+- [ ] Final privacy/security review and release checklist.

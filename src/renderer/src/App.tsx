@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
-  FriendsImportSectionResult
+  FriendsImportSectionResult,
+  MessagesImportSectionResult
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 
@@ -15,6 +16,8 @@ function App() {
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
+  const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
+  const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,7 @@ function App() {
     setError(null);
     setInspection(null);
     setFriendsImport(null);
+    setMessagesImport(null);
 
     try {
       const selection = await window.desktopApi.selectBackupDirectory(accountName);
@@ -64,6 +68,20 @@ function App() {
       setError('Friends data could not be imported. Check the local import report.');
     } finally {
       setIsImportingFriends(false);
+    }
+  }
+
+  async function importMessages() {
+    setIsImportingMessages(true);
+    setError(null);
+    try {
+      const result = await window.desktopApi.importMessagesForSelectedBackup();
+      setMessagesImport(result);
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Messages data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingMessages(false);
     }
   }
 
@@ -210,6 +228,22 @@ function App() {
                 {isImportingFriends ? 'Importing Friends…' : 'Import Friends'}
               </button>
             </div>
+            <div className="friends-import-action">
+              <div>
+                <strong>Messages</strong>
+                <span>Import recognized conversation HTML from inbox, archived, filtered, and request folders. Messages stay out of search indexing by default.</span>
+              </div>
+              <button className="secondary-button" onClick={importMessages} disabled={isImportingMessages}>
+                {isImportingMessages ? 'Importing Messages…' : 'Import Messages'}
+              </button>
+            </div>
+            {messagesImport && (
+              <p className="friends-import-result">
+                {messagesImport.filesAttempted} conversations checked · {messagesImport.recordsImported} messages imported ·
+                {messagesImport.mediaReferences} media references · {messagesImport.unsupportedFiles} unsupported ·
+                {messagesImport.failedFiles} failed
+              </p>
+            )}
             {friendsImport && (
               <p className="friends-import-result">
                 {friendsImport.filesAttempted} files checked · {friendsImport.recordsImported} records imported ·

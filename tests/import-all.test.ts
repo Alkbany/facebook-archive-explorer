@@ -83,4 +83,25 @@ describe('Import all supported data', () => {
     expect(result.totals.filesAttempted).toBe(0);
     expect(result.totals.failedFiles).toBe(0);
   });
+  it('recovers files and runs left in processing state after an interrupted session', async () => {
+    const now = new Date().toISOString();
+    const source = database.prepare("SELECT id FROM source_files WHERE snapshot_id = ? AND section_key = 'messages'")
+      .get(snapshotId) as { id: number };
+    database.prepare("UPDATE source_files SET status = 'processing' WHERE id = ?").run(source.id);
+    database.prepare(`
+      INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at, files_discovered)
+      VALUES ('interrupted-run', ?, 'import', 'running', ?, 1)
+    `).run(snapshotId, now);
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.totals.filesAttempted).toBe(5);
+    const recovered = database.prepare("SELECT status, safe_error_code FROM source_files WHERE id = ?")
+      .get(source.id) as { status: string; safe_error_code: string | null };
+    expect(recovered.status).toBe('unsupported');
+    expect(recovered.safe_error_code).toBe('MESSAGE_CARDS_NOT_FOUND');
+    const interruptedRun = database.prepare("SELECT status FROM import_runs WHERE id = 'interrupted-run'")
+      .get() as { status: string };
+    expect(interruptedRun.status).toBe('failed');
+  });
+
 });

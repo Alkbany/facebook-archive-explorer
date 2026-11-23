@@ -13,7 +13,8 @@ import type {
   ImportAllSupportedDataResult,
   ImportIssueReport,
   ImportCoverageReport,
-  ImportProgressEvent
+  ImportProgressEvent,
+  PhotoAlbumRecordSummary
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -63,6 +64,8 @@ function App() {
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
+  const [photoAlbums, setPhotoAlbums] = useState<PhotoAlbumRecordSummary[]>([]);
+  const [albumFilter, setAlbumFilter] = useState('');
   const [mediaFilter, setMediaFilter] = useState('all');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
@@ -105,6 +108,8 @@ function App() {
     setSearchedSection('all');
     setComparisonReport(null);
     setMediaGallery([]);
+    setPhotoAlbums([]);
+    setAlbumFilter('');
     setImportAllSummary(null);
     setFriendsImport(null);
     setPostsImport(null);
@@ -135,6 +140,7 @@ function App() {
         window.desktopApi.listArchiveSnapshots()
       ]);
       setMediaGallery(media);
+      setPhotoAlbums(albums);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
       setSavedBackups(backups);
@@ -159,6 +165,8 @@ function App() {
     setSearchedSection('all');
     setComparisonReport(null);
     setMediaGallery([]);
+    setPhotoAlbums([]);
+    setAlbumFilter('');
     setImportAllSummary(null);
     setFriendsImport(null);
     setPostsImport(null);
@@ -184,14 +192,15 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues, coverage] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
         window.desktopApi.listMediaForSelectedBackup(),
         window.desktopApi.listImportIssuesForSelectedBackup(),
-        window.desktopApi.getImportCoverageForSelectedBackup()
+        window.desktopApi.getImportCoverageForSelectedBackup(),
+        window.desktopApi.listPhotoAlbumsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -386,16 +395,18 @@ function App() {
       setCommentsImport(result.sections.comments);
       setReactionsImport(result.sections.reactions);
 
-      const [posts, comments, reactions, foundConversations] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, albums] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
-        window.desktopApi.listMessagesForSelectedBackup()
+        window.desktopApi.listMessagesForSelectedBackup(),
+        window.desktopApi.listPhotoAlbumsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
       setReactionRecords(reactions);
       setConversations(foundConversations);
+      setPhotoAlbums(albums);
       if (foundConversations.length > 0) {
         await loadConversation(foundConversations[0].sourceFileId);
       } else {
@@ -768,7 +779,7 @@ function App() {
                   setSearchExportStatus('');
                 }} aria-label="Filter search by section">
                   <option value="all">All searchable sections</option>
-                  {ARCHIVE_SECTIONS.filter((section) => ['friends', 'posts', 'comments', 'likes_and_reactions'].includes(section.key)).map((section) => (
+                  {ARCHIVE_SECTIONS.filter((section) => ['friends', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'].includes(section.key)).map((section) => (
                     <option key={section.key} value={section.key}>{section.title}</option>
                   ))}
                 </select>
@@ -869,6 +880,41 @@ function App() {
                         <strong>{record.authorRaw ?? 'Post'}</strong>
                         <span>{record.bodyRaw ?? 'No text in export'}{record.mediaCount ? ` · ${record.mediaCount} attachments` : ''}</span>
                         <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {photoAlbums.length > 0 && (
+              <section className="conversation-workspace">
+                <div className="conversation-workspace-heading">
+                  <div>
+                    <p className="eyebrow">YOUR LIBRARY</p>
+                    <h3>Photo albums</h3>
+                    <p>Album names, exported photo counts, preview links, and raw dates from the Photos &amp; Videos index.</p>
+                  </div>
+                  <span>{photoAlbums.length.toLocaleString()} albums</span>
+                </div>
+                <input
+                  className="conversation-filter"
+                  value={albumFilter}
+                  onChange={(event) => setAlbumFilter(event.target.value)}
+                  placeholder="Filter photo albums…"
+                />
+                <div className="media-gallery-list">
+                  {photoAlbums.filter((album) => [
+                    album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath
+                  ].join(' ').toLocaleLowerCase().includes(albumFilter.trim().toLocaleLowerCase())).map((album) => (
+                    <article className="media-gallery-item" key={album.id}>
+                      <div className="media-gallery-icon">▧</div>
+                      <div className="media-gallery-copy">
+                        <strong>{album.albumTitle}</strong>
+                        <span>{album.photoCount === null
+                          ? 'Photo count not available'
+                          : album.photoCount.toLocaleString() + (album.photoCount === 1 ? ' photo' : ' photos')}</span>
+                        <small>{album.dateRaw ?? 'Date not provided'} · {album.albumPath}</small>
                       </div>
                     </article>
                   ))}

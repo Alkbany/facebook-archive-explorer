@@ -147,5 +147,16 @@ describe('local SQLite storage', () => {
         filesDiscovered: 2
       }
     ]);
+
+    expect(listArchiveSnapshots(database)).toEqual([
+      {
+        id: session.snapshotId,
+        accountName: 'Test Facebook account',
+        backupName: 'Synthetic export',
+        status: 'discovered',
+        createdAt: expect.any(String),
+        filesDiscovered: 2
+      }
+    ]);
   });
 });

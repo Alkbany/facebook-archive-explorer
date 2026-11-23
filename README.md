@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends and Messages importers, and an initial local conversation browser. Posts, JSON exports, ZIP archives, and full media browsing are still pending.
+> **Status: active early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends and Messages importers, and a local conversation browser with bounded in-app media previews. Posts, JSON exports, ZIP archives, and streaming playback for large media are still pending.
 
 ## Product decisions
 
@@ -53,7 +53,8 @@ The development dependency installation requires an internet connection. The app
 - Explicit **Import Friends** action that stores records locally, preserves duplicate names and raw dates, and records unsupported structures as issues.
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
 - DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
-- Initial conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and attachment-reference indicators.
+- Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
+- In-app image and sticker preview plus on-demand audio/video playback controls; images are limited to 4 MB and audio/video to 24 MB per preview. Larger media remains untouched in the original backup.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
 - Arabic-aware search normalization and FTS5 schema are in place.
@@ -62,7 +63,7 @@ The development dependency installation requires an internet connection. The app
 
 - Parsers and importers for posts, comments, reactions, photos, videos, groups, and other export sections.
 - JSON import, ZIP discovery/import, resumable large-scale import orchestration, and full integrity reporting.
-- Media gallery and in-app playback/preview of original attachments, unified search UI, archive comparison, and selected-data export.
+- Full media gallery and streaming playback for large original attachments, unified search UI, archive comparison, and selected-data export.
 - Optional local embeddings and local LLM integration.
 
 Follow [the roadmap](docs/ROADMAP.md) for implementation status.

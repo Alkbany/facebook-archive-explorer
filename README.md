@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: early implementation.** The desktop shell, local SQLite database, account/snapshot grouping, and bounded directory inventory are implemented and tested. The application does not yet parse HTML/JSON content or import messages and media.
+> **Status: early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, and a tested Friends importer. Only the five known Friends HTML files are currently parsed. Other sections, JSON files, ZIP archives, messages, posts, and media are not yet imported.
 
 ## Product decisions
 
@@ -20,7 +20,7 @@ This repository stores source code and generic documentation only. Never commit 
 
 ## Requirements
 
-- Node.js 22.13 or later
+- Node.js 22.19 or later
 - npm
 - Windows 10/11 (initial target)
 
@@ -44,16 +44,24 @@ The development dependency installation requires an internet connection. The app
 
 ## Current capabilities
 
-- Electron desktop shell with a secure, narrow preload API.
-- Native selection of a local export directory.
-- Bounded inventory of file and folder names and basic file extensions; archive contents are not opened during this first pass.
-- Symbolic links are skipped, unreadable directories are counted, and very large inventories are marked as truncated.
-- A safe relative-path resolver with traversal tests.
-- Section evidence catalogue and Arabic-aware search normalization.
-- SQLite runtime with versioned migrations, account grouping, independent backup snapshots, and persisted source-file inventory.
-- Saved backup history loaded from the local database after startup.
+- Electron desktop shell with a narrow, typed preload API and secure window defaults.
+- Native selection of a local export directory and a user-defined account label.
+- Bounded, streaming inventory of file/folder names and basic file formats; discovery does not open file contents.
+- Independent backup snapshots persisted in SQLite, with a saved-backup history view.
+- A symlink-aware archive text reader with path containment and file-size checks.
+- DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
+- Explicit **Import Friends** action that stores records locally, preserves duplicate names and raw dates, and records unsupported structures as issues.
+- Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
+- Arabic-aware search normalization and FTS5 schema are in place.
 
-The actual HTML/JSON parsers, ZIP reader, record import pipeline, media viewers, and search UI are not implemented yet. Follow [the roadmap](docs/ROADMAP.md) for implementation status.
+## Not implemented yet
+
+- Parsers and importers for messages, posts, comments, reactions, photos, videos, groups, and the other export sections.
+- JSON import, ZIP discovery/import, resumable large-scale import orchestration, and full integrity reporting.
+- Media gallery, conversation viewer, unified search UI, archive comparison, and selected-data export.
+- Optional local embeddings and local LLM integration.
+
+Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 
 ## Documentation
 

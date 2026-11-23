@@ -3,8 +3,17 @@ name: Windows installer
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'package*.json'
+      - 'electron.vite.config.ts'
+      - 'tsconfig*.json'
+      - '.github/workflows/windows-installer.yml'
 
 permissions:
   contents: write

@@ -815,7 +815,7 @@ function App() {
                 <button
                   className="secondary-button"
                   onClick={() => void refreshImportCoverage()}
-                  disabled={isRefreshingImportCoverage || isChoosingFolder || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                  disabled={isRefreshingImportCoverage || isChoosingFolder || isAnyImporting}
                 >
                   {isRefreshingImportCoverage ? 'Refreshing…' : 'Refresh coverage'}
                 </button>
@@ -948,7 +948,7 @@ function App() {
               <button
                 className="secondary-button"
                 onClick={importFriends}
-                disabled={isImportingFriends || isImportingAll}
+                disabled={isAnyImporting || isChoosingFolder}
               >
                 {isImportingFriends ? 'Importing Friends…' : 'Import Friends'}
               </button>
@@ -1039,7 +1039,7 @@ function App() {
                 <strong>Messages</strong>
                 <span>Import recognized conversation HTML from inbox, archived, filtered, and request folders. Messages stay out of search indexing by default.</span>
               </div>
-              <button className="secondary-button" onClick={importMessages} disabled={isImportingMessages || isImportingAll}>
+              <button className="secondary-button" onClick={importMessages} disabled={isAnyImporting || isChoosingFolder}>
                 {isImportingMessages ? 'Importing Messages…' : 'Import Messages'}
               </button>
             </div>
@@ -1048,7 +1048,7 @@ function App() {
                 <strong>Posts</strong>
                 <span>Import sampled post cards, keep exported dates and authors, and link local photos/videos without copying them.</span>
               </div>
-              <button className="secondary-button" onClick={importPosts} disabled={isImportingPosts || isImportingAll}>
+              <button className="secondary-button" onClick={importPosts} disabled={isAnyImporting || isChoosingFolder}>
                 {isImportingPosts ? 'Importing posts…' : 'Import Posts'}
               </button>
             </div>
@@ -1096,7 +1096,7 @@ function App() {
                           </span>
                         )}
                       </div>
-                      <button className="secondary-button" onClick={importPhotosAndVideos} disabled={isImportingPhotos || isAnyImporting && !isImportingPhotos || isChoosingFolder}>
+                      <button className="secondary-button" onClick={importPhotosAndVideos} disabled={isAnyImporting || isChoosingFolder}>
                         {isImportingPhotos ? 'Importing photos…' : 'Import Photos &amp; Videos'}
                       </button>
                     </div>
@@ -1167,7 +1167,7 @@ function App() {
                     ) : (
                       <p className="photo-album-empty">
                         {photoAlbumDetail?.detailFileStatus === 'discovered'
-                          ? 'The album page has not been imported yet. Run Import All Supported Data to load its photos and comments.'
+                          ? 'The album page has not been imported yet. Run Import Photos & Videos to load its photos and comments.'
                           : photoAlbumDetail?.detailFileStatus === 'not_found'
                             ? 'The album detail HTML file is not present in this backup.'
                             : photoAlbumDetail?.detailFileStatus === 'unsupported'
@@ -1228,7 +1228,7 @@ function App() {
                 <strong>Comments</strong>
                 <span>Import sampled comment/reply activity cards. Keep the original activity wording, group label, comment text, and raw date separately.</span>
               </div>
-              <button className="secondary-button" onClick={importComments} disabled={isImportingComments || isImportingAll}>
+              <button className="secondary-button" onClick={importComments} disabled={isAnyImporting || isChoosingFolder}>
                 {isImportingComments ? 'Importing comments…' : 'Import Comments'}
               </button>
             </div>
@@ -1270,7 +1270,7 @@ function App() {
                 <strong>Likes &amp; Reactions</strong>
                 <span>Import observed reaction cards while keeping their original descriptions and raw dates.</span>
               </div>
-              <button className="secondary-button" onClick={importReactions} disabled={isImportingReactions || isImportingAll}>
+              <button className="secondary-button" onClick={importReactions} disabled={isAnyImporting || isChoosingFolder}>
                 {isImportingReactions ? 'Importing reactions…' : 'Import Likes & Reactions'}
               </button>
             </div>
@@ -1520,14 +1520,14 @@ function App() {
               <button
                 className="secondary-button"
                 onClick={() => void exportLocalDatabaseBackup()}
-                disabled={isExportingDatabase || isRestoringDatabase || isChoosingFolder || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                disabled={isExportingDatabase || isRestoringDatabase || isChoosingFolder || isAnyImporting}
               >
                 {isExportingDatabase ? 'Exporting…' : 'Export database'}
               </button>
               <button
                 className="danger-outline-button"
                 onClick={() => void restoreLocalDatabaseBackup()}
-                disabled={isExportingDatabase || isRestoringDatabase || isChoosingFolder || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                disabled={isExportingDatabase || isRestoringDatabase || isChoosingFolder || isAnyImporting}
               >
                 {isRestoringDatabase ? 'Validating…' : 'Restore database'}
               </button>
@@ -1562,7 +1562,7 @@ function App() {
                 <button
                   className="secondary-button"
                   onClick={() => void refreshImportIssues()}
-                  disabled={isRefreshingImportIssues || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                  disabled={isRefreshingImportIssues || isAnyImporting || isChoosingFolder}
                 >
                   {isRefreshingImportIssues ? 'Refreshing…' : 'Refresh report'}
                 </button>

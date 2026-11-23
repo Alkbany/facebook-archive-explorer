@@ -81,6 +81,7 @@ export async function importPhotoAlbumDetailsSection(
         file.relative_path
       );
       const timestamp = new Date().toISOString();
+      let warningCount = parsed.issues.length;
       const albumTitle = albumByPath.get(file.relative_path) ?? parsed.albumTitle ?? 'Photo album';
       const insertRecord = database.prepare(`
         INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type,
@@ -140,6 +141,7 @@ export async function importPhotoAlbumDetailsSection(
           linkMedia.run(savedRecord.id, asset.id);
           summary.mediaReferences += 1;
         } else {
+          warningCount += 1;
           database.prepare(`
             INSERT INTO import_issues (import_run_id, source_file_id, severity, issue_code, safe_message, context_json, created_at)
             VALUES (?, ?, 'warning', 'PHOTO_FILE_NOT_IN_ARCHIVE',
@@ -180,7 +182,7 @@ export async function importPhotoAlbumDetailsSection(
           snapshotId
         );
       database.prepare("UPDATE import_runs SET status='completed', finished_at=?, files_processed=1, records_imported=?, errors_count=? WHERE id=?")
-        .run(timestamp, parsed.photos.length, parsed.issues.length + (unsupported ? 1 : 0), runId);
+        .run(timestamp, parsed.photos.length, warningCount + (unsupported ? 1 : 0), runId);
       database.exec('RELEASE photo_album_detail_file');
       summary.recordsImported += parsed.photos.length;
       if (unsupported) summary.unsupportedFiles += 1;

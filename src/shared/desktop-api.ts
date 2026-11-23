@@ -18,6 +18,7 @@ import type {
   ReactionRecordSummary,
   PhotoAlbumRecordSummary,
   PhotoAlbumDetailView,
+  PhotoAlbumsImportSectionResult,
   ImportAllSupportedDataResult,
   ImportIssueReport,
   ImportCoverageReport,
@@ -54,6 +55,7 @@ export const IPC_CHANNELS = {
   openSavedSnapshot: 'archive:open-saved-snapshot',
   importFriendsForSelectedBackup: 'archive:import-friends',
   importAllSupportedDataForSelectedBackup: 'archive:import-all-supported-data',
+  importPhotosAndVideosForSelectedBackup: 'archive:import-photos-and-videos',
   importPostsForSelectedBackup: 'archive:import-posts',
   importCommentsForSelectedBackup: 'archive:import-comments',
   listCommentsForSelectedBackup: 'archive:list-comments',
@@ -87,6 +89,7 @@ export interface DesktopApi {
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   listFriendsDirectoryForSelectedBackup(filter: FriendDirectoryFilter, query: string, page: number): Promise<FriendDirectoryView>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
+  importPhotosAndVideosForSelectedBackup(): Promise<PhotoAlbumsImportSectionResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
   listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
   importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;

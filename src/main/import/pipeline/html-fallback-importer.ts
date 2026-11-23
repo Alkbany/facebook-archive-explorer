@@ -60,7 +60,7 @@ function rawDate($: any, element: any): string | null {
 
 function makeHtmlItems(html: string): Array<{ element: string; title: string | null; text: string; dateRaw: string | null }> {
   const $ = load(html);
-  const body = $('body').length > 0 ? $('body') : $.root();
+  const body: any = $('body').length > 0 ? $('body') : $.root();
   const candidateSelector = 'article, [role="article"], li, .pam';
   const candidates = body.find(candidateSelector).toArray();
   const topLevelCandidates = candidates.filter((element: any) =>

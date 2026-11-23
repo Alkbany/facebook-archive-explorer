@@ -7,7 +7,7 @@ import { getOrCreateAccount, listArchiveSnapshots } from '../src/main/database/a
 import { indexDiscoveredMediaAssets } from '../src/main/database/media-indexer';
 import { listArchiveMediaGallery } from '../src/main/database/messages-repository';
 import { searchArchiveRecords } from '../src/main/database/search-repository';
-import { compareArchiveSnapshots } from '../src/main/database/comparison-repository';
+import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../src/main/database/comparison-repository';
 
 const migrations = [
   { version: 1, name: 'initial_schema', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8') },
@@ -113,6 +113,58 @@ describe('archive-wide media, search, and comparison', () => {
     const report = compareArchiveSnapshots(database, baselineId, comparedId);
     expect(report).toMatchObject({ added: 1, removed: 1, changed: 1, unchanged: 1 });
     expect(report.sections).toEqual([{ sectionKey: 'posts', added: 1, removed: 1, changed: 1 }]);
+  });
+
+  it('browses paginated comparison details with source positions and previous/current values', () => {
+    const basePath = addSource(baselineId, 'posts/your_posts.html', 'html', 'posts');
+    const newPath = addSource(comparedId, 'posts/your_posts.html', 'html', 'posts');
+    addPost(baselineId, basePath, 0, 'Same', 'Unchanged body');
+    addPost(baselineId, basePath, 1, 'Old title', 'Changed body');
+    addPost(baselineId, basePath, 2, 'Removed item', 'No longer present');
+    addPost(comparedId, newPath, 0, 'Same', 'Unchanged body');
+    addPost(comparedId, newPath, 1, 'New title', 'Changed body');
+    addPost(comparedId, newPath, 3, 'Added item', 'Newly present');
+
+    const firstPage = listArchiveComparisonChanges(database, baselineId, comparedId, 'all', 'all', '', 1, 2);
+    expect(firstPage.total).toBe(3);
+    expect(firstPage.page).toBe(1);
+    expect(firstPage.pageSize).toBe(2);
+    expect(firstPage.changes).toHaveLength(2);
+    expect(firstPage.changes[0]).toMatchObject({
+      changeKind: 'changed',
+      sourcePath: 'posts/your_posts.html',
+      sourceCardIndex: 1,
+      previousTitle: 'Old title',
+      previousBody: 'Changed body',
+      comparedTitle: 'New title',
+      comparedBody: 'Changed body'
+    });
+    expect(firstPage.changes[1]).toMatchObject({
+      changeKind: 'removed',
+      sourceCardIndex: 2,
+      previousTitle: 'Removed item',
+      comparedTitle: null
+    });
+
+    const addedOnly = listArchiveComparisonChanges(database, baselineId, comparedId, 'added', 'posts', 'Added item');
+    expect(addedOnly).toMatchObject({
+      total: 1,
+      changes: [expect.objectContaining({ changeKind: 'added', comparedTitle: 'Added item', previousTitle: null })]
+    });
+    expect(listArchiveComparisonChanges(database, baselineId, comparedId, 'all', 'comments').total).toBe(0);
+    expect(listArchiveComparisonChanges(database, baselineId, comparedId, 'all', 'all', 'New title').total).toBe(1);
+    expect(() => listArchiveComparisonChanges(database, baselineId, comparedId, 'unknown' as never)).toThrow('filter');
+  });
+
+  it('treats SQL wildcard characters in detailed comparison search as literal text', () => {
+    const basePath = addSource(baselineId, 'posts/your_posts.html', 'html', 'posts');
+    const newPath = addSource(comparedId, 'posts/your_posts.html', 'html', 'posts');
+    addPost(comparedId, newPath, 0, 'Literal 50%_match', 'Added');
+    addPost(comparedId, newPath, 1, 'Literal 50XYmatch', 'Added');
+    addPost(baselineId, basePath, 2, 'Literal 50%_gone', 'Removed');
+
+    const results = listArchiveComparisonChanges(database, baselineId, comparedId, 'all', 'all', '50%_');
+    expect(results.total).toBe(2);
   });
 
   it('lists every saved backup instead of hiding snapshots beyond the latest twenty', () => {

@@ -12,7 +12,8 @@ import type {
   ReactionRecordSummary,
   ImportAllSupportedDataResult,
   ImportIssueReport,
-  ImportCoverageReport
+  ImportCoverageReport,
+  ImportProgressEvent
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -32,6 +33,7 @@ function App() {
   const [isRefreshingImportIssues, setIsRefreshingImportIssues] = useState(false);
   const [importCoverage, setImportCoverage] = useState<ImportCoverageReport | null>(null);
   const [isRefreshingImportCoverage, setIsRefreshingImportCoverage] = useState(false);
+  const [importProgress, setImportProgress] = useState<ImportProgressEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
@@ -75,6 +77,8 @@ function App() {
   const [databaseBackupStatus, setDatabaseBackupStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => window.desktopApi.onImportProgress(setImportProgress), []);
+
   useEffect(() => {
     void window.desktopApi.getAppInfo()
       .then((info) => setVersion(info.appVersion))
@@ -91,6 +95,7 @@ function App() {
     setInspection(null);
     setImportIssueReport(null);
     setImportCoverage(null);
+    setImportProgress(null);
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
@@ -629,6 +634,48 @@ function App() {
               </button>
             </div>
 
+            {importProgress && (
+              <section className="import-progress-panel" aria-live="polite">
+                <div className="import-progress-heading">
+                  <div>
+                    <strong>
+                      {importProgress.phase === 'completed'
+                        ? (SECTION_TITLES.get(importProgress.sectionKey) ?? importProgress.sectionKey) + ' import complete'
+                        : 'Importing ' + (SECTION_TITLES.get(importProgress.sectionKey) ?? importProgress.sectionKey)}
+                    </strong>
+                    <span>
+                      {importProgress.filesCompleted.toLocaleString()} / {importProgress.filesTotal.toLocaleString()} files ·
+                      {importProgress.recordsImported.toLocaleString()} records ·
+                      {importProgress.unsupportedFiles.toLocaleString()} unsupported ·
+                      {importProgress.failedFiles.toLocaleString()} failed
+                    </span>
+                  </div>
+                  <span className="import-progress-phase">{importProgress.phase === 'completed' ? 'Complete' : 'In progress'}</span>
+                </div>
+                <div
+                  className="import-progress-track"
+                  role="progressbar"
+                  aria-label="Import progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={importProgress.filesTotal === 0
+                    ? (importProgress.phase === 'completed' ? 100 : 0)
+                    : Math.min(100, Math.round((importProgress.filesCompleted / importProgress.filesTotal) * 100))}
+                >
+                  <div
+                    className="import-progress-fill"
+                    style={{
+                      width: (importProgress.filesTotal === 0
+                        ? (importProgress.phase === 'completed' ? 100 : 0)
+                        : Math.min(100, Math.round((importProgress.filesCompleted / importProgress.filesTotal) * 100))) + '%'
+                    }}
+                  />
+                </div>
+                {importProgress.filesTotal === 0 && importProgress.phase === 'started' && (
+                  <p className="import-progress-note">No remaining files were found for this section.</p>
+                )}
+              </section>
+            )}
             <section className="import-coverage-panel">
               <div className="import-coverage-heading">
                 <div>

@@ -12,6 +12,8 @@ const desktopApi: DesktopApi = {
   listArchiveSnapshots: () => ipcRenderer.invoke(IPC_CHANNELS.listArchiveSnapshots),
   listImportIssuesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listImportIssuesForSelectedBackup),
   getImportCoverageForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.getImportCoverageForSelectedBackup),
+  pauseImport: () => ipcRenderer.invoke(IPC_CHANNELS.pauseImport),
+  resumeImport: () => ipcRenderer.invoke(IPC_CHANNELS.resumeImport),
   onImportProgress: (listener) => {
     const wrappedListener = (_event: unknown, value: unknown) => {
       if (typeof value !== 'object' || value === null) return;

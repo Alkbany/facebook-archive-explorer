@@ -21,7 +21,9 @@
 - [x] Report live per-file progress from all supported section importers over a narrow IPC event channel.
 - [x] Serialize import requests and prevent backup switching while an import is active.
 - [x] Recover interrupted section imports and Import All runs across all snapshots during application startup, with safe Diagnostics and an atomic SQLite savepoint.
-- [ ] Add durable checkpoints, user-controlled pause/resume, and full integrity reporting.
+- [x] Persist each source-file result atomically so completed files are durable checkpoints and interrupted files can be retried safely.
+- [x] Add user-controlled pause/resume at file boundaries without interrupting an active file transaction.
+- [x] Add archive integrity reporting for record-count mismatches, cross-snapshot records/media links, missing media sources, invalid media metadata, and unfinished import markers.
 - [x] Add ZIP selection and streaming ZIP entry discovery.
 - [x] Read HTML/JSON-sized entries from ZIP archives on demand without extraction.
 - [x] Stream ZIP media from the original archive with byte-range support, including deflated entries.
@@ -38,13 +40,15 @@
 - [x] Implement the sampled Comments activity-card parser/importer with separate activity, group, body, and raw-date fields.
 - [ ] Implement other activity-card sections.
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
-- [ ] Add parser fixtures for all remaining supported sections.
+- [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
+- [ ] Add schema-specific JSON importers and parser fixtures for the remaining sections.
 
 ## Milestone 3 — Media and remaining activity
 
 - [x] Index all discovered image, video, and audio files in one browsable media library, including unlinked media.
 - [x] Parse sampled album captions, photo dates, and comment authors/text/dates.
-- [ ] Additional photo/video metadata (dimensions, duration, and album membership).
+- [x] Read image dimensions from PNG, JPEG, GIF, and WebP headers using bounded 256 KiB prefix reads in batches of 50 when the media gallery opens; large image files are not loaded in full.
+- [ ] Video duration metadata and verified album-membership links.
 - [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
 
 ## Milestone 4 — Browsing and search
@@ -78,6 +82,7 @@
 ## Milestone 6 — Windows release
 
 - [x] Build and upload a Windows NSIS test-installer artifact from `main` after type-checking, unit tests, and packaging.
+- [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
 - [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup.

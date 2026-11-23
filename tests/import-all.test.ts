@@ -94,6 +94,102 @@ describe('Import all supported data', () => {
     expect(snapshot.status).toBe('partial');
   });
 
+  it('imports unknown JSON shapes as safe raw records and disables search for sensitive sections', async () => {
+    await mkdir(join(root, 'groups'), { recursive: true });
+    await mkdir(join(root, 'security_and_login_information'), { recursive: true });
+    await mkdir(join(root, 'future_section'), { recursive: true });
+    const groupsPath = 'groups/groups.json';
+    const securityPath = 'security_and_login_information/sessions.json';
+    const unknownPath = 'future_section/future.json';
+    const invalidPath = 'groups/malformed.json';
+    await writeFile(join(root, groupsPath), '\uFEFF' + JSON.stringify({
+      groups: [
+        { name: 'Chess Club', description: 'Weekly chess games', created_time: 'Unparsed Facebook date', metadata: { value: 'Open chess community' }, email: 'private@example.test', access_token: 'synthetic-secret' },
+        { name: 'Book Club', description: 'Monthly reading meetings' }
+      ],
+      exported_at: '2024-01-01'
+    }), 'utf8');
+    await writeFile(join(root, securityPath), JSON.stringify([
+      { name: 'Recent login', description: 'Synthetic session details', ip_address: '192.0.2.10' }
+    ]), 'utf8');
+    await writeFile(join(root, unknownPath), JSON.stringify({ message: 'Unreviewed section text' }), 'utf8');
+    await writeFile(join(root, invalidPath), '{ invalid json', 'utf8');
+
+    const now = new Date().toISOString();
+    for (const [relativePath, fileName, sectionKey] of [
+      [groupsPath, 'groups.json', 'groups'],
+      [securityPath, 'sessions.json', 'security_and_login_information'],
+      [unknownPath, 'future.json', 'future_section'],
+      [invalidPath, 'malformed.json', 'groups']
+    ]) {
+      database.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, file_size_bytes, status, discovered_at
+        ) VALUES (?, ?, ?, ?, 'json', ?, 'discovered', ?)
+      `).run(snapshotId, relativePath, fileName, sectionKey,
+        (await readFile(join(root, relativePath))).byteLength, now);
+    }
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.sections.json).toMatchObject({
+      filesAttempted: 4,
+      recordsImported: 5,
+      unsupportedFiles: 0,
+      failedFiles: 1
+    });
+
+    const records = database.prepare(`
+      SELECT section_key AS sectionKey, title, body_text AS body,
+        sensitivity, search_enabled AS searchEnabled, event_time_raw AS timestampRaw, payload_json AS payloadJson
+      FROM records WHERE record_type = 'json_item'
+      ORDER BY section_key, source_record_index
+    `).all() as Array<{
+      sectionKey: string; title: string | null; body: string | null;
+      sensitivity: string; searchEnabled: number; timestampRaw: string | null; payloadJson: string;
+    }>;
+    const groupRecords = records.filter((record) => record.sectionKey === 'groups');
+    expect(groupRecords).toHaveLength(3);
+    expect(groupRecords[0]).toMatchObject({
+      title: 'Chess Club',
+      body: 'Weekly chess games\nOpen chess community',
+      sensitivity: 'personal',
+      searchEnabled: 1,
+      timestampRaw: 'Unparsed Facebook date'
+    });
+    expect(groupRecords[0].body).not.toContain('private@example.test');
+    expect(groupRecords[0].body).not.toContain('synthetic-secret');
+    expect(JSON.parse(groupRecords[0].payloadJson)).toMatchObject({
+      source_key: 'groups[0]',
+      value: { name: 'Chess Club', description: 'Weekly chess games' }
+    });
+    const securityRecord = records.find((record) => record.sectionKey === 'security_and_login_information');
+    expect(securityRecord).toMatchObject({
+      title: 'Recent login',
+      body: 'Synthetic session details',
+      sensitivity: 'sensitive',
+      searchEnabled: 0
+    });
+
+    const unknownRecord = records.find((record) => record.sectionKey === 'future_section');
+    expect(unknownRecord).toMatchObject({
+      body: 'Unreviewed section text',
+      sensitivity: 'sensitive',
+      searchEnabled: 0
+    });
+
+    const statuses = database.prepare(`
+      SELECT relative_path AS relativePath, status
+      FROM source_files WHERE snapshot_id = ? AND detected_format = 'json'
+      ORDER BY relative_path
+    `).all(snapshotId) as Array<{ relativePath: string; status: string }>;
+    expect(statuses).toEqual([
+      { relativePath: 'future_section/future.json', status: 'completed' },
+      { relativePath: 'groups/groups.json', status: 'completed' },
+      { relativePath: 'groups/malformed.json', status: 'failed' },
+      { relativePath: 'security_and_login_information/sessions.json', status: 'completed' }
+    ]);
+  });
+
   it('imports referenced album detail pages, photo records, and local image links during Import All', async () => {
     const albumPath = 'photos_and_videos/album/0.html';
     const imagePath = 'photos_and_videos/sample_album/photo.jpg';

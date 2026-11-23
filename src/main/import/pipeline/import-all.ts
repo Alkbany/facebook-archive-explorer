@@ -8,6 +8,7 @@ import { importCommentsSection } from './comments-importer';
 import { importReactionsSection } from './reactions-importer';
 import { importPhotoAlbumsSection } from './photo-albums-importer';
 import { importPhotoAlbumDetailsSection } from './photo-album-details-importer';
+import { importJsonFilesSection } from './json-importer';
 import type { ImportProgressReporter } from './import-progress';
 
 /**
@@ -167,8 +168,9 @@ export async function importAllSupportedData(
     const comments = await importCommentsSection(database, snapshotId, archiveRoot, onProgress);
     const reactions = await importReactionsSection(database, snapshotId, archiveRoot, onProgress);
     const photosAndVideos = await importPhotosAndVideosSection(database, snapshotId, archiveRoot, onProgress);
+    const json = await importJsonFilesSection(database, snapshotId, archiveRoot, onProgress);
 
-    const sections = { friends, messages, posts, comments, reactions, photosAndVideos };
+    const sections = { friends, messages, posts, comments, reactions, photosAndVideos, json };
     const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {
       const mediaReferences = 'mediaReferences' in section ? section.mediaReferences : 0;
       return {

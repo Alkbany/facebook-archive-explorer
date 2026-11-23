@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parseReactionsExport } from '../parsers/reactions-parser';
@@ -47,6 +48,7 @@ export async function importReactionsSection(
   emitProgress('started');
 
   for (const file of files) {
+    await waitIfImportPaused();
     summary.filesAttempted += 1;
     const runId = randomUUID();
     const startedAt = new Date().toISOString();

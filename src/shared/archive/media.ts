@@ -12,4 +12,7 @@ export interface ArchiveMediaGalleryItem {
   title: string | null;
   body: string | null;
   timestampRaw: string | null;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
 }

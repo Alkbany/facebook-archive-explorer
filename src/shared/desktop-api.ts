@@ -61,6 +61,8 @@ export const IPC_CHANNELS = {
   listImportIssuesForSelectedBackup: 'archive:list-import-issues',
   getImportCoverageForSelectedBackup: 'archive:get-import-coverage',
   importProgress: 'archive:import-progress',
+  pauseImport: 'archive:pause-import',
+  resumeImport: 'archive:resume-import',
   openSavedSnapshot: 'archive:open-saved-snapshot',
   importFriendsForSelectedBackup: 'archive:import-friends',
   importAllSupportedDataForSelectedBackup: 'archive:import-all-supported-data',
@@ -96,6 +98,8 @@ export interface DesktopApi {
   listImportIssuesForSelectedBackup(): Promise<ImportIssueReport>;
   getImportCoverageForSelectedBackup(): Promise<ImportCoverageReport>;
   onImportProgress(listener: (progress: ImportProgressEvent) => void): () => void;
+  pauseImport(): Promise<boolean>;
+  resumeImport(): Promise<boolean>;
   openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionView>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   listFriendsDirectoryForSelectedBackup(filter: FriendDirectoryFilter, query: string, page: number): Promise<FriendDirectoryView>;

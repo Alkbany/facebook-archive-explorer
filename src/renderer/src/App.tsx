@@ -33,7 +33,7 @@ import type {
   ArchiveComparisonExportFormat
 } from '../../shared/archive/comparison';
 
-const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
+const SECTION_TITLES = new Map([...ARCHIVE_SECTIONS.map((section) => [section.key, section.title] as const), ['json', 'Structured JSON'] as const]);
 
 const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, string> = {
   discovered: 'Not processed',
@@ -84,6 +84,7 @@ function App() {
   const [archiveFilePage, setArchiveFilePage] = useState(1);
   const [isLoadingArchiveFiles, setIsLoadingArchiveFiles] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgressEvent | null>(null);
+  const [isImportPaused, setIsImportPaused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
@@ -152,6 +153,10 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions || isImportingPhotos;
+
+  useEffect(() => {
+    if (!isAnyImporting) setIsImportPaused(false);
+  }, [isAnyImporting]);
 
   useEffect(() => {
     let cancelled = false;
@@ -674,6 +679,17 @@ function App() {
     }
   }
 
+  async function toggleImportPause() {
+    try {
+      const changed = isImportPaused
+        ? await window.desktopApi.resumeImport()
+        : await window.desktopApi.pauseImport();
+      if (changed) setIsImportPaused(!isImportPaused);
+    } catch {
+      setError('The import pause request could not be applied. The current file remains safe.');
+    }
+  }
+
   async function importAllSupportedData() {
     setIsImportingAll(true);
     setImportAllSummary(null);
@@ -984,7 +1000,16 @@ function App() {
                       {importProgress.failedFiles.toLocaleString()} failed
                     </span>
                   </div>
-                  <span className="import-progress-phase">{importProgress.phase === 'completed' ? 'Complete' : 'In progress'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="import-progress-phase">
+                      {importProgress.phase === 'completed' ? 'Complete' : isImportPaused ? 'Pause requested' : 'In progress'}
+                    </span>
+                    {isAnyImporting && (
+                      <button className="secondary-button" onClick={() => void toggleImportPause()}>
+                        {isImportPaused ? 'Resume import' : 'Pause import'}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div
                   className="import-progress-track"
@@ -1005,6 +1030,9 @@ function App() {
                     }}
                   />
                 </div>
+                {isImportPaused && isAnyImporting && (
+                  <p className="import-progress-note">Pause requested. The current file will finish safely before the import pauses.</p>
+                )}
                 {importProgress.filesTotal === 0 && importProgress.phase === 'started' && (
                   <p className="import-progress-note">No remaining files were found for this section.</p>
                 )}
@@ -1035,16 +1063,33 @@ function App() {
                     <div><strong>{importCoverage.totals.failedFiles.toLocaleString()}</strong><span>Failed</span></div>
                     <div><strong>{importCoverage.totals.unprocessedFiles.toLocaleString()}</strong><span>Not processed</span></div>
                   </div>
+                  <div className="import-coverage-stats import-integrity-stats" aria-label="Import integrity checks">
+                    <div><strong>{importCoverage.integrity.sourceRecordCountMismatches.toLocaleString()}</strong><span>Record count mismatches</span></div>
+                    <div><strong>{importCoverage.integrity.recordsFromAnotherSnapshot.toLocaleString()}</strong><span>Cross-snapshot records</span></div>
+                    <div><strong>{importCoverage.integrity.mediaAssetsWithoutSourceFile.toLocaleString()}</strong><span>Unlinked media assets</span></div>
+                    <div><strong>{importCoverage.integrity.mediaAssetsFromAnotherSnapshot.toLocaleString()}</strong><span>Cross-snapshot media</span></div>
+                    <div><strong>{importCoverage.integrity.mediaLinksAcrossSnapshots.toLocaleString()}</strong><span>Cross-snapshot media links</span></div>
+                    <div><strong>{importCoverage.integrity.invalidMediaMetadata.toLocaleString()}</strong><span>Invalid media metadata</span></div>
+                    <div><strong>{importCoverage.integrity.runningImportRuns.toLocaleString()}</strong><span>Unfinished import runs</span></div>
+                    <div><strong>{importCoverage.integrity.processingSourceFiles.toLocaleString()}</strong><span>Files left processing</span></div>
+                  </div>
+                  <p className="import-coverage-note">
+                    Integrity checks look for inconsistent record counts, cross-backup links, missing media sources, invalid metadata, and interrupted work. A zero count means no mismatch was detected.
+                  </p>
                   <div className="import-coverage-list">
                     {importCoverage.sections.map((section) => {
                       const capability = getArchiveImportCapability(section.sectionKey);
-                      const capabilityLabel = capability === 'known-html'
-                        ? 'Known HTML exports'
-                        : capability === 'sampled-html'
-                          ? 'Sample-based HTML parser'
-                          : capability === 'media-index-only'
-                            ? 'Media inventory only'
-                            : 'No importer yet';
+                      const capabilityLabel = section.jsonFiles > 0 && section.htmlFiles > 0
+                        ? (capability === 'not-implemented' ? 'Generic JSON · no HTML parser' : 'Generic JSON + reviewed HTML')
+                        : section.jsonFiles > 0
+                          ? 'Generic JSON importer'
+                          : capability === 'known-html'
+                            ? 'Known HTML exports'
+                            : capability === 'sampled-html'
+                              ? 'Sample-based HTML parser'
+                              : capability === 'media-index-only'
+                                ? 'Media inventory only'
+                                : 'No importer yet';
                       return (
                       <article className="import-coverage-row" key={section.sectionKey}>
                         <div className="import-coverage-section">
@@ -1749,6 +1794,8 @@ function App() {
                       <div className="media-gallery-copy">
                         <strong>{media.relativePath.split('/').pop()}</strong>
                         <span>{SECTION_TITLES.get(media.sectionKey) ?? media.sectionKey} · {media.mediaKind}</span>
+                        {media.width !== null && media.height !== null && <small>{media.width.toLocaleString()} × {media.height.toLocaleString()} px</small>}
+                        {media.durationMs !== null && <small>{(media.durationMs / 1000).toFixed(1)} sec</small>}
                         <small>{media.title ?? 'Not linked to an imported record'}{media.recordType ? ' · ' + media.recordType.replaceAll('_', ' ') : ''}</small>
                         <small>{media.sourcePath}</small>
                         {media.body && <small className="media-gallery-caption">{media.body}</small>}

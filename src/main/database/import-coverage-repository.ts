@@ -38,8 +38,43 @@ export function getImportCoverage(database: DatabaseSync, snapshotId: string): I
     ORDER BY totalFiles DESC, section_key COLLATE NOCASE
   `).all(snapshotId) as unknown as ImportCoverageReport['sections'];
 
+  const integrityRow = database.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM source_files AS files
+        WHERE files.snapshot_id = ? AND files.record_count <> (
+          SELECT COUNT(*) FROM records WHERE source_file_id = files.id
+        )) AS sourceRecordCountMismatches,
+      (SELECT COUNT(*) FROM records AS records
+        INNER JOIN source_files AS files ON files.id = records.source_file_id
+        WHERE records.snapshot_id = ? AND files.snapshot_id <> records.snapshot_id) AS recordsFromAnotherSnapshot,
+      (SELECT COUNT(*) FROM media_assets AS assets
+        LEFT JOIN source_files AS files ON files.id = assets.source_file_id
+        WHERE assets.snapshot_id = ? AND (assets.source_file_id IS NULL OR files.id IS NULL)) AS mediaAssetsWithoutSourceFile,
+      (SELECT COUNT(*) FROM media_assets AS assets
+        INNER JOIN source_files AS files ON files.id = assets.source_file_id
+        WHERE assets.snapshot_id = ? AND files.snapshot_id <> assets.snapshot_id) AS mediaAssetsFromAnotherSnapshot,
+      (SELECT COUNT(*) FROM record_media AS links
+        INNER JOIN records ON records.id = links.record_id
+        INNER JOIN media_assets AS assets ON assets.id = links.media_asset_id
+        WHERE records.snapshot_id = ? AND assets.snapshot_id <> records.snapshot_id) AS mediaLinksAcrossSnapshots,
+      (SELECT COUNT(*) FROM media_assets AS assets
+        WHERE assets.snapshot_id = ? AND (
+          (assets.width IS NOT NULL AND assets.width < 1) OR
+          (assets.height IS NOT NULL AND assets.height < 1) OR
+          (assets.duration_ms IS NOT NULL AND assets.duration_ms < 0)
+        )) AS invalidMediaMetadata,
+      (SELECT COUNT(*) FROM import_runs
+        WHERE snapshot_id = ? AND status = 'running') AS runningImportRuns,
+      (SELECT COUNT(*) FROM source_files
+        WHERE snapshot_id = ? AND status = 'processing') AS processingSourceFiles
+  `).get(
+    snapshotId, snapshotId, snapshotId, snapshotId,
+    snapshotId, snapshotId, snapshotId, snapshotId
+  ) as unknown as ImportCoverageReport['integrity'];
+
   const normalize = (value: number | null): number => value ?? 0;
   return {
+    integrity: integrityRow,
     totals: {
       totalFiles: normalize(totals.totalFiles),
       contentFiles: normalize(totals.contentFiles),

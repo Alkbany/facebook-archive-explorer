@@ -28,13 +28,13 @@ import { listFriendDirectory } from '../database/friends-repository';
 import { listArchiveFiles } from '../database/archive-files-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
-import { indexDiscoveredMediaAssets } from '../database/media-indexer';
+import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
 import { getImportCoverage } from '../database/import-coverage-repository';
-import { assertNoImportInProgress, runExclusiveImport } from './import-operation-lock';
+import { assertNoImportInProgress, pauseActiveImport, resumeActiveImport, runExclusiveImport } from './import-operation-lock';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -116,6 +116,9 @@ export function registerIpcHandlers(
     app.exit(0);
     return { status: 'restarting' as const };
   });
+
+  ipcMain.handle(IPC_CHANNELS.pauseImport, () => pauseActiveImport());
+  ipcMain.handle(IPC_CHANNELS.resumeImport, () => resumeActiveImport());
 
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
     appName: app.getName(),
@@ -308,9 +311,10 @@ export function registerIpcHandlers(
     return listMessageMediaGallery(database, selectedSnapshotId);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async () => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing media.');
     indexDiscoveredMediaAssets(database, selectedSnapshotId);
+    if (selectedBackupDirectory) await indexDiscoveredImageDimensions(database, selectedSnapshotId, selectedBackupDirectory);
     return listArchiveMediaGallery(database, selectedSnapshotId);
   });
 

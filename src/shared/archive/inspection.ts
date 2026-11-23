@@ -186,7 +186,7 @@ export interface ImportIssueReport {
 
 
 
-export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos';
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'json';
 
 export interface ImportProgressEvent {
   sectionKey: ImportProgressSectionKey;
@@ -214,7 +214,19 @@ export interface ImportCoverageSectionSummary {
   skippedFiles: number;
 }
 
+export interface ImportIntegritySummary {
+  sourceRecordCountMismatches: number;
+  recordsFromAnotherSnapshot: number;
+  mediaAssetsWithoutSourceFile: number;
+  mediaAssetsFromAnotherSnapshot: number;
+  mediaLinksAcrossSnapshots: number;
+  invalidMediaMetadata: number;
+  runningImportRuns: number;
+  processingSourceFiles: number;
+}
+
 export interface ImportCoverageReport {
+  integrity: ImportIntegritySummary;
   totals: {
     totalFiles: number;
     contentFiles: number;
@@ -229,6 +241,13 @@ export interface ImportCoverageReport {
   sections: ImportCoverageSectionSummary[];
 }
 
+export interface JsonImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
 export interface ImportAllSupportedDataResult {
   sections: {
     friends: FriendsImportSectionResult;
@@ -237,6 +256,7 @@ export interface ImportAllSupportedDataResult {
     comments: CommentsImportSectionResult;
     reactions: ReactionsImportSectionResult;
     photosAndVideos: PhotoAlbumsImportSectionResult;
+    json: JsonImportSectionResult;
   };
   totals: {
     filesAttempted: number;

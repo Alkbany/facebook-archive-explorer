@@ -185,7 +185,8 @@ export function listArchiveMediaGallery(database: DatabaseSync, snapshotId: stri
       COALESCE(records.section_key, media_source.section_key, 'other') AS sectionKey,
       records.record_type AS recordType, records.source_record_index AS sourceCardIndex,
       records.title AS title, records.body_text AS body,
-      records.event_time_raw AS timestampRaw
+      records.event_time_raw AS timestampRaw,
+      assets.width AS width, assets.height AS height, assets.duration_ms AS durationMs
     FROM media_assets AS assets
     LEFT JOIN source_files AS media_source ON media_source.id = assets.source_file_id
       AND media_source.snapshot_id = assets.snapshot_id

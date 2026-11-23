@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parsePhotoAlbumsIndex } from '../parsers/photo-albums-parser';
+import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 
 export interface PhotoAlbumsImportSectionResult {
@@ -58,6 +59,7 @@ export async function importPhotoAlbumsSection(
   emitProgress('started');
 
   for (const file of files) {
+    await waitIfImportPaused();
     summary.filesAttempted += 1;
     const runId = randomUUID();
     const startedAt = new Date().toISOString();

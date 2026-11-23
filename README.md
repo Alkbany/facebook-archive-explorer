@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
+> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, a schema-agnostic JSON fallback importer, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
 
 ## Product decisions
 
@@ -76,18 +76,25 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 - In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking. This works for directory backups and ZIP backups without extraction; deflated ZIP media is streamed through decompression to satisfy byte ranges.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
-- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, Likes & Reactions, and Photos & Videos album summaries, with section filtering and JSON export of search results.
+- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, Likes & Reactions, Photos & Videos album summaries, and eligible generic JSON records from non-sensitive sections, with section filtering and JSON export of search results.
 - Snapshot comparison for two backups of the same account, matching section, source-relative path, and original card index and reporting aggregate changes.
 - Verified local application-database export and restore, using SQLite's online backup API, integrity/foreign-key/schema checks, a pre-restore recovery copy, and interrupted-swap recovery. The database backup contains indexes and imported records, not the original Facebook media.
 
 ## Not implemented yet
 
-- Photo dimensions, additional per-photo metadata, Groups, events, Marketplace, saved items, and other export sections remain unsupported.
-- JSON-backed section import, resumable large-scale import orchestration with durable checkpoints, and full integrity reporting.
-- Advanced raw-date filters, detailed record-level comparison views, and export formats beyond JSON.
-- Optional local embeddings and local LLM integration.
+The following are genuine remaining product tasks; filename discovery alone is not treated as parser support:
 
-Follow [the roadmap](docs/ROADMAP.md) for implementation status.
+- Durable mid-file import checkpoints, user-controlled pause/resume, and full import-integrity reconciliation. Completed files are already skipped and failed/unsupported files can be retried between runs.
+- A schema-agnostic JSON fallback that stores root-level entries with original payloads and conservative text extraction. This is not a substitute for verified section-specific JSON parsers; unknown sections remain excluded from full-text search.
+- Additional activity-card importers beyond the currently supported Friends, Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos album pages.
+- Additional photo/video metadata such as image dimensions and video duration where it can be read safely and consistently.
+- Groups, events, Marketplace, saved items, and remaining export sections. These need representative export samples and parser fixtures before implementation.
+- Evidence-backed raw Facebook date parsing and date-range filters; raw date strings are preserved today.
+- Optional local embeddings and local LLM integration, disabled by default.
+- Large-archive performance benchmarks, complete real-backup end-to-end validation, clean-device Windows install/upgrade/uninstall testing, and final release privacy/security review.
+- A trusted Windows signing identity and Smart App Control validation. Test installers may remain unsigned until signing is configured.
+
+The detailed comparison browser and CSV/JSON comparison export are already implemented. The Archive Files browser, Friends directory, Photos & Videos import action, and functional navigation are also implemented; see [the roadmap](docs/ROADMAP.md) for the authoritative checklist.
 
 ## Documentation
 

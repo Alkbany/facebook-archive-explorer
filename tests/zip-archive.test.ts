@@ -5,7 +5,7 @@ import { deflateRawSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { inspectArchiveZip } from '../src/main/import/discovery/zip-inventory';
 import { getZipEntrySize, openZipEntryReadStream, readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
-import { readArchiveBinaryFile, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
+import { readArchiveBinaryFile, readArchiveBinaryPrefix, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
 
 interface ZipFixtureEntry { name: string; content: Buffer; externalAttributes?: number; compressionMethod?: 0 | 8; }
 
@@ -101,6 +101,26 @@ describe('ZIP archive reader and inventory', () => {
       for await (const chunk of storedRange.stream) storedChunks.push(Buffer.from(chunk));
       storedRange.close();
       expect(Buffer.concat(storedChunks)).toEqual(Buffer.from('ored-me'));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('streams only the requested image header prefix from compressed and stored ZIP entries', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'archive-zip-prefix-'));
+    try {
+      const zipPath = join(root, 'prefix.zip');
+      const compressedPayload = Buffer.from('header-compressed-payload-that-should-not-be-loaded-in-full');
+      const storedPayload = Buffer.from('header-stored-payload-that-should-not-be-loaded-in-full');
+      await writeFile(zipPath, makeDeflatedZip([
+        { name: 'photos/compressed.jpg', content: compressedPayload },
+        { name: 'photos/stored.png', content: storedPayload, compressionMethod: 0 }
+      ]));
+
+      await expect(readArchiveBinaryPrefix(zipPath, 'photos/compressed.jpg', 6))
+        .resolves.toEqual(compressedPayload.subarray(0, 6));
+      await expect(readArchiveBinaryPrefix(zipPath, 'photos/stored.png', 7))
+        .resolves.toEqual(storedPayload.subarray(0, 7));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

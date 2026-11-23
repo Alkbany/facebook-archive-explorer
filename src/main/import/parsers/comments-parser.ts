@@ -30,7 +30,7 @@ function cleanText(value: string): string {
   return value.replace(/\u00a0/gu, ' ').trim();
 }
 
-function extractGroup($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>): string | null {
+function extractGroup(content: cheerio.Cheerio<Element>): string | null {
   const groupNode = content.find(GROUP_META_SELECTOR).first();
   if (groupNode.length === 0) return null;
   const copy = groupNode.clone();
@@ -76,7 +76,7 @@ export function parseCommentsExport(html: string, sourceFile: string): CommentsP
     const content = card.find(CONTENT_SELECTOR).first();
     const activityRaw = cleanText(card.find(ACTIVITY_SELECTOR).first().text()) || null;
     const bodyRaw = extractBody($, content);
-    const groupRaw = extractGroup($, content);
+    const groupRaw = extractGroup(content);
     const dateNode = card.find(DATE_SELECTOR).first();
     const dateRaw = cleanText(dateNode.text()) || null;
     const permalinkRaw = dateNode.find('a[href]').first().attr('href') ?? null;

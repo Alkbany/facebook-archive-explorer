@@ -10,7 +10,8 @@ import type {
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
   ReactionRecordSummary,
-  ImportAllSupportedDataResult
+  ImportAllSupportedDataResult,
+  ImportIssueReport
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -26,6 +27,8 @@ function App() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [inspection, setInspection] = useState<ArchiveInspectionView | null>(null);
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
+  const [importIssueReport, setImportIssueReport] = useState<ImportIssueReport | null>(null);
+  const [isRefreshingImportIssues, setIsRefreshingImportIssues] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
@@ -83,6 +86,7 @@ function App() {
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
+    setImportIssueReport(null);
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
@@ -113,8 +117,14 @@ function App() {
       setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
-      setMediaGallery(await window.desktopApi.listMediaForSelectedBackup());
-      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+      const [media, issues, backups] = await Promise.all([
+        window.desktopApi.listMediaForSelectedBackup(),
+        window.desktopApi.listImportIssuesForSelectedBackup(),
+        window.desktopApi.listArchiveSnapshots()
+      ]);
+      setMediaGallery(media);
+      setImportIssueReport(issues);
+      setSavedBackups(backups);
     } catch {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
     } finally {
@@ -127,6 +137,7 @@ function App() {
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
+    setImportIssueReport(null);
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
@@ -159,18 +170,20 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
-        window.desktopApi.listMediaForSelectedBackup()
+        window.desktopApi.listMediaForSelectedBackup(),
+        window.desktopApi.listImportIssuesForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
       setReactionRecords(reactions);
       setConversations(foundConversations);
       setMediaGallery(media);
+      setImportIssueReport(issues);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setInspection(null);
@@ -185,6 +198,17 @@ function App() {
       setMediaGallery(await window.desktopApi.listMediaForSelectedBackup());
     } catch {
       setError('The local media index could not be refreshed.');
+    }
+  }
+
+  async function refreshImportIssues() {
+    setIsRefreshingImportIssues(true);
+    try {
+      setImportIssueReport(await window.desktopApi.listImportIssuesForSelectedBackup());
+    } catch {
+      setError('The import diagnostics report could not be refreshed.');
+    } finally {
+      setIsRefreshingImportIssues(false);
     }
   }
 
@@ -278,6 +302,7 @@ function App() {
       setPostsImport(result);
       setPostRecords(await window.desktopApi.listPostsForSelectedBackup());
       await refreshMediaGallery();
+      await refreshImportIssues();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Posts data could not be imported. Check the local import report.');
@@ -309,6 +334,7 @@ function App() {
     try {
       const result = await window.desktopApi.importFriendsForSelectedBackup();
       setFriendsImport(result);
+      await refreshImportIssues();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Friends data could not be imported. Check the local import report.');
@@ -347,6 +373,7 @@ function App() {
       }
 
       await refreshMediaGallery();
+      await refreshImportIssues();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
       setImportAllSummary(result.totals);
     } catch {
@@ -420,6 +447,7 @@ function App() {
       const foundConversations = await window.desktopApi.listMessagesForSelectedBackup();
       setConversations(foundConversations);
       await refreshMediaGallery();
+      await refreshImportIssues();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
@@ -1033,6 +1061,58 @@ function App() {
               {isComparingBackups ? 'Comparing…' : 'Compare backups'}
             </button>
           </div>
+          {inspection && (
+            <section className="import-issues-panel">
+              <div className="import-issues-heading">
+                <div>
+                  <p className="eyebrow">IMPORT DIAGNOSTICS</p>
+                  <h3>Import report</h3>
+                  <p>Files or items that need attention. Personal message text and raw archive contents are not shown here.</p>
+                </div>
+                <button
+                  className="secondary-button"
+                  onClick={() => void refreshImportIssues()}
+                  disabled={isRefreshingImportIssues || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                >
+                  {isRefreshingImportIssues ? 'Refreshing…' : 'Refresh report'}
+                </button>
+              </div>
+              <div className="import-issue-counts">
+                <span className="import-issue-count-error"><strong>{importIssueReport?.counts.error ?? 0}</strong> errors</span>
+                <span className="import-issue-count-warning"><strong>{importIssueReport?.counts.warning ?? 0}</strong> warnings</span>
+                <span className="import-issue-count-info"><strong>{importIssueReport?.counts.info ?? 0}</strong> notices</span>
+              </div>
+              {!importIssueReport || importIssueReport.items.length === 0 ? (
+                <p className="import-issues-empty">
+                  {importIssueReport ? 'No import issues have been recorded for this backup.' : 'The import report has not been loaded yet.'}
+                </p>
+              ) : (
+                <>
+                  <div className="import-issues-list">
+                    {importIssueReport.items.map((issue) => (
+                      <article className="import-issue-item" key={issue.id}>
+                        <div className="import-issue-topline">
+                          <span className={'import-issue-severity import-issue-severity-' + issue.severity}>{issue.severity}</span>
+                          <code>{issue.issueCode}</code>
+                          <time>{new Date(issue.createdAt).toLocaleString()}</time>
+                        </div>
+                        <p>{issue.safeMessage}</p>
+                        <div className="import-issue-source">
+                          <span>{issue.sourcePath ?? issue.sourceFileName ?? 'Archive-level issue'}</span>
+                          {issue.sourceCardIndex !== null && <small>Item index {issue.sourceCardIndex}</small>}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  {importIssueReport.hasMore && (
+                    <p className="import-issues-truncated">
+                      Showing the latest {importIssueReport.items.length.toLocaleString()} of {importIssueReport.total.toLocaleString()} diagnostics.
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+          )}
           {comparisonReport && (
             <div className="comparison-report">
               <p><strong>{comparisonReport.baseline.backupName}</strong> → <strong>{comparisonReport.compared.backupName}</strong></p>

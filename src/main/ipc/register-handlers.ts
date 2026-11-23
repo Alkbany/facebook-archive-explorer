@@ -12,6 +12,7 @@ import {
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
+import { importMessagesSection } from '../import/pipeline/messages-importer';
 
 let selectedBackupDirectory: string | null = null;
 let selectedAccountId: string | null = null;
@@ -90,6 +91,13 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       failDiscoverySession(database, session);
       throw error;
     }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importMessagesForSelectedBackup, async () => {
+    if (!selectedBackupDirectory || !selectedSnapshotId) {
+      throw new Error('Inspect an archive folder before importing Messages data.');
+    }
+    return importMessagesSection(database, selectedSnapshotId, selectedBackupDirectory);
   });
 
   ipcMain.handle(IPC_CHANNELS.importFriendsForSelectedBackup, async () => {

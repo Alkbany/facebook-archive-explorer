@@ -6,7 +6,7 @@ const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, s
 
 function App() {
   const [version, setVersion] = useState('0.1.0');
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [accountName, setAccountName] = useState('My Facebook account');\n  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,10 +23,10 @@ function App() {
     setInspection(null);
 
     try {
-      const selection = await window.desktopApi.selectBackupDirectory();
+      const selection = await window.desktopApi.selectBackupDirectory(accountName);
       if (selection.status === 'cancelled') return;
 
-      setSelectedFolder(selection.folderName);
+      setSelectedFolder(selection.folderName);\n      setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
     } catch {
@@ -83,7 +83,7 @@ function App() {
               Choose the Facebook export folder on your computer. The first pass only
               inventories filenames and file types; it does not open archive contents.
             </p>
-            <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder}>
+            <label className="account-field">\n              <span>Facebook account label</span>\n              <input\n                value={accountName}\n                onChange={(event) => setAccountName(event.target.value)}\n                maxLength={100}\n                placeholder="My Facebook account"\n                disabled={isChoosingFolder}\n              />\n            </label>\n            <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder || !accountName.trim()}>
               <span className="button-icon">＋</span>
               {isChoosingFolder ? 'Inspecting folder…' : 'Choose backup folder'}
             </button>
@@ -92,8 +92,8 @@ function App() {
               <div className="selected-folder">
                 <span className="selected-folder-icon">✓</span>
                 <div>
-                  <strong>Folder selected: {selectedFolder}</strong>
-                  <span>Only file and folder names were inspected.</span>
+                  <strong>{accountName} · {selectedFolder}</strong>
+                  <span>Discovery metadata was saved in the local database.</span>
                 </div>
               </div>
             )}
@@ -123,7 +123,7 @@ function App() {
             <div className="inspection-heading">
               <div>
                 <p className="eyebrow">FIRST LOOK</p>
-                <h2>Folder inventory</h2>
+                <h2>Folder inventory</h2>\n                <span className="snapshot-id">Saved snapshot: {inspection.snapshotId.slice(0, 8)}</span>
                 <p>Names and file types only. No HTML, JSON, messages, or media contents were opened.</p>
               </div>
               <span className="inspection-date">

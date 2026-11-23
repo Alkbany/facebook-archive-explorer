@@ -57,6 +57,8 @@ CREATE INDEX IF NOT EXISTS idx_source_files_snapshot_status
 CREATE TABLE IF NOT EXISTS import_runs (
   id TEXT PRIMARY KEY,
   snapshot_id TEXT NOT NULL,
+  run_type TEXT NOT NULL DEFAULT 'import'
+    CHECK (run_type IN ('discovery', 'import')),
   status TEXT NOT NULL DEFAULT 'running'
     CHECK (status IN ('running', 'paused', 'completed', 'failed', 'cancelled')),
   started_at TEXT NOT NULL,

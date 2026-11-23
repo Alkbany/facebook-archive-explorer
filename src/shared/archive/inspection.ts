@@ -62,6 +62,25 @@ export interface PostsImportSectionResult {
   failedFiles: number;
 }
 
+export interface PhotoAlbumsImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  mediaReferences: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
+export interface PhotoAlbumRecordSummary {
+  id: number;
+  sourcePath: string;
+  sourceCardIndex: number;
+  albumTitle: string;
+  photoCount: number | null;
+  albumPath: string;
+  coverPath: string | null;
+  dateRaw: string | null;
+}
+
 export interface PostRecordSummary {
   id: number;
   sourcePath: string;
@@ -135,7 +154,7 @@ export interface ImportIssueReport {
 
 
 
-export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions';
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos';
 
 export interface ImportProgressEvent {
   sectionKey: ImportProgressSectionKey;
@@ -185,6 +204,7 @@ export interface ImportAllSupportedDataResult {
     posts: PostsImportSectionResult;
     comments: CommentsImportSectionResult;
     reactions: ReactionsImportSectionResult;
+    photosAndVideos: PhotoAlbumsImportSectionResult;
   };
   totals: {
     filesAttempted: number;

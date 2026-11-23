@@ -3,7 +3,8 @@ import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
-  MessagesImportSectionResult
+  MessagesImportSectionResult,
+  ReactionsImportSectionResult
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from '../../shared/archive/messages';
@@ -18,6 +19,8 @@ function App() {
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
+  const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
+  const [isImportingReactions, setIsImportingReactions] = useState(false);
   const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
@@ -47,6 +50,7 @@ function App() {
     setInspection(null);
     setFriendsImport(null);
     setMessagesImport(null);
+    setReactionsImport(null);
     setConversations([]);
     setConversationMessages([]);
     setMediaGallery([]);
@@ -121,6 +125,20 @@ function App() {
       setActiveMedia((current) => current?.id === media.id ? { ...current, dataUrl, loading: false } : current);
     } catch {
       setActiveMedia((current) => current?.id === media.id ? { ...current, loading: false, error: 'Preview unavailable. The file may be missing or unsupported.' } : current);
+    }
+  }
+
+  async function importReactions() {
+    setIsImportingReactions(true);
+    setError(null);
+    try {
+      const result = await window.desktopApi.importReactionsForSelectedBackup();
+      setReactionsImport(result);
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Likes & Reactions data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingReactions(false);
     }
   }
 
@@ -301,6 +319,21 @@ function App() {
                 {isImportingMessages ? 'Importing Messages…' : 'Import Messages'}
               </button>
             </div>
+            <div className="friends-import-action">
+              <div>
+                <strong>Likes &amp; Reactions</strong>
+                <span>Import observed reaction cards while keeping their original descriptions and raw dates.</span>
+              </div>
+              <button className="secondary-button" onClick={importReactions} disabled={isImportingReactions}>
+                {isImportingReactions ? 'Importing reactions…' : 'Import Likes & Reactions'}
+              </button>
+            </div>
+            {reactionsImport && (
+              <p className="friends-import-result">
+                {reactionsImport.filesAttempted} files checked · {reactionsImport.recordsImported} reactions imported ·
+                {reactionsImport.unsupportedFiles} unsupported · {reactionsImport.failedFiles} failed
+              </p>
+            )}
             {messagesImport && (
               <p className="friends-import-result">
                 {messagesImport.filesAttempted} conversations checked · {messagesImport.recordsImported} messages imported ·

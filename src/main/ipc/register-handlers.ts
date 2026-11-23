@@ -67,12 +67,13 @@ export function registerIpcHandlers(
     }
 
     const selectedPath = selection.filePaths[0];
-    await validateDatabaseBackup(selectedPath, supportedSchemaVersion);
+    const backupInfo = await validateDatabaseBackup(selectedPath, supportedSchemaVersion);
+    const sizeMb = (backupInfo.sizeBytes / (1024 * 1024)).toFixed(1);
     const confirmation = await dialog.showMessageBox({
       type: 'warning',
       title: 'Restore application database?',
       message: 'This will replace the current local archive library and restart the application.',
-      detail: 'The current database is preserved as a recovery copy. This backup contains archive indexes and imported records, not the original Facebook export folders, ZIP files, or media. Those original files must remain at their existing paths.',
+      detail: 'Selected backup: ' + backupInfo.accounts.toLocaleString() + ' accounts, ' + backupInfo.snapshots.toLocaleString() + ' archive snapshots, ' + backupInfo.records.toLocaleString() + ' imported records (' + sizeMb + ' MB).\n\nThe current database is preserved as a recovery copy. The selected file is an unencrypted SQLite database. It contains archive indexes and imported records, not the original Facebook export folders, ZIP files, or media. Those original files must remain at their existing paths.',
       buttons: ['Restore and restart', 'Cancel'],
       defaultId: 1,
       cancelId: 1,

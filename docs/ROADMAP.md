@@ -51,6 +51,7 @@
 
 - [x] Initial conversation list, local filter, and source-order message timeline.
 - [x] Paginated Friends directory with category filters, name/date/path search, and functional workspace navigation.
+- [x] Read-only Archive Files browser with status/section filters, path and error-code search, and pagination.
 - [x] Standalone Photos & Videos import action reusing the album-index and referenced album-detail import pipeline.
 - [x] In-app preview for supported image and sticker attachments (4 MB per-image limit and eight automatic previews per conversation).
 - [x] On-demand in-app image/audio/video viewer with native playback controls (24 MB audio/video preview limit).

@@ -70,13 +70,15 @@ Startup recovery records an `IMPORT_INTERRUPTED` error for each recovered source
 
 ## Import coverage
 
-The per-snapshot coverage summary groups discovered files by section and format. It labels importer capability separately from file state: Friends has five known HTML exports; Messages, Posts, Comments, Likes & Reactions, and the root Photos & Videos album index use sample-based HTML parsers; other sections have no importer yet. Album detail HTML files remain unprocessed until their structure is verified. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
+The per-snapshot coverage summary groups discovered files by section and format. It labels importer capability separately from file state: Friends has five known HTML exports; Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos album index/detail HTML use sample-based parsers; other sections have no importer yet. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
 
-## Photos & Videos album index
+## Photos & Videos albums and photo pages
 
 The sampled root-level Photos & Videos HTML index is parsed into one local record per album. The parser keeps album names, numeric photo counts when the heading explicitly contains one, the album-detail relative path, the preview-image relative path, the original heading, and the date text exactly as exported. Arabic-Indic and Eastern Arabic-Indic numerals are normalized only for the numeric count; the raw count text is retained.
 
-The importer links a preview image only when the path is relative, remains inside the Photos & Videos section, and matches an image source-file row discovered in the selected backup. It does not copy media bytes or fetch URLs. Album detail pages (for example, `photos_and_videos/album/0.html`) are left untouched and remain eligible for a later dedicated parser once their structure has been reviewed.
+For each album path referenced by that index, the importer parses the sampled album-detail page (for example, `photos_and_videos/album/0.html`). Each photo card retains its local image path, caption, raw photo date, and source-card index. Comment entries are stored with their author, text, and raw date in original order. Dates are not converted or assigned a timezone.
+
+An image or album preview is linked only when its path is relative, remains inside the Photos & Videos section, and matches a discovered image source-file row in the selected backup. The importer does not copy media bytes or fetch URLs. The album browser displays captions and comments, and the original image opens through the bounded local preview path. Pages not referenced by a parsed album index are left untouched.
 
 ## Search and comparison
 
@@ -86,9 +88,8 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 
 - JSON-backed section parsing; ZIP inventory and on-demand reads are implemented for HTML and media sources.
 - Full resumable import orchestration across all sections and integrity reporting.
-- Photo album detail pages and per-photo records; the current parser only imports the root-level album index and its album summaries.
+- Photo dimensions, video duration, and other media metadata not present in the sampled HTML cards.
 - Groups, events, Marketplace, saved items, and other remaining export sections; these require their own verified samples.
-- Album/photo metadata enrichment (dimensions, duration, per-photo timestamps, and membership).
 - Advanced raw-date parsing and date filters.
 
 ## Import progress events
@@ -97,7 +98,7 @@ Each section importer emits a start event, a progress event after each attempted
 
 ## One-click import and resume behavior
 
-The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, Likes & Reactions, and the root Photos & Videos album index sequentially. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.
+The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, Likes & Reactions, the Photos & Videos album index, and only the album-detail pages referenced by parsed album entries. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.
 
 At the beginning of the next Import All run, files left in `processing` and their still-running import rows are marked as interrupted/failed. The eligible failed files are then retried. Durable mid-file checkpoints, user-controlled pause/resume, and complete integrity reconciliation remain planned. ZIP archives use the same flow because importer reads are archive-source agnostic.
 

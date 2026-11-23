@@ -23,7 +23,7 @@ const AUDIO_EXTENSIONS = new Set([
 export interface ArchiveInventoryOptions {
   snapshotId: string;
   accountId: string;
-  onFileFound?: (file: DiscoveredArchiveFile) => void;
+  onFilesFound?: (files: readonly DiscoveredArchiveFile[]) => void;
 }
 
 function sectionForPath(relativePath: string): string {
@@ -73,10 +73,16 @@ export async function inspectArchiveDirectory(
   const noDataSections = new Set<string>();
   let visitedEntries = 0;
   let batch: DiscoveredArchiveFile[] = [];
+  let callbackFailure: unknown = null;
 
   const flushBatch = () => {
     if (batch.length === 0) return;
-    options.onFileFound?.(batch as DiscoveredArchiveFile[] [number]);
+    try {
+      options.onFilesFound?.(batch);
+    } catch (error) {
+      callbackFailure = error;
+      throw error;
+    }
     batch = [];
   };
 
@@ -143,7 +149,8 @@ export async function inspectArchiveDirectory(
 
         if (batch.length >= BATCH_SIZE) flushBatch();
       }
-    } catch {
+    } catch (error) {
+      if (callbackFailure !== null) throw callbackFailure;
       report.unreadableDirectories += 1;
     }
   }

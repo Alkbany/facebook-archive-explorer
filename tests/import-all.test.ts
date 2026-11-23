@@ -99,9 +99,9 @@ describe('Import all supported data', () => {
     expect(recoveredFiles.map((file) => file.safe_error_code)).toEqual([
       'COMMENT_CARDS_NOT_FOUND',
       'FRIENDS_CARDS_NOT_FOUND',
+      'REACTION_CARDS_NOT_FOUND',
       'MESSAGE_CARDS_NOT_FOUND',
-      'POST_CARDS_NOT_FOUND',
-      'REACTION_CARDS_NOT_FOUND'
+      'POST_CARDS_NOT_FOUND'
     ]);
     const interruptedRun = database.prepare("SELECT status FROM import_runs WHERE id = 'interrupted-run'")
       .get() as { status: string };

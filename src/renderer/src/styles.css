@@ -320,3 +320,25 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .conversation-browser { grid-template-columns: minmax(170px, 38%) minmax(0, 1fr); }
   .conversation-detail-heading { align-items: flex-start; flex-direction: column; }
 }
+
+
+.message-attachment {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(100%, 360px);
+  margin: 5px 8px 5px 0;
+  color: var(--muted, #667085);
+  font-size: 12px;
+}
+.message-attachment img {
+  display: block;
+  max-width: 100%;
+  max-height: 280px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 130, 150, 0.2);
+  background: #f4f6fa;
+}

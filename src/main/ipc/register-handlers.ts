@@ -1,11 +1,13 @@
 import { app, dialog, ipcMain } from 'electron';
 import { basename } from 'node:path';
+import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
+import { beginDiscoverySession, completeDiscoverySession, failDiscoverySession, insertDiscoveredFiles } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 
 let selectedBackupDirectory: string | null = null;
 
-export function registerIpcHandlers(): void {
+export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
     appName: app.getName(),
     appVersion: app.getVersion(),
@@ -39,6 +41,22 @@ export function registerIpcHandlers(): void {
       throw new Error('Select an archive folder before inspecting it.');
     }
 
-    return inspectArchiveDirectory(selectedBackupDirectory);
+    const sourcePath = selectedBackupDirectory;
+    const archiveName = basename(sourcePath);
+    const session = beginDiscoverySession(database, archiveName, sourcePath);
+
+    try {
+      const report = await inspectArchiveDirectory(sourcePath, {
+        snapshotId: session.snapshotId,
+        accountId: session.accountId,
+        onFileFound: (file) => insertDiscoveredFiles(database, session.snapshotId, [file])
+      });
+
+      completeDiscoverySession(database, session, report.totalFiles);
+      return report;
+    } catch (error) {
+      failDiscoverySession(database, session);
+      throw error;
+    }
   });
 }

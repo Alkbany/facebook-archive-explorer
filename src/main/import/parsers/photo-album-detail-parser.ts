@@ -38,6 +38,10 @@ function cleanText(value: string): string {
   return value.replace(/\u00a0/gu, ' ').replace(DIRECTIONAL_MARKS, '').replace(/\s+/gu, ' ').trim();
 }
 
+function rawText(value: string): string {
+  return value.replace(/\u00a0/gu, ' ').replace(/\s+/gu, ' ').trim();
+}
+
 function isSafePhotoPath(value: string): boolean {
   if (!value || value.startsWith('/') || value.includes('\\') ||
       /^(?:https?:|data:|file:|javascript:)/iu.test(value) ||
@@ -62,7 +66,7 @@ function parseComments($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>)
     const comment = $(element);
     const authorRaw = cleanText(comment.find('span._3-8_._2oao').first().text()) || null;
     const bodyRaw = getCommentText($, comment);
-    const dateRaw = cleanText(comment.find('div._67gx').first().text()) || null;
+    const dateRaw = rawText(comment.find('div._67gx').first().text()) || null;
     if (!authorRaw && !bodyRaw && !dateRaw) return;
     comments.push({ authorRaw, bodyRaw, dateRaw });
   });
@@ -108,7 +112,7 @@ export function parsePhotoAlbumDetail(html: string, sourceFile: string): AlbumPh
     }
 
     const captionRaw = cleanText(content.children('div._3-95').first().text()) || null;
-    const dateRaw = cleanText(card.children('div._3-94._2lem').first().text()) || null;
+    const dateRaw = rawText(card.children('div._3-94._2lem').first().text()) || null;
     result.photos.push({
       albumTitle: result.albumTitle,
       imagePath,

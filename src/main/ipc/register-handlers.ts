@@ -3,7 +3,7 @@ import { basename, extname } from 'node:path';
 import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
-import type { ArchiveInspectionView, ImportProgressEvent } from '../../shared/archive/inspection';
+import type { ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -23,6 +23,7 @@ import { listPostRecords, listCommentActivities, listPhotoAlbums, getPhotoAlbumD
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
+import { listFriendDirectory } from '../database/friends-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredMediaAssets } from '../database/media-indexer';
@@ -260,6 +261,21 @@ export function registerIpcHandlers(
       failDiscoverySession(database, session);
       throw error;
     }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listFriendsDirectoryForSelectedBackup, (_event, filter: unknown, query: unknown, page: unknown) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing Friends data.');
+    const validFilters = ['all', 'friend', 'received', 'sent', 'rejected', 'removed'];
+    if (typeof filter !== 'string' || !validFilters.includes(filter)) {
+      throw new Error('Invalid Friends directory filter.');
+    }
+    if (typeof query !== 'string' || query.length > 100) {
+      throw new Error('Invalid Friends directory search.');
+    }
+    if (!Number.isSafeInteger(page) || (page as number) < 1) {
+      throw new Error('Invalid Friends directory page.');
+    }
+    return listFriendDirectory(database, selectedSnapshotId, filter as FriendDirectoryFilter, query, page as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.listMessagesForSelectedBackup, () => {

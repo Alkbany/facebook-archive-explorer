@@ -91,7 +91,7 @@ export async function inspectArchiveZip(
     else report.filesByFormat.other += 1;
 
     if (fileName.toLocaleLowerCase() === 'no-data.txt') noDataSections.add(sectionKey);
-    batch.push({ relativePath, fileName, sectionKey, detectedFormat });
+    batch.push({ relativePath, fileName, sectionKey, detectedFormat, fileSizeBytes: entry.uncompressedSize });
     if (batch.length >= batchSize) flushBatch();
   }, maxEntries);
 

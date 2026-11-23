@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
+> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
 
 ## Product decisions
 
@@ -45,21 +45,21 @@ The development dependency installation requires an internet connection. The app
 ## Current capabilities
 
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.
-- Native selection of a local export directory and a user-defined account label.
-- Bounded, streaming inventory of file/folder names and basic file formats; discovery does not open file contents.
+- Native selection of a local export directory or ZIP archive and a user-defined account label.
+- Bounded, streaming inventory of directory and ZIP central-directory entries; discovery does not open file contents or extract ZIP entries.
 - Independent backup snapshots persisted in SQLite, with a saved-backup history view.
-- A symlink-aware archive text reader with path containment and file-size checks.
+- A symlink-aware archive text reader with path containment and file-size checks for directory and ZIP sources.
 - DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
 - Explicit **Import Friends** action and one-click **Import All Supported Data** workflow, which sequentially runs the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
 - The combined import reports file/record/media/error totals; completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
-- The combined import recovers source files left in a `processing` state after an interrupted run and makes them eligible for retry; full crash-safe orchestration and integrity reporting remain planned.
+- The combined import recovers source files and runs left in a `processing` state after an interrupted session and retries the files; full progress journaling, integrity reporting, and safe resume checkpoints remain planned.
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
 - DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
 - DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.
 - Searchable local Posts and Likes & Reactions activity panels, scoped to the selected backup.
 - Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
 - A unified media library that indexes all discovered image, video, and audio files across the backup, including files without an imported record association; imported context is shown when available (first 1,000 references shown).
-- In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking; images use bounded previews while original media remains in place.
+- In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking. This works for directory backups and ZIP backups without extraction; deflated ZIP media is streamed through decompression to satisfy byte ranges.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
 - Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, and Likes & Reactions, with section filtering and JSON export of search results.
@@ -68,7 +68,7 @@ The development dependency installation requires an internet connection. The app
 ## Not implemented yet
 
 - Photos/albums as structured standalone sections, groups, events, Marketplace, saved items, and other export sections. The unified media inventory already lists discovered media files without requiring those parsers.
-- JSON import, ZIP discovery/import, resumable large-scale import orchestration, and full integrity reporting.
+- JSON-backed section import, resumable large-scale import orchestration with durable checkpoints, and full integrity reporting.
 - Advanced raw-date filters, detailed record-level comparison views, and export formats beyond JSON.
 - Optional local embeddings and local LLM integration.
 
@@ -85,12 +85,14 @@ Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 
 ## Current import support
 
+ZIP backups can be selected, inventoried, reopened, and read on demand without extracting the original archive. The same reviewed HTML importers are used with ZIP entries and directory files.
+
 - Friends: five recognized HTML exports.
 - Messages: observed conversation HTML, local attachments, and a browsable conversation explorer.
 - Posts: sampled post-card HTML with source-provenanced records and verified local media links.
 - Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
 - Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
 - Media: all discovered image/video/audio paths are indexed, with associated record context where a supported parser has linked them.
-- Audio/video: supported local files stream from the selected backup with byte-range seeking.
+- Audio/video: supported local files stream from directory or ZIP backups with byte-range seeking; deflated ZIP entries are decompressed as a stream when seeking.
 
 The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.

@@ -245,6 +245,5 @@ export function listArchiveSnapshots(database: DatabaseSync): ArchiveSnapshotSum
       snapshots.status,
       snapshots.created_at
     ORDER BY snapshots.created_at DESC
-    LIMIT 20
   `).all() as unknown as ArchiveSnapshotSummary[];
 }

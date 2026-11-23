@@ -7,7 +7,7 @@ import {
 
 describe('archive import operation lock', () => {
   it('prevents overlapping import requests and releases the lock after completion', async () => {
-    let releaseFirst: (() => void) | null = null;
+    let releaseFirst: () => void = () => undefined;
     const firstOperation = runExclusiveImport('Posts', () => new Promise<string>((resolve) => {
       releaseFirst = () => resolve('completed');
     }));
@@ -17,7 +17,7 @@ describe('archive import operation lock', () => {
     await expect(runExclusiveImport('Messages', async () => 'should not run'))
       .rejects.toThrow('Another import is already running: Posts.');
 
-    releaseFirst?.();
+    releaseFirst();
     await expect(firstOperation).resolves.toBe('completed');
     expect(getActiveImportName()).toBeNull();
     expect(() => assertNoImportInProgress('switch backups')).not.toThrow();

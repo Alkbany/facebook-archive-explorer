@@ -6,16 +6,18 @@
 - [x] Define local-first privacy and repository safety rules.
 - [x] Build the desktop shell and verify its production build in CI.
 - [x] Add the section evidence catalogue and Arabic search normalization.
-- [x] Add the initial SQLite schema proposal.
+- [x] Add the SQLite runtime, versioned migrations, and initial FTS5 schema.
 - [x] Add a safe archive-relative path resolver and unit tests.
 
 ## Milestone 1 — Storage and discovery
 
 - [x] Select a local export directory through the native folder picker.
 - [x] Inventory filenames and basic file formats without opening file contents.
+- [x] Persist account labels, independent backup snapshots, discovery runs, and source-file metadata.
+- [x] Show saved backup inventories from the local database.
 - [ ] Add ZIP selection and streaming ZIP entry discovery.
 - [ ] Add symlink-aware canonical path validation at file-open time.
-- [ ] Add SQLite driver, migration runner, and repositories.
+- [x] Add SQLite driver, migration runner, and repositories.
 - [ ] Add resumable import state and integrity reporting.
 
 ## Milestone 2 — First reliable parsers

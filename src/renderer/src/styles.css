@@ -1215,3 +1215,15 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .comparison-detail-pagination { align-items: stretch; flex-direction: column; }
   .comparison-detail-pagination > div { justify-content: space-between; }
 }
+
+
+.photo-album-cover {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: block;
+  object-fit: cover;
+  border: 1px solid #e9ebf2;
+  border-radius: 9px;
+  background: #f4f5fa;
+}

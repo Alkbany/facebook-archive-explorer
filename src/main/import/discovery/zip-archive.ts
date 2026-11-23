@@ -41,7 +41,7 @@ function normalizeZipEntryName(fileName: string): string {
   const portable = fileName.replace(/\\/gu, '/');
   if (
     !portable ||
-    portable.includes('\\0') ||
+    portable.includes('\0') ||
     portable.startsWith('/') ||
     /^[a-zA-Z]:/u.test(portable) ||
     portable.split('/').includes('..')
@@ -154,6 +154,18 @@ export async function readZipEntryBuffer(
     }
     if (totalBytes !== entry.uncompressedSize) throw new ZipArchiveError('NOT_A_FILE');
     return Buffer.concat(chunks, totalBytes);
+  } finally {
+    zip.close();
+  }
+}
+
+/** Returns an entry's uncompressed size without opening its data stream. */
+export async function getZipEntrySize(zipPath: string, relativePath: string): Promise<number> {
+  const zip = await openZipArchive(zipPath);
+  try {
+    const entry = await findZipEntry(zip, relativePath);
+    if (!entry.canDecodeFileData() || entry.isEncrypted()) throw new ZipArchiveError('NOT_A_FILE');
+    return entry.uncompressedSize;
   } finally {
     zip.close();
   }

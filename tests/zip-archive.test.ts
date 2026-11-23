@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { inspectArchiveZip } from '../src/main/import/discovery/zip-inventory';
-import { readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
+import { getZipEntrySize, openZipEntryReadStream, readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
 import { readArchiveBinaryFile, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
 
 interface ZipFixtureEntry { name: string; content: Buffer; externalAttributes?: number; }
@@ -85,6 +85,12 @@ describe('ZIP archive reader and inventory', () => {
         .resolves.toBe('<html>synthetic</html>');
       await expect(readArchiveBinaryFile(zipPath, 'posts/your_posts.html', 1024))
         .resolves.toEqual(Buffer.from('<html>synthetic</html>'));
+      await expect(getZipEntrySize(zipPath, 'posts/your_posts.html')).resolves.toBe(22);
+      const opened = await openZipEntryReadStream(zipPath, 'posts/your_posts.html', 1, 5);
+      const rangeChunks: Buffer[] = [];
+      for await (const chunk of opened.stream) rangeChunks.push(Buffer.from(chunk));
+      opened.close();
+      expect(Buffer.concat(rangeChunks)).toEqual(Buffer.from('html>'));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

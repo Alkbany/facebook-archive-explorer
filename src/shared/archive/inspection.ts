@@ -62,6 +62,23 @@ export interface PostRecordSummary {
   mediaCount: number;
 }
 
+export interface CommentsImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
+export interface CommentActivitySummary {
+  id: number;
+  sourcePath: string;
+  sourceCardIndex: number;
+  activityRaw: string | null;
+  bodyRaw: string | null;
+  groupRaw: string | null;
+  dateRaw: string | null;
+}
+
 export interface ReactionsImportSectionResult {
   filesAttempted: number;
   recordsImported: number;

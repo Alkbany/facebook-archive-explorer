@@ -12,7 +12,8 @@ import {
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
-import { importPostsSection } from '../import/pipeline/posts-importer';\nimport { importCommentsSection } from '../import/pipeline/comments-importer';
+import { importPostsSection } from '../import/pipeline/posts-importer';
+import { importCommentsSection } from '../import/pipeline/comments-importer';
 import { listPostRecords, listCommentActivities } from '../database/activity-repository';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
@@ -137,7 +138,17 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     return importPostsSection(database, selectedSnapshotId, selectedBackupDirectory);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listCommentsForSelectedBackup, () => {\n    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing comments.');\n    return listCommentActivities(database, selectedSnapshotId);\n  });\n\n  ipcMain.handle(IPC_CHANNELS.importCommentsForSelectedBackup, async () => {\n    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Comments data.');\n    return importCommentsSection(database, selectedSnapshotId, selectedBackupDirectory);\n  });\n\n  ipcMain.handle(IPC_CHANNELS.listReactionsForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listCommentsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing comments.');
+    return listCommentActivities(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importCommentsForSelectedBackup, async () => {
+    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Comments data.');
+    return importCommentsSection(database, selectedSnapshotId, selectedBackupDirectory);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listReactionsForSelectedBackup, () => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing reactions.');
     return listReactionRecords(database, selectedSnapshotId);
   });

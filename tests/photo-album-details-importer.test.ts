@@ -126,6 +126,8 @@ describe('Photos & Videos album detail import', () => {
   });
 
   it('does not import unrelated album detail HTML that has no index entry', async () => {
+    database.prepare('UPDATE records SET payload_json = ? WHERE id = ?')
+      .run(JSON.stringify({ album_path: 'photos_and_videos/album/98.html', photo_count: 3 }), albumRecordId);
     const now = new Date().toISOString();
     database.prepare(`
       INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
@@ -136,7 +138,7 @@ describe('Photos & Videos album detail import', () => {
       filesAttempted: 0, recordsImported: 0, mediaReferences: 0, unsupportedFiles: 0, failedFiles: 0
     });
     const detail = getPhotoAlbumDetail(database, snapshotId, albumRecordId);
-    expect(detail.detailFileStatus).toBe('discovered');
+    expect(detail.detailFileStatus).toBe('not_found');
     expect(detail.photos).toEqual([]);
   });
 });

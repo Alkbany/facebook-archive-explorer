@@ -15,7 +15,7 @@ import type {
   ImportCoverageReport,
   ImportProgressEvent
 } from '../../shared/archive/inspection';
-import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
+import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import type { ArchiveSearchResult } from '../../shared/archive/search';
@@ -702,13 +702,23 @@ function App() {
                     <div><strong>{importCoverage.totals.unprocessedFiles.toLocaleString()}</strong><span>Not processed</span></div>
                   </div>
                   <div className="import-coverage-list">
-                    {importCoverage.sections.map((section) => (
+                    {importCoverage.sections.map((section) => {
+                      const capability = getArchiveImportCapability(section.sectionKey);
+                      const capabilityLabel = capability === 'known-html'
+                        ? 'Known HTML exports'
+                        : capability === 'sampled-html'
+                          ? 'Sample-based HTML parser'
+                          : capability === 'media-index-only'
+                            ? 'Media inventory only'
+                            : 'No importer yet';
+                      return (
                       <article className="import-coverage-row" key={section.sectionKey}>
                         <div className="import-coverage-section">
                           <strong>{SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey}</strong>
                           <span>
                             {section.totalFiles.toLocaleString()} files · {section.htmlFiles} HTML · {section.jsonFiles} JSON · {section.mediaFiles} media
                           </span>
+                          <small className={'import-capability-badge import-capability-' + capability}>{capabilityLabel}</small>
                         </div>
                         <div className="import-coverage-statuses">
                           {section.completedFiles > 0 && <span className="coverage-done">{section.completedFiles} done</span>}
@@ -719,7 +729,8 @@ function App() {
                           {section.skippedFiles > 0 && <span>{section.skippedFiles} skipped</span>}
                         </div>
                       </article>
-                    ))}
+                    );
+                    })}
                     {importCoverage.sections.length === 0 && (
                       <p className="import-issues-empty">No files were found in this backup.</p>
                     )}

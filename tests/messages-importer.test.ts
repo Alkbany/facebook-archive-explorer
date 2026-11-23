@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importMessagesSection } from '../src/main/import/pipeline/messages-importer';
-import { getMessageConversation, listMessageConversations } from '../src/main/database/messages-repository';
+import { getMessageConversation, listMessageConversations, listMessageMediaGallery } from '../src/main/database/messages-repository';
 
 describe('Messages conversation import', () => {
   let database: DatabaseSync;
@@ -117,6 +117,13 @@ describe('Messages conversation import', () => {
       messageCount: 1,
       participants: ['Synthetic Sender']
     });
+    const gallery = listMessageMediaGallery(database, snapshotId);
+    expect(gallery).toHaveLength(2);
+    expect(gallery).toEqual(expect.arrayContaining([
+      expect.objectContaining({ mediaKind: 'image', sender: 'Synthetic Sender', sourceFileId: conversations[0].sourceFileId }),
+      expect.objectContaining({ mediaKind: 'audio', sender: 'Synthetic Sender', sourceFileId: conversations[0].sourceFileId })
+    ]));
+
     const displayedMessages = getMessageConversation(database, snapshotId, conversations[0].sourceFileId);
     expect(displayedMessages[0]).toMatchObject({
       sender: 'Synthetic Sender',

@@ -64,6 +64,9 @@ function App() {
   const [isImportingAll, setIsImportingAll] = useState(false);
   const [importAllSummary, setImportAllSummary] = useState<ImportAllSupportedDataResult['totals'] | null>(null);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
+  const [isExportingDatabase, setIsExportingDatabase] = useState(false);
+  const [isRestoringDatabase, setIsRestoringDatabase] = useState(false);
+  const [databaseBackupStatus, setDatabaseBackupStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -218,6 +221,39 @@ function App() {
         : 'Export cancelled.');
     } catch {
       setError('Search results could not be exported.');
+    }
+  }
+
+  async function exportLocalDatabaseBackup() {
+    setIsExportingDatabase(true);
+    setDatabaseBackupStatus('');
+    setError(null);
+    try {
+      const result = await window.desktopApi.exportLocalDatabaseBackup();
+      setDatabaseBackupStatus(result.status === 'saved'
+        ? `Exported ${result.fileName} · ${(result.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+        : 'Database backup export cancelled.');
+    } catch {
+      setError('The application database backup could not be exported. Finish any active import and try again.');
+    } finally {
+      setIsExportingDatabase(false);
+    }
+  }
+
+  async function restoreLocalDatabaseBackup() {
+    setIsRestoringDatabase(true);
+    setDatabaseBackupStatus('Choose a database backup to validate.');
+    setError(null);
+    try {
+      const result = await window.desktopApi.restoreLocalDatabaseBackup();
+      setDatabaseBackupStatus(result.status === 'restarting'
+        ? 'Restoring the selected database and restarting…'
+        : 'Database restore cancelled.');
+    } catch {
+      setDatabaseBackupStatus('');
+      setError('The selected file could not be restored. The current local archive database has been left unchanged.');
+    } finally {
+      setIsRestoringDatabase(false);
     }
   }
 
@@ -957,6 +993,29 @@ function App() {
               ))}
             </div>
           )}
+          <div className="database-safety-tools">
+            <div className="database-safety-copy">
+              <strong>Protect your local library</strong>
+              <span>Export or restore the app database, including imported records and archive indexes. Original Facebook folders, ZIP files, and media are not copied.</span>
+            </div>
+            <div className="database-safety-actions">
+              <button
+                className="secondary-button"
+                onClick={() => void exportLocalDatabaseBackup()}
+                disabled={isExportingDatabase || isRestoringDatabase || isChoosingFolder || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+              >
+                {isExportingDatabase ? 'Exporting…' : 'Export database'}
+              </button>
+              <button
+                className="danger-outline-button"
+                onClick={() => void restoreLocalDatabaseBackup()}
+                disabled={isExportingDatabase || isRestoringDatabase || isChoosingFolder || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+              >
+                {isRestoringDatabase ? 'Validating…' : 'Restore database'}
+              </button>
+            </div>
+            {databaseBackupStatus && <p className="database-safety-status">{databaseBackupStatus}</p>}
+          </div>
           <div className="backup-compare-controls">
             <label><span>Older backup</span>
               <select value={comparisonBaselineId} onChange={(event) => setComparisonBaselineId(event.target.value)}>

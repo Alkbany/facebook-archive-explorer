@@ -43,7 +43,8 @@
 ## Milestone 3 — Media and remaining activity
 
 - [x] Index all discovered image, video, and audio files in one browsable media library, including unlinked media.
-- [ ] Structured album and media metadata parsing (captions, dimensions, duration, membership).
+- [x] Parse sampled album captions, photo dates, and comment authors/text/dates.
+- [ ] Additional photo/video metadata (dimensions, duration, and album membership).
 - [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
 
 ## Milestone 4 — Browsing and search

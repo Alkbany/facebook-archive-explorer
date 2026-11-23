@@ -13,6 +13,7 @@ import {
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
+import { getMessageConversation, listMessageConversations } from '../database/messages-repository';
 
 let selectedBackupDirectory: string | null = null;
 let selectedAccountId: string | null = null;
@@ -91,6 +92,19 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       failDiscoverySession(database, session);
       throw error;
     }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listMessagesForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing conversations.');
+    return listMessageConversations(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.getMessagesForSelectedConversation, (_event, sourceFileId: unknown) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing conversations.');
+    if (!Number.isSafeInteger(sourceFileId) || (sourceFileId as number) < 1) {
+      throw new Error('Invalid conversation selection.');
+    }
+    return getMessageConversation(database, selectedSnapshotId, sourceFileId as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.importMessagesForSelectedBackup, async () => {

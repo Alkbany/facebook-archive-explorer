@@ -53,6 +53,8 @@ export async function importPhotoAlbumDetailsSection(
   const summary: PhotoAlbumDetailsImportResult = {
     filesAttempted: 0, recordsImported: 0, mediaReferences: 0, unsupportedFiles: 0, failedFiles: 0
   };
+  if (files.length === 0) return summary;
+
   const emitProgress = (phase: 'started' | 'progress' | 'completed') => reportImportProgress(onProgress, {
     sectionKey: 'photos_and_videos',
     phase,

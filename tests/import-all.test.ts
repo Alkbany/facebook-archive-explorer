@@ -63,18 +63,18 @@ describe('Import all supported data', () => {
     const progress: ImportProgressEvent[] = [];
     const result = await importAllSupportedData(database, snapshotId, root, (event) => progress.push(event));
     expect(progress.filter((event) => event.phase === 'started').map((event) => event.sectionKey)).toEqual([
-      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos', 'html_fallback'
     ]);
-    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(6);
+    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(12);
     expect(progress.filter((event) => event.phase === 'completed').map((event) => event.sectionKey)).toEqual([
-      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos', 'html_fallback'
     ]);
     expect(progress.find((event) => event.sectionKey === 'posts' && event.phase === 'progress')).toMatchObject({
       filesCompleted: 1, filesTotal: 1, recordsImported: 0, unsupportedFiles: 1, failedFiles: 0
     });
     expect(result.totals).toEqual({
-      filesAttempted: 6,
-      recordsImported: 0,
+      filesAttempted: 12,
+      recordsImported: 6,
       mediaReferences: 0,
       unsupportedFiles: 6,
       failedFiles: 0
@@ -85,10 +85,11 @@ describe('Import all supported data', () => {
     expect(result.sections.comments.filesAttempted).toBe(1);
     expect(result.sections.reactions.filesAttempted).toBe(1);
     expect(result.sections.photosAndVideos.filesAttempted).toBe(1);
+    expect(result.sections.htmlFallback.filesAttempted).toBe(6);
 
-    const statuses = database.prepare('SELECT status FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
-      .all(snapshotId) as Array<{ status: string }>;
-    expect(statuses.every((row) => row.status === 'unsupported')).toBe(true);
+    const statuses = database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
+      .all(snapshotId) as Array<{ status: string; parserKey: string | null }>;
+    expect(statuses.every((row) => row.status === 'completed' && row.parserKey === 'html_fallback')).toBe(true);
     const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
       .get(snapshotId) as { status: string };
     expect(snapshot.status).toBe('partial');
@@ -303,7 +304,7 @@ describe('Import all supported data', () => {
     await expect(importAllSupportedData(database, snapshotId, root, () => {
       throw new Error('Renderer progress listener is unavailable');
     })).resolves.toMatchObject({
-      totals: { filesAttempted: 6, unsupportedFiles: 6, failedFiles: 0 }
+      totals: { filesAttempted: 12, unsupportedFiles: 6, failedFiles: 0 }
     });
   });
 
@@ -434,17 +435,12 @@ describe('Import all supported data', () => {
     `).run(snapshotId, now);
 
     const result = await importAllSupportedData(database, snapshotId, root);
-    expect(result.totals.filesAttempted).toBe(6);
-    const recoveredFiles = database.prepare("SELECT status, safe_error_code FROM source_files WHERE snapshot_id = ? ORDER BY relative_path")
-      .all(snapshotId) as Array<{ status: string; safe_error_code: string | null }>;
-    expect(recoveredFiles.every((file) => file.status === 'unsupported')).toBe(true);
+    expect(result.totals.filesAttempted).toBe(12);
+    const recoveredFiles = database.prepare("SELECT status, safe_error_code, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? ORDER BY relative_path")
+      .all(snapshotId) as Array<{ status: string; safe_error_code: string | null; parserKey: string | null }>;
+    expect(recoveredFiles.every((file) => file.status === 'completed' && file.safe_error_code === null && file.parserKey === 'html_fallback')).toBe(true);
     expect(recoveredFiles.map((file) => file.safe_error_code)).toEqual([
-      'COMMENT_CARDS_NOT_FOUND',
-      'FRIENDS_CARDS_NOT_FOUND',
-      'REACTION_CARDS_NOT_FOUND',
-      'MESSAGE_CARDS_NOT_FOUND',
-      'PHOTO_ALBUM_INDEX_NOT_RECOGNIZED',
-      'POST_CARDS_NOT_FOUND'
+      null, null, null, null, null, null
     ]);
     const interruptedRun = database.prepare("SELECT status, errors_count FROM import_runs WHERE id = 'interrupted-run'")
       .get() as { status: string; errors_count: number };

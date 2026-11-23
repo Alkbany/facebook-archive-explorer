@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
-import { importAllSupportedData, recoverAllInterruptedImports } from '../src/main/import/pipeline/import-all';
+import { importAllSupportedData, importPhotosAndVideosSection, recoverAllInterruptedImports } from '../src/main/import/pipeline/import-all';
 import type { ImportProgressEvent } from '../src/shared/archive/inspection';
 
 describe('Import all supported data', () => {
@@ -150,6 +150,57 @@ describe('Import all supported data', () => {
     expect(Number.isSafeInteger(album.id)).toBe(true);
     expect(database.prepare('SELECT status FROM source_files WHERE snapshot_id = ? AND relative_path = ?')
       .get(snapshotId, albumPath)).toMatchObject({ status: 'completed' });
+  });
+
+  it('imports Photos & Videos independently without running other sections', async () => {
+    const albumPath = 'photos_and_videos/album/1.html';
+    const imagePath = 'photos_and_videos/standalone/photo.jpg';
+    await mkdir(join(root, 'photos_and_videos', 'album'), { recursive: true });
+    await mkdir(join(root, 'photos_and_videos', 'standalone'), { recursive: true });
+    await writeFile(join(root, 'photos_and_videos', 'your_photos.html'), `
+      <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+        <div class="_3-96 _2pio _2lek _2lel">Standalone album - 1 photo</div>
+        <div class="_3-96 _2let"><a href="${albumPath}"><img src="${imagePath}"></a></div>
+        <div class="_3-94 _2lem">Raw album date</div>
+      </div>`, 'utf8');
+    await writeFile(join(root, albumPath), `
+      <div class="_3b0d">Standalone album</div>
+      <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+        <div class="_3-96 _2let">
+          <a href="${imagePath}"><img src="${imagePath}"></a>
+          <div class="_3-95">Independent photo caption</div>
+        </div>
+        <div class="_3-94 _2lem">Raw photo date</div>
+      </div>`, 'utf8');
+    await writeFile(join(root, imagePath), 'synthetic photo bytes', 'utf8');
+
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+      VALUES (?, ?, '1.html', 'photos_and_videos', 'html', 'discovered', ?)
+    `).run(snapshotId, albumPath, now);
+    database.prepare(`
+      INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+      VALUES (?, ?, 'photo.jpg', 'photos_and_videos', 'image', 'discovered', ?)
+    `).run(snapshotId, imagePath, now);
+
+    const result = await importPhotosAndVideosSection(database, snapshotId, root);
+
+    expect(result).toEqual({
+      filesAttempted: 2,
+      recordsImported: 2,
+      mediaReferences: 2,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+    const otherSections = database.prepare(
+      "SELECT COUNT(*) AS count FROM records WHERE snapshot_id = ? AND section_key != 'photos_and_videos'"
+    ).get(snapshotId) as { count: number };
+    expect(otherSections.count).toBe(0);
+    const photo = database.prepare(
+      "SELECT body_text AS caption FROM records WHERE snapshot_id = ? AND record_type = 'photo'"
+    ).get(snapshotId) as { caption: string };
+    expect(photo.caption).toBe('Independent photo caption');
   });
 
   it('continues importing if a progress listener throws', async () => {

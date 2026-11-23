@@ -39,7 +39,7 @@
 ## Milestone 4 — Browsing and search
 
 - [x] Initial conversation list, local filter, and source-order message timeline.
-- [x] In-app preview for supported image and sticker attachments (8 MB per-image safety limit).
+- [x] In-app preview for supported image and sticker attachments (4 MB per-image limit and eight automatic previews per conversation).
 - [ ] Audio/video playback and full media viewer.
 - [ ] Unified search with section and date filters.
 - [ ] Timeline and album browsing.

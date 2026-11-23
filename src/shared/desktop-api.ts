@@ -15,6 +15,7 @@ import type {
   ReactionsImportSectionResult,
   ReactionRecordSummary,
   PhotoAlbumRecordSummary,
+  PhotoAlbumDetailView,
   ImportAllSupportedDataResult,
   ImportIssueReport,
   ImportCoverageReport,
@@ -58,6 +59,7 @@ export const IPC_CHANNELS = {
   importReactionsForSelectedBackup: 'archive:import-reactions',
   listReactionsForSelectedBackup: 'archive:list-reactions',
   listPhotoAlbumsForSelectedBackup: 'archive:list-photo-albums',
+  getPhotoAlbumDetailForSelectedBackup: 'archive:get-photo-album-detail',
   listMessagesForSelectedBackup: 'archive:list-messages',
   listMessageMediaForSelectedBackup: 'archive:list-message-media',
   getMessagesForSelectedConversation: 'archive:get-conversation-messages',
@@ -89,6 +91,7 @@ export interface DesktopApi {
   importReactionsForSelectedBackup(): Promise<ReactionsImportSectionResult>;
   listReactionsForSelectedBackup(): Promise<ReactionRecordSummary[]>;
   listPhotoAlbumsForSelectedBackup(): Promise<PhotoAlbumRecordSummary[]>;
+  getPhotoAlbumDetailForSelectedBackup(albumRecordId: number): Promise<PhotoAlbumDetailView>;
   listMessagesForSelectedBackup(): Promise<MessageConversationSummary[]>;
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;

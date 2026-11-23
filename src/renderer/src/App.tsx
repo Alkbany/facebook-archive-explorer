@@ -26,7 +26,7 @@ function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
-  const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; loading: boolean; error: string | null } | null>(null);
+  const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; streamUrl: string | null; loading: boolean; error: string | null } | null>(null);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,16 +114,13 @@ function App() {
   }
 
   async function openMedia(media: { id: number; mediaKind: string; relativePath: string }) {
-    setActiveMedia({ ...media, dataUrl: null, loading: true, error: null });
+    setActiveMedia({ ...media, dataUrl: null, streamUrl: media.mediaKind === 'video' || media.mediaKind === 'audio' ? `archive-media://media/${media.id}` : null, loading: media.mediaKind !== 'video' && media.mediaKind !== 'audio', error: null });
+    if (media.mediaKind === 'video' || media.mediaKind === 'audio') return;
     try {
       const dataUrl = await window.desktopApi.getMessageMediaPreview(media.id);
-      setActiveMedia((current) => current?.id === media.id
-        ? { ...current, dataUrl, loading: false }
-        : current);
+      setActiveMedia((current) => current?.id === media.id ? { ...current, dataUrl, loading: false } : current);
     } catch {
-      setActiveMedia((current) => current?.id === media.id
-        ? { ...current, loading: false, error: 'Preview unavailable. The file may be too large, missing, or unsupported.' }
-        : current);
+      setActiveMedia((current) => current?.id === media.id ? { ...current, loading: false, error: 'Preview unavailable. The file may be missing or unsupported.' } : current);
     }
   }
 
@@ -549,11 +546,11 @@ function App() {
               <div className="media-viewer-content">
                 {activeMedia.loading && <p>Loading attachment from this backup…</p>}
                 {activeMedia.error && <p className="media-viewer-error">{activeMedia.error}</p>}
-                {activeMedia.dataUrl && activeMedia.mediaKind === 'video' && <video src={activeMedia.dataUrl} controls autoPlay />}
-                {activeMedia.dataUrl && activeMedia.mediaKind === 'audio' && <audio src={activeMedia.dataUrl} controls autoPlay />}
+                {activeMedia.streamUrl && activeMedia.mediaKind === 'video' && <video src={activeMedia.streamUrl} controls autoPlay />}
+                {activeMedia.streamUrl && activeMedia.mediaKind === 'audio' && <audio src={activeMedia.streamUrl} controls autoPlay />}
                 {activeMedia.dataUrl && (activeMedia.mediaKind === 'image' || activeMedia.mediaKind === 'sticker') && <img src={activeMedia.dataUrl} alt="Selected archive attachment" />}
               </div>
-              <footer>Loaded locally from the selected backup. Files larger than 24 MB are not previewed.</footer>
+              <footer>Streamed locally from the selected backup; seeking uses byte-range requests. Images use bounded local previews.</footer>
             </section>
           </div>
         )}

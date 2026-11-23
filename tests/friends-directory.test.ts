@@ -81,7 +81,7 @@ describe('Friends directory repository', () => {
       counts: { all: 6, friends: 2, received: 1, sent: 1, rejected: 1, removed: 1 }
     });
     expect(result.records.map((record) => record.recordType)).toEqual([
-      'friend', 'friend', 'rejected', 'received', 'removed', 'sent'
+      'friend', 'friend', 'sent', 'received', 'removed', 'rejected'
     ]);
     expect(result.records[0]).toMatchObject({
       nameRaw: 'Layla Ahmed',

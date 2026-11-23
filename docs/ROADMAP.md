@@ -18,8 +18,11 @@
 - [x] Validate each file-open path component and reject symbolic links.
 - [x] Add SQLite driver, migration runner, and repositories.
 - [x] Add one-click sequential import orchestration for the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
-- [ ] Add crash-safe resumable import orchestration for files interrupted while processing and full integrity reporting.
+- [x] Recover file/run markers left in `processing` when the next Import All session starts.
+- [ ] Add durable checkpoints, user-controlled pause/resume, and full integrity reporting.
 - [x] Add ZIP selection and streaming ZIP entry discovery.
+- [x] Read HTML/JSON-sized entries from ZIP archives on demand without extraction.
+- [x] Stream ZIP media from the original archive with byte-range support, including deflated entries.
 
 ## Milestone 2 — First reliable parsers
 
@@ -64,6 +67,6 @@
 
 ## Milestone 6 — Windows release
 
-- [x] Add a Windows NSIS installer workflow that runs checks and publishes the installer as a GitHub Actions artifact.
+- [x] Add a Windows NSIS installer workflow that runs checks and publishes the installer as a GitHub Actions artifact (workflow configured; release artifact not yet generated).
 - [ ] Database backup/restore, large-archive performance tests, and final release validation.
 - [ ] Privacy/security review and release checklist.

@@ -6,7 +6,7 @@ import type {
   MessagesImportSectionResult
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
-import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
+import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from '../../shared/archive/messages';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
 
@@ -21,6 +21,8 @@ function App() {
   const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
+  const [mediaGallery, setMediaGallery] = useState<MessageMediaGalleryItem[]>([]);
+  const [mediaFilter, setMediaFilter] = useState('all');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
@@ -47,6 +49,7 @@ function App() {
     setMessagesImport(null);
     setConversations([]);
     setConversationMessages([]);
+    setMediaGallery([]);
     setSelectedConversationId(null);
     setConversationFilter('');
 
@@ -132,6 +135,7 @@ function App() {
       setMessagesImport(result);
       const foundConversations = await window.desktopApi.listMessagesForSelectedBackup();
       setConversations(foundConversations);
+      setMediaGallery(await window.desktopApi.listMessageMediaForSelectedBackup());
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
@@ -142,6 +146,7 @@ function App() {
   }
 
   const selectedConversation = conversations.find((item) => item.sourceFileId === selectedConversationId) ?? null;
+  const visibleMedia = mediaGallery.filter((media) => mediaFilter === 'all' || media.mediaKind === mediaFilter);
   const visibleConversations = conversations.filter((item) => {
     const haystack = [item.relativePath, item.conversationType, ...item.participants].join(' ').toLocaleLowerCase();
     return haystack.includes(conversationFilter.trim().toLocaleLowerCase());
@@ -402,6 +407,43 @@ function App() {
                         <div className="conversation-empty">Choose a conversation to view its messages.</div>
                       )}
                     </div>
+                  </div>
+                )}
+              </section>
+            )}
+            {messagesImport && (
+              <section className="media-gallery-panel">
+                <div className="media-gallery-heading">
+                  <div>
+                    <p className="eyebrow">ATTACHMENTS FROM MESSAGES</p>
+                    <h3>Media library</h3>
+                    <p>Browse media references found in imported conversations. Original files stay in the backup.</p>
+                  </div>
+                  <span>{mediaGallery.length.toLocaleString()} items{mediaGallery.length === 300 ? ' · first 300 shown' : ''}</span>
+                </div>
+                <div className="media-gallery-filters">
+                  {['all', 'image', 'sticker', 'video', 'audio'].map((kind) => (
+                    <button key={kind} className={mediaFilter === kind ? 'active' : ''} onClick={() => setMediaFilter(kind)}>
+                      {kind === 'all' ? 'All media' : kind}
+                    </button>
+                  ))}
+                </div>
+                {visibleMedia.length === 0 ? (
+                  <div className="conversation-empty">No {mediaFilter === 'all' ? '' : mediaFilter + ' '}attachments found in imported messages.</div>
+                ) : (
+                  <div className="media-gallery-list">
+                    {visibleMedia.map((media) => (
+                      <article className="media-gallery-item" key={media.id + ':' + media.sourceFileId}>
+                        <div className="media-gallery-icon">{media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'}</div>
+                        <div className="media-gallery-copy">
+                          <strong>{media.relativePath.split('/').pop()}</strong>
+                          <span>{media.sender || 'Unknown sender'} · {media.mediaKind}</span>
+                          <small>{media.conversationPath.split('/').slice(2, -1).join('/') || 'Conversation'}</small>
+                          {media.body && <small className="media-gallery-caption">{media.body}</small>}
+                        </div>
+                        <button className="media-gallery-open" onClick={() => void openMedia(media)}>Open</button>
+                      </article>
+                    ))}
                   </div>
                 )}
               </section>

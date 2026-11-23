@@ -54,6 +54,7 @@ The development dependency installation requires an internet connection. The app
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
 - DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
 - Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
+- A message media library with image, sticker, video, and audio filters, linked back to sender and conversation context (first 300 references shown).
 - In-app image and sticker preview plus on-demand audio/video playback controls; images are limited to 4 MB and audio/video to 24 MB per preview. Larger media remains untouched in the original backup.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.

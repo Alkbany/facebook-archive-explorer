@@ -197,7 +197,7 @@ export async function openZipEntryReadStream(
     }
     const stream = await zip.openReadStreamPromise(entry, start === undefined && end === undefined
       ? undefined
-      : { start: start ?? 0, end: end ?? entry.uncompressedSize - 1 });
+      : { start: start ?? 0, end: (end ?? entry.uncompressedSize - 1) + 1 });
     let closed = false;
     const close = () => {
       if (closed) return;

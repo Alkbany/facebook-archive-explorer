@@ -17,7 +17,7 @@ export class ArchiveReadError extends Error {
   }
 }
 
-async function resolveSafeArchiveFile(archiveRoot: string, relativePath: string, maxBytes: number) {
+export async function resolveSafeArchiveFile(archiveRoot: string, relativePath: string, maxBytes: number) {
   const canonicalRoot = await realpath(archiveRoot);
   const safePath = resolveArchivePath(canonicalRoot, relativePath);
   if (!safePath.ok) {

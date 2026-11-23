@@ -1222,15 +1222,16 @@ function App() {
                 {friendDirectory && (
                   <>
                     <div className="friends-directory-tabs" role="group" aria-label="Filter Friends by export category">
-                      <button type="button" className={friendTypeFilter === 'all' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('all', friendQuery, 1)}>All <span>{friendDirectory.counts.all}</span></button>
-                      <button type="button" className={friendTypeFilter === 'friend' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('friend', friendQuery, 1)}>Friends <span>{friendDirectory.counts.friends}</span></button>
-                      <button type="button" className={friendTypeFilter === 'received' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('received', friendQuery, 1)}>Received <span>{friendDirectory.counts.received}</span></button>
-                      <button type="button" className={friendTypeFilter === 'sent' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('sent', friendQuery, 1)}>Sent <span>{friendDirectory.counts.sent}</span></button>
-                      <button type="button" className={friendTypeFilter === 'rejected' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('rejected', friendQuery, 1)}>Rejected <span>{friendDirectory.counts.rejected}</span></button>
-                      <button type="button" className={friendTypeFilter === 'removed' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('removed', friendQuery, 1)}>Removed <span>{friendDirectory.counts.removed}</span></button>
+                      <button type="button" className={friendTypeFilter === 'all' ? 'selected' : ''} disabled={isLoadingFriends} onClick={() => void loadFriendsDirectory('all', friendQuery, 1)}>All <span>{friendDirectory.counts.all}</span></button>
+                      <button type="button" className={friendTypeFilter === 'friend' ? 'selected' : ''} disabled={isLoadingFriends} onClick={() => void loadFriendsDirectory('friend', friendQuery, 1)}>Friends <span>{friendDirectory.counts.friends}</span></button>
+                      <button type="button" className={friendTypeFilter === 'received' ? 'selected' : ''} disabled={isLoadingFriends} onClick={() => void loadFriendsDirectory('received', friendQuery, 1)}>Received <span>{friendDirectory.counts.received}</span></button>
+                      <button type="button" className={friendTypeFilter === 'sent' ? 'selected' : ''} disabled={isLoadingFriends} onClick={() => void loadFriendsDirectory('sent', friendQuery, 1)}>Sent <span>{friendDirectory.counts.sent}</span></button>
+                      <button type="button" className={friendTypeFilter === 'rejected' ? 'selected' : ''} disabled={isLoadingFriends} onClick={() => void loadFriendsDirectory('rejected', friendQuery, 1)}>Rejected <span>{friendDirectory.counts.rejected}</span></button>
+                      <button type="button" className={friendTypeFilter === 'removed' ? 'selected' : ''} disabled={isLoadingFriends} onClick={() => void loadFriendsDirectory('removed', friendQuery, 1)}>Removed <span>{friendDirectory.counts.removed}</span></button>
                     </div>
                     <div className="friends-directory-search">
                       <input
+                        disabled={isLoadingFriends}
                         value={friendQuery}
                         onChange={(event) => setFriendQuery(event.target.value)}
                         onKeyDown={(event) => { if (event.key === 'Enter') void loadFriendsDirectory(friendTypeFilter, friendQuery, 1); }}
@@ -1805,7 +1806,7 @@ function App() {
                 {savedBackups.map((backup) => <option key={backup.id} value={backup.id}>{backup.accountName} · {backup.backupName}</option>)}
               </select>
             </label>
-            <button className="secondary-button" onClick={() => void compareBackups()} disabled={!comparisonBaselineId || !comparisonTargetId || isComparingBackups}>
+            <button className="secondary-button" onClick={() => void compareBackups()} disabled={!comparisonBaselineId || !comparisonTargetId || isComparingBackups || isAnyImporting}>
               {isComparingBackups ? 'Comparing…' : 'Compare backups'}
             </button>
           </div>
@@ -1888,6 +1889,7 @@ function App() {
                 </div>
                 <div className="comparison-detail-controls">
                   <select
+                    disabled={isLoadingComparisonChanges}
                     value={comparisonChangeFilter}
                     onChange={(event) => void loadComparisonChanges(
                       comparisonBaselineId, comparisonTargetId, event.target.value as ArchiveComparisonChangeKind,
@@ -1901,6 +1903,7 @@ function App() {
                     <option value="changed">Changed</option>
                   </select>
                   <select
+                    disabled={isLoadingComparisonChanges}
                     value={comparisonChangeSection}
                     onChange={(event) => void loadComparisonChanges(
                       comparisonBaselineId, comparisonTargetId, comparisonChangeFilter,
@@ -1916,6 +1919,7 @@ function App() {
                     ))}
                   </select>
                   <input
+                    disabled={isLoadingComparisonChanges}
                     value={comparisonChangeQuery}
                     onChange={(event) => setComparisonChangeQuery(event.target.value)}
                     onKeyDown={(event) => {

@@ -348,6 +348,8 @@ export interface FallbackArchiveRecord {
   sourcePath: string;
   sourceRecordIndex: number;
   sensitivity: ArchiveRecordSensitivity;
+  payloadPreview: string;
+  payloadTruncated: boolean;
 }
 
 export interface FallbackArchiveRecordsPage {

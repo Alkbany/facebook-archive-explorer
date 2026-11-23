@@ -45,8 +45,8 @@ describe('fallback archive records repository', () => {
     expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1)).toMatchObject({
       total: 2, page: 1, pageSize: 40,
       records: [
-        { sectionKey: 'groups', title: 'Chess Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 0 },
-        { sectionKey: 'groups', title: 'Book Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 1 }
+        { sectionKey: 'groups', title: 'Chess Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 0, payloadPreview: '{}', payloadTruncated: false },
+        { sectionKey: 'groups', title: 'Book Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 1, payloadPreview: '{}', payloadTruncated: false }
       ]
     });
     expect(listFallbackArchiveRecords(database, snapshotId, 'security_and_login_information', 1).records[0])

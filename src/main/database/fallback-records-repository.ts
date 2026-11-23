@@ -60,7 +60,9 @@ export function listFallbackArchiveRecords(
     'records.record_type AS recordType, records.title AS title, ' +
     'records.body_text AS body, records.event_time_raw AS dateRaw, ' +
     'source.relative_path AS sourcePath, records.source_record_index AS sourceRecordIndex, ' +
-    'records.sensitivity AS sensitivity ' +
+    'records.sensitivity AS sensitivity, ' +
+    'substr(records.payload_json, 1, 20000) AS payloadPreview, ' +
+    'length(records.payload_json) > 20000 AS payloadTruncated ' +
     'FROM records INNER JOIN source_files AS source ' +
     'ON source.id = records.source_file_id AND source.snapshot_id = records.snapshot_id ' +
     'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?) ' +

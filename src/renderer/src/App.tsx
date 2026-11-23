@@ -48,6 +48,14 @@ const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, stri
   skipped: 'Skipped'
 };
 
+function formatFallbackPayload(payload: string): string {
+  try {
+    return JSON.stringify(JSON.parse(payload) as unknown, null, 2);
+  } catch {
+    return payload;
+  }
+}
+
 function formatFileSize(bytes: number | null): string {
   if (bytes === null || !Number.isFinite(bytes) || bytes < 0) return 'Size not recorded';
   if (bytes < 1024) return bytes.toLocaleString() + ' B';
@@ -2194,6 +2202,13 @@ function App() {
                       <span>{record.recordType === 'json_item' ? 'JSON' : 'HTML'} · {record.sensitivity}</span>
                     </div>
                     {record.body && <p>{record.body}</p>}
+                    {record.recordType === 'json_item' && (
+                      <details className="fallback-record-payload">
+                        <summary>View original JSON fields</summary>
+                        <pre>{formatFallbackPayload(record.payloadPreview)}</pre>
+                        {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete original record remains preserved in the local database.</small>}
+                      </details>
+                    )}
                     <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
                   </article>
                 ))}

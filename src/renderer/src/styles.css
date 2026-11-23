@@ -1741,3 +1741,34 @@ h1 {
   line-height: 1.6;
 }
 .fallback-record-note { margin: 12px 0 0; }
+
+.fallback-record-payload {
+  margin: 8px 0;
+  border-top: 1px solid #edf0f5;
+  padding-top: 7px;
+}
+.fallback-record-payload summary {
+  color: #656b81;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+.fallback-record-payload pre {
+  max-height: 260px;
+  margin: 8px 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 7px;
+  background: #f3f4f8;
+  color: #4b5063;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fallback-record-payload small {
+  display: block;
+  color: #9a7a50;
+  font-size: 8px;
+}

@@ -25,7 +25,7 @@ export interface HtmlFallbackImportSectionResult {
 const MAX_HTML_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_HTML_RECORDS_PER_FILE = 5000;
 const MAX_HTML_TEXT_LENGTH = 20_000;
-const HTML_NOISE_SELECTOR = 'script, style, noscript, svg, button, input, select, textarea, template';
+const HTML_NOISE_SELECTOR = 'script, style, noscript, svg, button, input, select, textarea, template, [hidden], [aria-hidden="true"], [style*="display:none"], [style*="display: none"], [style*="visibility:hidden"], [style*="visibility: hidden"]';
 
 function cleanText(value: string): string {
   return value

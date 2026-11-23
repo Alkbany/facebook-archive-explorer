@@ -51,6 +51,7 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 ## Current capabilities
 
 - A browsable Friends directory with separate current-friend, received-request, sent-request, rejected-request, and removed-friend filters; name/date/path search; and paginated results. Contact information remains excluded from the directory view and full-text index.
+- A standalone **Import Photos & Videos** action that runs the same reviewed album-index and explicitly linked album-detail importers as Import All; it shares the global import lock and reports progress and diagnostics.
 - Functional sidebar navigation to Overview, Friends, Conversations, Photos & Videos, Activity, and Search. Navigation entries no longer advertise implemented modules as “Soon”.
 
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.

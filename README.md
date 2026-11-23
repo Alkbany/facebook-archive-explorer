@@ -70,7 +70,7 @@ Artifacts are retained for 14 days. The installer is currently **unsigned** beca
 - In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking. This works for directory backups and ZIP backups without extraction; deflated ZIP media is streamed through decompression to satisfy byte ranges.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
-- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, and Likes & Reactions, with section filtering and JSON export of search results.
+- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, Likes & Reactions, and Photos & Videos album summaries, with section filtering and JSON export of search results.
 - Snapshot comparison for two backups of the same account, matching section, source-relative path, and original card index and reporting aggregate changes.
 - Verified local application-database export and restore, using SQLite's online backup API, integrity/foreign-key/schema checks, a pre-restore recovery copy, and interrupted-swap recovery. The database backup contains indexes and imported records, not the original Facebook media.
 
@@ -102,6 +102,7 @@ ZIP backups can be selected, inventoried, reopened, and read on demand without e
 - Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
 - Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
 - Media: all discovered image/video/audio paths are indexed, with associated record context where a supported parser has linked them.
+- Photos & Videos: the root-level album index is parsed into searchable album summaries, retaining raw exported dates and numeric photo counts; a preview image is linked only when its relative path exists in the discovered image inventory. Album detail pages are not parsed yet.
 - Photos & Videos: the root-level album index is parsed into searchable album summaries, retaining raw exported dates and numeric photo counts; a preview image is linked only when its relative path exists in the discovered image inventory. Album detail pages are not parsed yet.
 - Audio/video: supported local files stream from directory or ZIP backups with byte-range seeking; deflated ZIP entries are decompressed as a stream when seeking.
 

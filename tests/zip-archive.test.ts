@@ -160,10 +160,14 @@ describe('ZIP archive reader and inventory', () => {
         { name: 'messages/', content: Buffer.alloc(0) }
       ]));
       const discovered: string[] = [];
+      const discoveredSizes = new Map<string, number | null | undefined>();
       const report = await inspectArchiveZip(zipPath, {
         snapshotId: 'snapshot-zip',
         accountId: 'account-zip',
-        onFilesFound: (files) => discovered.push(...files.map((file) => file.relativePath))
+        onFilesFound: (files) => {
+          discovered.push(...files.map((file) => file.relativePath));
+          for (const file of files) discoveredSizes.set(file.relativePath, file.fileSizeBytes);
+        }
       });
       expect(report.archiveName).toBe('facebook-export');
       expect(report.totalFiles).toBe(4);
@@ -176,6 +180,10 @@ describe('ZIP archive reader and inventory', () => {
         'photos_and_videos/photo.jpg',
         'location/no-data.txt'
       ]);
+      expect(discoveredSizes.get('friends/friends.html')).toBe(Buffer.byteLength('synthetic html'));
+      expect(discoveredSizes.get('posts/your_posts.json')).toBe(2);
+      expect(discoveredSizes.get('photos_and_videos/photo.jpg')).toBe(Buffer.byteLength('not-decoded-media'));
+      expect(discoveredSizes.get('location/no-data.txt')).toBe(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

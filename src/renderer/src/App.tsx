@@ -20,7 +20,9 @@ import type {
   PhotoAlbumDetailView,
   PhotoAlbumsImportSectionResult,
   FriendDirectoryFilter,
-  FriendDirectoryView
+  FriendDirectoryView,
+  ArchiveFileDirectoryView,
+  ArchiveFileStatus
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -29,6 +31,30 @@ import type { ArchiveSearchResult } from '../../shared/archive/search';
 import type { ArchiveComparisonReport } from '../../shared/archive/comparison';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
+
+const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, string> = {
+  discovered: 'Not processed',
+  queued: 'Queued',
+  processing: 'Processing',
+  completed: 'Completed',
+  empty: 'Empty',
+  unsupported: 'Unsupported',
+  failed: 'Failed',
+  skipped: 'Skipped'
+};
+
+function formatFileSize(bytes: number | null): string {
+  if (bytes === null || !Number.isFinite(bytes) || bytes < 0) return 'Size not recorded';
+  if (bytes < 1024) return bytes.toLocaleString() + ' B';
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return value.toFixed(value >= 100 ? 0 : 1) + ' ' + units[unit];
+}
 
 const FRIEND_STATUS_LABELS: Record<FriendDirectoryView['records'][number]['recordType'], string> = {
   friend: 'Friend',
@@ -471,6 +497,23 @@ function App() {
       setError('The Friends directory could not be loaded. Import Friends first and try again.');
     } finally {
       setIsLoadingFriends(false);
+    }
+  }
+
+  async function loadArchiveFiles(status: ArchiveFileStatus, sectionKey: string, query: string, page: number) {
+    setIsLoadingArchiveFiles(true);
+    setArchiveFileStatus(status);
+    setArchiveFileSection(sectionKey);
+    setArchiveFileQuery(query);
+    setArchiveFilePage(page);
+    try {
+      const result = await window.desktopApi.listArchiveFilesForSelectedBackup(status, sectionKey, query, page);
+      setArchiveFileDirectory(result);
+      setArchiveFilePage(result.page);
+    } catch {
+      setError('The archive file inventory could not be loaded. Inspect the backup again and retry.');
+    } finally {
+      setIsLoadingArchiveFiles(false);
     }
   }
 

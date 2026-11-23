@@ -6,6 +6,7 @@ import type {
   MessagesImportSectionResult
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
+import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
 
@@ -18,6 +19,11 @@ function App() {
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
   const [isImportingMessages, setIsImportingMessages] = useState(false);
+  const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
+  const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+  const [conversationFilter, setConversationFilter] = useState('');
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +44,10 @@ function App() {
     setInspection(null);
     setFriendsImport(null);
     setMessagesImport(null);
+    setConversations([]);
+    setConversationMessages([]);
+    setSelectedConversationId(null);
+    setConversationFilter('');
 
     try {
       const selection = await window.desktopApi.selectBackupDirectory(accountName);
@@ -71,19 +81,42 @@ function App() {
     }
   }
 
+  async function loadConversation(sourceFileId: number) {
+    setSelectedConversationId(sourceFileId);
+    setIsLoadingConversation(true);
+    try {
+      const messages = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId);
+      setConversationMessages(messages);
+    } catch {
+      setError('This conversation could not be opened from the selected backup.');
+      setConversationMessages([]);
+    } finally {
+      setIsLoadingConversation(false);
+    }
+  }
+
   async function importMessages() {
     setIsImportingMessages(true);
     setError(null);
     try {
       const result = await window.desktopApi.importMessagesForSelectedBackup();
       setMessagesImport(result);
+      const foundConversations = await window.desktopApi.listMessagesForSelectedBackup();
+      setConversations(foundConversations);
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setError('Messages data could not be imported. Check the local import report.');
     } finally {
       setIsImportingMessages(false);
     }
   }
+
+  const selectedConversation = conversations.find((item) => item.sourceFileId === selectedConversationId) ?? null;
+  const visibleConversations = conversations.filter((item) => {
+    const haystack = [item.relativePath, item.conversationType, ...item.participants].join(' ').toLocaleLowerCase();
+    return haystack.includes(conversationFilter.trim().toLocaleLowerCase());
+  });
 
   const sectionCounts = inspection
     ? Object.entries(inspection.sectionFileCounts).sort((a, b) => b[1] - a[1]).slice(0, 8)
@@ -243,6 +276,99 @@ function App() {
                 {messagesImport.mediaReferences} media references · {messagesImport.unsupportedFiles} unsupported ·
                 {messagesImport.failedFiles} failed
               </p>
+            )}
+            {messagesImport && (
+              <section className="conversation-workspace" id="conversation-explorer">
+                <div className="conversation-workspace-heading">
+                  <div>
+                    <p className="eyebrow">YOUR MESSAGES</p>
+                    <h3>Conversation explorer</h3>
+                    <p>Browse imported conversations locally. Message text is not included in global search.</p>
+                  </div>
+                  <span>{conversations.length.toLocaleString()} conversations</span>
+                </div>
+                {conversations.length === 0 ? (
+                  <div className="conversation-empty">
+                    <strong>No readable conversations found yet.</strong>
+                    <span>Check the import report for unsupported or failed HTML files.</span>
+                  </div>
+                ) : (
+                  <div className="conversation-browser">
+                    <aside className="conversation-list-panel">
+                      <label className="conversation-search">
+                        <span>⌕</span>
+                        <input
+                          value={conversationFilter}
+                          onChange={(event) => setConversationFilter(event.target.value)}
+                          placeholder="Find a conversation…"
+                          aria-label="Find a conversation"
+                        />
+                      </label>
+                      <div className="conversation-list">
+                        {visibleConversations.map((conversation) => (
+                          <button
+                            className={conversation.sourceFileId === selectedConversationId ? 'conversation-list-item selected' : 'conversation-list-item'}
+                            key={conversation.sourceFileId}
+                            onClick={() => void loadConversation(conversation.sourceFileId)}
+                          >
+                            <span className="conversation-avatar">{(conversation.participants[0] ?? 'M').slice(0, 1).toLocaleUpperCase()}</span>
+                            <span className="conversation-list-copy">
+                              <strong>{conversation.participants.join(' · ') || 'Conversation'}</strong>
+                              <small>{conversation.conversationType.replaceAll('_', ' ')} · {conversation.messageCount.toLocaleString()} messages</small>
+                              <small className="conversation-path">{conversation.relativePath.split('/').slice(2, -1).join('/')}</small>
+                            </span>
+                          </button>
+                        ))}
+                        {visibleConversations.length === 0 && <p className="conversation-filter-empty">No matches.</p>}
+                      </div>
+                    </aside>
+                    <div className="conversation-detail-panel">
+                      {selectedConversation ? (
+                        <>
+                          <div className="conversation-detail-heading">
+                            <div>
+                              <strong>{selectedConversation.participants.join(' · ') || 'Conversation'}</strong>
+                              <span>{selectedConversation.messageCount.toLocaleString()} imported records · Original order preserved</span>
+                            </div>
+                            <span className="conversation-type-pill">{selectedConversation.conversationType.replaceAll('_', ' ')}</span>
+                          </div>
+                          {isLoadingConversation ? (
+                            <div className="conversation-empty">Loading conversation…</div>
+                          ) : (
+                            <div className="message-timeline">
+                              {conversationMessages.map((message) => (
+                                <article className={message.recordType === 'call_event' ? 'message-card call-event' : 'message-card'} key={message.id}>
+                                  <div className="message-card-meta">
+                                    <strong>{message.sender || 'Unknown sender'}</strong>
+                                    <span>{message.timestampRaw || 'Date not provided'}</span>
+                                  </div>
+                                  {message.body && <p>{message.body}</p>}
+                                  {message.media.length > 0 && (
+                                    <div className="message-attachments">
+                                      {message.media.map((media) => (
+                                        <span key={media.relativePath} title={media.relativePath}>
+                                          {media.mediaKind === 'image' || media.mediaKind === 'sticker' ? '▧' : media.mediaKind === 'video' ? '▶' : '♫'}
+                                          {' '}{media.mediaKind}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {message.reactions.length > 0 && (
+                                    <div className="message-reactions">{message.reactions.join(' · ')}</div>
+                                  )}
+                                </article>
+                              ))}
+                              {conversationMessages.length === 0 && <div className="conversation-empty">No messages to display.</div>}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="conversation-empty">Choose a conversation to view its messages.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
             )}
             {friendsImport && (
               <p className="friends-import-result">

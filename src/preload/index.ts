@@ -50,7 +50,11 @@ const desktopApi: DesktopApi = {
   exportSearchResultsForSelectedBackup: (query, sectionKey) =>
     ipcRenderer.invoke(IPC_CHANNELS.exportSearchResultsForSelectedBackup, query, sectionKey),
   compareArchiveSnapshots: (baselineSnapshotId, comparedSnapshotId) =>
-    ipcRenderer.invoke(IPC_CHANNELS.compareArchiveSnapshots, baselineSnapshotId, comparedSnapshotId)
+    ipcRenderer.invoke(IPC_CHANNELS.compareArchiveSnapshots, baselineSnapshotId, comparedSnapshotId),
+  listArchiveComparisonChanges: (baselineSnapshotId, comparedSnapshotId, filter, sectionKey, query, page) =>
+    ipcRenderer.invoke(IPC_CHANNELS.listArchiveComparisonChanges, baselineSnapshotId, comparedSnapshotId, filter, sectionKey, query, page),
+  exportArchiveComparisonChanges: (baselineSnapshotId, comparedSnapshotId, filter, sectionKey, query, format) =>
+    ipcRenderer.invoke(IPC_CHANNELS.exportArchiveComparisonChanges, baselineSnapshotId, comparedSnapshotId, filter, sectionKey, query, format)
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

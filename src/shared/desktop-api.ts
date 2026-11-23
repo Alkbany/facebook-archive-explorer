@@ -9,6 +9,8 @@ import type {
   FriendsImportSectionResult,
   FriendDirectoryFilter,
   FriendDirectoryView,
+  ArchiveFileDirectoryView,
+  ArchiveFileStatus,
   PostsImportSectionResult,
   CommentsImportSectionResult,
   CommentActivitySummary,
@@ -49,6 +51,7 @@ export const IPC_CHANNELS = {
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
   listFriendsDirectoryForSelectedBackup: 'archive:list-friends-directory',
+  listArchiveFilesForSelectedBackup: 'archive:list-files',
   listImportIssuesForSelectedBackup: 'archive:list-import-issues',
   getImportCoverageForSelectedBackup: 'archive:get-import-coverage',
   importProgress: 'archive:import-progress',
@@ -88,6 +91,7 @@ export interface DesktopApi {
   openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionView>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   listFriendsDirectoryForSelectedBackup(filter: FriendDirectoryFilter, query: string, page: number): Promise<FriendDirectoryView>;
+  listArchiveFilesForSelectedBackup(status: ArchiveFileStatus, sectionKey: string, query: string, page: number): Promise<ArchiveFileDirectoryView>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
   importPhotosAndVideosForSelectedBackup(): Promise<PhotoAlbumsImportSectionResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;

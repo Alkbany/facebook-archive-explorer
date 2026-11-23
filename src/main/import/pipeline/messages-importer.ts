@@ -206,8 +206,13 @@ export async function importMessagesSection(
     SELECT id, relative_path, file_name, detected_format
     FROM source_files
     WHERE snapshot_id = ? AND section_key = 'messages' AND detected_format = 'html'
-      AND lower(relative_path) GLOB 'messages/*/*/*.html'
-      AND lower(relative_path) NOT LIKE 'messages/stickers_used/%'
+      AND (
+        lower(relative_path) LIKE 'messages/inbox/%'
+        OR lower(relative_path) LIKE 'messages/archived_threads/%'
+        OR lower(relative_path) LIKE 'messages/filtered_threads/%'
+        OR lower(relative_path) LIKE 'messages/message_requests/%'
+      )
+      AND (length(relative_path) - length(replace(relative_path, '/', ''))) = 3
       AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path
   `).all(snapshotId) as unknown as MessageSourceFileRow[];

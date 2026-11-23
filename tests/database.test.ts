@@ -4,7 +4,8 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, openAppDatabase } from '../src/main/database/connection';
 import {
-  beginDiscoverySession,\n  getOrCreateAccount,
+  beginDiscoverySession,
+  getOrCreateAccount,
   completeDiscoverySession,
   insertDiscoveredFiles
 } from '../src/main/database/archive-repository';
@@ -35,7 +36,6 @@ describe('local SQLite storage', () => {
     expect(initialCount.count).toBe(1);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
-    // Re-applying the same migration must be a no-op.
     applyMigrations(database, [{ version: 1, name: 'initial_schema', sql: initialSchema }]);
 
     const finalCount = database.prepare(
@@ -83,8 +83,18 @@ describe('local SQLite storage', () => {
     `).run('snapshot-1', sourceFileId, 'sensitive synthetic value', 'sensitive synthetic value', timestamp)).toThrow();
   });
 
-  it('creates separate accounts by label and reuses an existing label', () => {\n    const personalId = getOrCreateAccount(database, 'Personal');\n    const samePersonalId = getOrCreateAccount(database, ' personal  ');\n    const secondId = getOrCreateAccount(database, 'Family account');\n\n    expect(samePersonalId).toBe(personalId);\n    expect(secondId).not.toBe(personalId);\n  });\n\n  it('persists a discovery session and every discovered source file', () => {
-    const accountId = getOrCreateAccount(database, 'Test Facebook account');\n    const session = beginDiscoverySession(database, accountId, 'Synthetic export', '/tmp/synthetic-export');
+  it('creates separate accounts by label and reuses an existing label', () => {
+    const personalId = getOrCreateAccount(database, 'Personal');
+    const samePersonalId = getOrCreateAccount(database, ' personal  ');
+    const secondId = getOrCreateAccount(database, 'Family account');
+
+    expect(samePersonalId).toBe(personalId);
+    expect(secondId).not.toBe(personalId);
+  });
+
+  it('persists a discovery session and every discovered source file', () => {
+    const accountId = getOrCreateAccount(database, 'Test Facebook account');
+    const session = beginDiscoverySession(database, accountId, 'Synthetic export', '/tmp/synthetic-export');
 
     insertDiscoveredFiles(database, session.snapshotId, [
       {

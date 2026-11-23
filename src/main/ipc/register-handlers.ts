@@ -13,6 +13,7 @@ import {
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
+import { importAllSupportedData } from '../import/pipeline/import-all';
 import { importPostsSection } from '../import/pipeline/posts-importer';
 import { importCommentsSection } from '../import/pipeline/comments-importer';
 import { listPostRecords, listCommentActivities } from '../database/activity-repository';
@@ -213,6 +214,13 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       throw new Error('Inspect an archive folder before importing Messages data.');
     }
     return importMessagesSection(database, selectedSnapshotId, selectedBackupDirectory);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importAllSupportedDataForSelectedBackup, async () => {
+    if (!selectedBackupDirectory || !selectedSnapshotId) {
+      throw new Error('Inspect an archive folder before importing supported data.');
+    }
+    return importAllSupportedData(database, selectedSnapshotId, selectedBackupDirectory);
   });
 
   ipcMain.handle(IPC_CHANNELS.importFriendsForSelectedBackup, async () => {

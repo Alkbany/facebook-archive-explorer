@@ -482,3 +482,14 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .comparison-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .search-export-row { align-items:flex-start; flex-direction:column; }
 }
+
+.import-all-action { border-color: #dedaf7; background: #f8f7ff; }
+.import-all-action > div { max-width: 680px; }
+.import-all-button { flex: 0 0 auto; min-height: 38px; padding: 0 15px; border: 0; border-radius: 8px; color: #fff; background: #6659c9; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.import-all-button:hover { background: #5548b7; }
+.import-all-button:disabled { opacity: .65; cursor: wait; }
+.import-all-summary { display: block; margin-top: 5px; color: #5e846f !important; font-weight: 700; }
+@media (max-width: 760px) {
+  .import-all-action { align-items: stretch; flex-direction: column; }
+  .import-all-button { width: 100%; }
+}

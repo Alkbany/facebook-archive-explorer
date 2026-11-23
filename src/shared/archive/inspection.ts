@@ -103,3 +103,20 @@ export interface MessagesImportSectionResult {
   failedFiles: number;
   mediaReferences: number;
 }
+
+export interface ImportAllSupportedDataResult {
+  sections: {
+    friends: FriendsImportSectionResult;
+    messages: MessagesImportSectionResult;
+    posts: PostsImportSectionResult;
+    comments: CommentsImportSectionResult;
+    reactions: ReactionsImportSectionResult;
+  };
+  totals: {
+    filesAttempted: number;
+    recordsImported: number;
+    mediaReferences: number;
+    unsupportedFiles: number;
+    failedFiles: number;
+  };
+}

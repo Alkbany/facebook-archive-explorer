@@ -9,7 +9,8 @@ import type {
   PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
-  ReactionRecordSummary
+  ReactionRecordSummary,
+  ImportAllSupportedDataResult
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -60,6 +61,8 @@ function App() {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; streamUrl: string | null; loading: boolean; error: string | null } | null>(null);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
+  const [isImportingAll, setIsImportingAll] = useState(false);
+  const [importAllSummary, setImportAllSummary] = useState<ImportAllSupportedDataResult['totals'] | null>(null);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +87,7 @@ function App() {
     setSearchedSection('all');
     setComparisonReport(null);
     setMediaGallery([]);
+    setImportAllSummary(null);
     setFriendsImport(null);
     setPostsImport(null);
     setPostRecords([]);
@@ -217,6 +221,45 @@ function App() {
       setError('Friends data could not be imported. Check the local import report.');
     } finally {
       setIsImportingFriends(false);
+    }
+  }
+
+  async function importAllSupportedData() {
+    setIsImportingAll(true);
+    setImportAllSummary(null);
+    setError(null);
+    try {
+      const result = await window.desktopApi.importAllSupportedDataForSelectedBackup();
+      setFriendsImport(result.sections.friends);
+      setMessagesImport(result.sections.messages);
+      setPostsImport(result.sections.posts);
+      setCommentsImport(result.sections.comments);
+      setReactionsImport(result.sections.reactions);
+
+      const [posts, comments, reactions, foundConversations] = await Promise.all([
+        window.desktopApi.listPostsForSelectedBackup(),
+        window.desktopApi.listCommentsForSelectedBackup(),
+        window.desktopApi.listReactionsForSelectedBackup(),
+        window.desktopApi.listMessagesForSelectedBackup()
+      ]);
+      setPostRecords(posts);
+      setCommentRecords(comments);
+      setReactionRecords(reactions);
+      setConversations(foundConversations);
+      if (foundConversations.length > 0) {
+        await loadConversation(foundConversations[0].sourceFileId);
+      } else {
+        setSelectedConversationId(null);
+        setConversationMessages([]);
+      }
+
+      await refreshMediaGallery();
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+      setImportAllSummary(result.totals);
+    } catch {
+      setError('The supported archive import could not be completed. Review the local import report and retry.');
+    } finally {
+      setIsImportingAll(false);
     }
   }
 
@@ -416,6 +459,26 @@ function App() {
               <div><strong>{inspection.filesByFormat.media.toLocaleString()}</strong><span>Media files</span></div>
               <div><strong>{inspection.filesByFormat.other.toLocaleString()}</strong><span>Other files</span></div>
             </div>
+            <div className="friends-import-action import-all-action">
+              <div>
+                <strong>Import all supported data</strong>
+                <span>Run Friends, Messages, Posts, Comments, and Likes &amp; Reactions importers in sequence. Already completed files are skipped; failed or unsupported files remain retryable.</span>
+                {importAllSummary && (
+                  <span className="import-all-summary">
+                    {importAllSummary.filesAttempted} files checked · {importAllSummary.recordsImported} records imported ·
+                    {importAllSummary.mediaReferences} media links · {importAllSummary.unsupportedFiles} unsupported ·
+                    {importAllSummary.failedFiles} failed
+                  </span>
+                )}
+              </div>
+              <button
+                className="primary-button import-all-button"
+                onClick={() => void importAllSupportedData()}
+                disabled={isImportingAll || isChoosingFolder || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+              >
+                {isImportingAll ? 'Importing supported data…' : 'Import All Supported Data'}
+              </button>
+            </div>
 
             <section className="unified-search-panel">
               <div className="media-gallery-heading">
@@ -495,7 +558,7 @@ function App() {
               <button
                 className="secondary-button"
                 onClick={importFriends}
-                disabled={isImportingFriends}
+                disabled={isImportingFriends || isImportingAll}
               >
                 {isImportingFriends ? 'Importing Friends…' : 'Import Friends'}
               </button>
@@ -505,7 +568,7 @@ function App() {
                 <strong>Messages</strong>
                 <span>Import recognized conversation HTML from inbox, archived, filtered, and request folders. Messages stay out of search indexing by default.</span>
               </div>
-              <button className="secondary-button" onClick={importMessages} disabled={isImportingMessages}>
+              <button className="secondary-button" onClick={importMessages} disabled={isImportingMessages || isImportingAll}>
                 {isImportingMessages ? 'Importing Messages…' : 'Import Messages'}
               </button>
             </div>
@@ -514,7 +577,7 @@ function App() {
                 <strong>Posts</strong>
                 <span>Import sampled post cards, keep exported dates and authors, and link local photos/videos without copying them.</span>
               </div>
-              <button className="secondary-button" onClick={importPosts} disabled={isImportingPosts}>
+              <button className="secondary-button" onClick={importPosts} disabled={isImportingPosts || isImportingAll}>
                 {isImportingPosts ? 'Importing posts…' : 'Import Posts'}
               </button>
             </div>
@@ -554,7 +617,7 @@ function App() {
                 <strong>Comments</strong>
                 <span>Import sampled comment/reply activity cards. Keep the original activity wording, group label, comment text, and raw date separately.</span>
               </div>
-              <button className="secondary-button" onClick={importComments} disabled={isImportingComments}>
+              <button className="secondary-button" onClick={importComments} disabled={isImportingComments || isImportingAll}>
                 {isImportingComments ? 'Importing comments…' : 'Import Comments'}
               </button>
             </div>
@@ -596,7 +659,7 @@ function App() {
                 <strong>Likes &amp; Reactions</strong>
                 <span>Import observed reaction cards while keeping their original descriptions and raw dates.</span>
               </div>
-              <button className="secondary-button" onClick={importReactions} disabled={isImportingReactions}>
+              <button className="secondary-button" onClick={importReactions} disabled={isImportingReactions || isImportingAll}>
                 {isImportingReactions ? 'Importing reactions…' : 'Import Likes & Reactions'}
               </button>
             </div>

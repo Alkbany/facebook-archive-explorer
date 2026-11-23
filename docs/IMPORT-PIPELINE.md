@@ -68,9 +68,11 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 - Album metadata enrichment (dimensions, duration, thumbnails, membership).
 - Advanced raw-date parsing and date filters.
 
-## Resume safety
+## One-click import and resume behavior
 
-Full multi-section resume orchestration is not implemented yet. The schema tracks per-file state and import runs, but the application must not claim that a large import can currently resume end-to-end.
+The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, and Likes & Reactions sequentially. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.
+
+This is not yet crash-safe resume orchestration: an abrupt process exit can leave a file marked as processing, and interrupted-file recovery has not yet been implemented. ZIP archives and unsupported sections are not part of this one-click action.
 
 ## Duplicate handling
 

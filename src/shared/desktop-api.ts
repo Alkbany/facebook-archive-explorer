@@ -12,7 +12,8 @@ import type {
   PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
-  ReactionRecordSummary
+  ReactionRecordSummary,
+  ImportAllSupportedDataResult
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -31,6 +32,7 @@ export const IPC_CHANNELS = {
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
   importFriendsForSelectedBackup: 'archive:import-friends',
+  importAllSupportedDataForSelectedBackup: 'archive:import-all-supported-data',
   importPostsForSelectedBackup: 'archive:import-posts',
   importCommentsForSelectedBackup: 'archive:import-comments',
   listCommentsForSelectedBackup: 'archive:list-comments',
@@ -54,6 +56,7 @@ export interface DesktopApi {
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
+  importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
   listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
   importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;

@@ -1,4 +1,7 @@
-import type { ArchiveInspectionReport, ArchiveSnapshotSummary } from './archive/inspection';
+import type {
+  ArchiveInspectionReport,
+  ArchiveSnapshotSummary
+} from './archive/inspection';
 
 export interface AppInfo {
   appName: string;
@@ -13,11 +16,13 @@ export type DirectorySelectionResult =
 export const IPC_CHANNELS = {
   getAppInfo: 'app:get-info',
   selectBackupDirectory: 'archive:select-directory',
-  inspectSelectedBackup: 'archive:inspect-selected',\n  listArchiveSnapshots: 'archive:list-snapshots'
+  inspectSelectedBackup: 'archive:inspect-selected',
+  listArchiveSnapshots: 'archive:list-snapshots'
 } as const;
 
 export interface DesktopApi {
   getAppInfo(): Promise<AppInfo>;
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
-  inspectSelectedBackup(): Promise<ArchiveInspectionReport>;\n  listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
+  inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
+  listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
 }

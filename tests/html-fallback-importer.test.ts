@@ -140,7 +140,7 @@ describe('generic HTML fallback importer', () => {
     expect(result.recordsImported).toBe(1);
     expect(database.prepare('SELECT body_text AS body, search_enabled AS searchEnabled FROM records WHERE snapshot_id = ? AND section_key = \'posts\'')
       .get(snapshotId)).toMatchObject({
-        body: 'Older post layout\\nText from an unsupported card',
+        body: 'Older post layout\nText from an unsupported card',
         searchEnabled: 1
       });
   });

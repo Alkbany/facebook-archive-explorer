@@ -34,4 +34,8 @@ The name and normalized name are searchable. Contact information remains in `pay
 6. Sensitive records are excluded from FTS5 by default.
 7. Similar records are not automatically collapsed.
 
+## Implemented Messages record
+
+The conversation importer stores sender text, body text, raw timestamp, source file, and original card index. Reaction text and media references are retained separately in `payload_json`; linked local media references use `media_assets` and `record_media`. Message records are classified as sensitive and are excluded from FTS5 by default. Media bytes remain in the original export folder.
+
 Other section-specific record models and parsers are still pending.

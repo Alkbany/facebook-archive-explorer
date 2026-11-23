@@ -8,7 +8,7 @@ export interface AppInfo {
 
 export type DirectorySelectionResult =
   | { status: 'cancelled' }
-  | { status: 'selected'; folderName: string };
+  | { status: 'selected'; folderName: string; accountName: string };
 
 export const IPC_CHANNELS = {
   getAppInfo: 'app:get-info',
@@ -18,6 +18,6 @@ export const IPC_CHANNELS = {
 
 export interface DesktopApi {
   getAppInfo(): Promise<AppInfo>;
-  selectBackupDirectory(): Promise<DirectorySelectionResult>;
+  selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
 }

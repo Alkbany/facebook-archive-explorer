@@ -33,6 +33,7 @@ describe('Messages conversation import', () => {
     const accountId = getOrCreateAccount(database, 'Synthetic messages account');
     snapshotId = 'messages-snapshot-test';
     const timestamp = new Date().toISOString();
+    database.prepare("UPDATE source_files SET status = 'completed' WHERE relative_path = 'messages/inbox/thread-1/thread.html'").run();
     database.prepare(`
       INSERT INTO archive_snapshots (
         id, account_id, display_name, source_kind, source_path, status, created_at, updated_at

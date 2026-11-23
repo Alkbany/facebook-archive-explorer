@@ -16,6 +16,7 @@ import type {
   ImportProgressEvent,
   PhotoAlbumRecordSummary,
   PhotoAlbumDetailView,
+  PhotoAlbumsImportSectionResult,
   FriendDirectoryFilter,
   FriendDirectoryView
 } from '../../shared/archive/inspection';
@@ -74,9 +75,11 @@ function App() {
   const [isImportingPosts, setIsImportingPosts] = useState(false);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
   const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
+  const [photosImport, setPhotosImport] = useState<PhotoAlbumsImportSectionResult | null>(null);
   const [reactionRecords, setReactionRecords] = useState<ReactionRecordSummary[]>([]);
   const [reactionFilter, setReactionFilter] = useState('');
   const [isImportingReactions, setIsImportingReactions] = useState(false);
+  const [isImportingPhotos, setIsImportingPhotos] = useState(false);
   const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
@@ -100,7 +103,7 @@ function App() {
   const [databaseBackupStatus, setDatabaseBackupStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions;
+  const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions || isImportingPhotos;
 
   useEffect(() => window.desktopApi.onImportProgress(setImportProgress), []);
 
@@ -134,6 +137,7 @@ function App() {
     setPhotoAlbumDetail(null);
     setIsLoadingPhotoAlbum(false);
     setImportAllSummary(null);
+    setPhotosImport(null);
     setFriendsImport(null);
     setFriendDirectory(null);
     setFriendTypeFilter('all');
@@ -197,6 +201,7 @@ function App() {
     setPhotoAlbumDetail(null);
     setIsLoadingPhotoAlbum(false);
     setImportAllSummary(null);
+    setPhotosImport(null);
     setFriendsImport(null);
     setFriendDirectory(null);
     setFriendTypeFilter('all');
@@ -478,6 +483,7 @@ function App() {
       setPostsImport(result.sections.posts);
       setCommentsImport(result.sections.comments);
       setReactionsImport(result.sections.reactions);
+      setPhotosImport(result.sections.photosAndVideos);
 
       const [posts, comments, reactions, foundConversations, albums, friends] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
@@ -569,6 +575,26 @@ function App() {
       setError('Likes & Reactions data could not be imported. Check the local import report.');
     } finally {
       setIsImportingReactions(false);
+    }
+  }
+
+  async function importPhotosAndVideos() {
+    setIsImportingPhotos(true);
+    setError(null);
+    setSelectedPhotoAlbum(null);
+    setPhotoAlbumDetail(null);
+    try {
+      const result = await window.desktopApi.importPhotosAndVideosForSelectedBackup();
+      setPhotosImport(result);
+      setPhotoAlbums(await window.desktopApi.listPhotoAlbumsForSelectedBackup());
+      await refreshMediaGallery();
+      await refreshImportIssues();
+      await refreshImportCoverage();
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Photos & Videos data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingPhotos(false);
     }
   }
 
@@ -1058,7 +1084,23 @@ function App() {
               </section>
             )}
 
-            {(photoAlbums.length > 0 || isImportingAll) && (
+                    <div className="friends-import-action">
+                      <div>
+                        <strong>Photos &amp; Videos</strong>
+                        <span>Import the album index and only detail pages explicitly linked from it. Original media files stay in place.</span>
+                        {photosImport && (
+                          <span className="import-all-summary">
+                            {photosImport.filesAttempted} files checked · {photosImport.recordsImported} records imported ·
+                            {photosImport.mediaReferences} media links · {photosImport.unsupportedFiles} unsupported ·
+                            {photosImport.failedFiles} failed
+                          </span>
+                        )}
+                      </div>
+                      <button className="secondary-button" onClick={importPhotosAndVideos} disabled={isImportingPhotos || isAnyImporting && !isImportingPhotos || isChoosingFolder}>
+                        {isImportingPhotos ? 'Importing photos…' : 'Import Photos &amp; Videos'}
+                      </button>
+                    </div>
+            {(photoAlbums.length > 0 || isImportingAll || isImportingPhotos || photosImport) && (
               <section className="conversation-workspace photo-albums-workspace" id="photo-albums-workspace">
                 {selectedPhotoAlbum ? (
                   <>
@@ -1152,6 +1194,9 @@ function App() {
                       onChange={(event) => setAlbumFilter(event.target.value)}
                       placeholder="Filter photo albums…"
                     />
+                    {photoAlbums.length === 0 ? (
+                      <p className="photo-album-empty">No recognized photo albums were imported from this backup.</p>
+                    ) : null}
                     <div className="media-gallery-list">
                       {photoAlbums.filter((album) => [
                         album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath

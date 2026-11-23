@@ -35,14 +35,6 @@ const NAME_SELECTOR = 'div._3-96._2pio._2lek._2lel';
 const DATE_SELECTOR = 'div._3-94._2lem';
 const CONTACT_SELECTOR = 'div._3-96._2let';
 
-function firstText(
-  root: cheerio.Cheerio<unknown>,
-  selector: string
-): string | null {
-  const value = root.find(selector).first().text().replace(/\u00a0/gu, ' ').trim();
-  return value.length > 0 ? value : null;
-}
-
 /**
  * Parses one of the five known Friends export pages.
  *
@@ -68,17 +60,20 @@ export function parseFriendsExport(html: string, sourceFile: string): FriendPars
 
   cards.each((sourceCardIndex, element) => {
     const card = $(element);
-    const nameRaw = firstText(card, NAME_SELECTOR);
+    const nameText = card.find(NAME_SELECTOR).first().text().replace(/\u00a0/gu, ' ').trim();
+    const nameRaw = nameText.length > 0 ? nameText : null;
 
     if (!nameRaw) {
       result.issues.push({ code: 'missing_name', sourceCardIndex });
       return;
     }
 
-    const dateRaw = firstText(card, DATE_SELECTOR);
-    const contactInfoRaw = recordType === 'friend'
-      ? firstText(card, CONTACT_SELECTOR)
-      : null;
+    const dateText = card.find(DATE_SELECTOR).first().text().replace(/\u00a0/gu, ' ').trim();
+    const dateRaw = dateText.length > 0 ? dateText : null;
+    const contactText = recordType === 'friend'
+      ? card.find(CONTACT_SELECTOR).first().text().replace(/\u00a0/gu, ' ').trim()
+      : '';
+    const contactInfoRaw = contactText.length > 0 ? contactText : null;
 
     result.records.push({
       recordType,

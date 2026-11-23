@@ -5,6 +5,7 @@ import { importMessagesSection } from './messages-importer';
 import { importPostsSection } from './posts-importer';
 import { importCommentsSection } from './comments-importer';
 import { importReactionsSection } from './reactions-importer';
+import type { ImportProgressReporter } from './import-progress';
 
 /**
  * Repairs file/run markers left by an interrupted import-all session.
@@ -46,7 +47,8 @@ function recoverInterruptedImports(database: DatabaseSync, snapshotId: string): 
 export async function importAllSupportedData(
   database: DatabaseSync,
   snapshotId: string,
-  archiveRoot: string
+  archiveRoot: string,
+  onProgress?: ImportProgressReporter
 ): Promise<ImportAllSupportedDataResult> {
   recoverInterruptedImports(database, snapshotId);
   const startedAt = new Date().toISOString();
@@ -54,11 +56,11 @@ export async function importAllSupportedData(
     .run(startedAt, snapshotId);
 
   try {
-    const friends = await importFriendsSection(database, snapshotId, archiveRoot);
-    const messages = await importMessagesSection(database, snapshotId, archiveRoot);
-    const posts = await importPostsSection(database, snapshotId, archiveRoot);
-    const comments = await importCommentsSection(database, snapshotId, archiveRoot);
-    const reactions = await importReactionsSection(database, snapshotId, archiveRoot);
+    const friends = await importFriendsSection(database, snapshotId, archiveRoot, onProgress);
+    const messages = await importMessagesSection(database, snapshotId, archiveRoot, onProgress);
+    const posts = await importPostsSection(database, snapshotId, archiveRoot, onProgress);
+    const comments = await importCommentsSection(database, snapshotId, archiveRoot, onProgress);
+    const reactions = await importReactionsSection(database, snapshotId, archiveRoot, onProgress);
 
     const sections = { friends, messages, posts, comments, reactions };
     const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {

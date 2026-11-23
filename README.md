@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: foundation scaffold.** The repository is being set up with Electron, React, and TypeScript. This is not yet a finished importer. Directory discovery, parsing, SQLite persistence, and search must be implemented and tested before using the app with a real archive.
+> **Status: early implementation.** The desktop shell, local SQLite database, account/snapshot grouping, and bounded directory inventory are implemented and tested. The application does not yet parse HTML/JSON content or import messages and media.
 
 ## Product decisions
 
@@ -20,7 +20,7 @@ This repository stores source code and generic documentation only. Never commit 
 
 ## Requirements
 
-- Node.js 22.12 or later
+- Node.js 22.13 or later
 - npm
 - Windows 10/11 (initial target)
 
@@ -50,9 +50,10 @@ The development dependency installation requires an internet connection. The app
 - Symbolic links are skipped, unreadable directories are counted, and very large inventories are marked as truncated.
 - A safe relative-path resolver with traversal tests.
 - Section evidence catalogue and Arabic-aware search normalization.
-- Initial SQLite schema proposal (not connected to a runtime database yet).
+- SQLite runtime with versioned migrations, account grouping, independent backup snapshots, and persisted source-file inventory.
+- Saved backup history loaded from the local database after startup.
 
-The actual HTML/JSON parsers, ZIP reader, SQLite runtime, media viewers, and search UI are not implemented yet. Follow [the roadmap](docs/ROADMAP.md) for implementation status.
+The actual HTML/JSON parsers, ZIP reader, record import pipeline, media viewers, and search UI are not implemented yet. Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 
 ## Documentation
 

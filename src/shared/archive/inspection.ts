@@ -80,6 +80,7 @@ export interface PhotoAlbumRecordSummary {
   photoCount: number | null;
   albumPath: string;
   coverPath: string | null;
+  coverAssetId: number | null;
   dateRaw: string | null;
   detailStatus: string;
   importedPhotoCount: number;

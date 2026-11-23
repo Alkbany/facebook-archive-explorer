@@ -163,3 +163,37 @@ export function failDiscoverySession(database: DatabaseSync, session: DiscoveryS
     throw error;
   }
 }
+
+export interface ArchiveSnapshotSummary {
+  id: string;
+  accountName: string;
+  backupName: string;
+  status: string;
+  createdAt: string;
+  filesDiscovered: number;
+}
+
+export function listArchiveSnapshots(database: DatabaseSync): ArchiveSnapshotSummary[] {
+  return database.prepare(`
+    SELECT
+      snapshots.id AS id,
+      accounts.display_name AS accountName,
+      snapshots.display_name AS backupName,
+      snapshots.status AS status,
+      snapshots.created_at AS createdAt,
+      COALESCE(MAX(runs.files_discovered), 0) AS filesDiscovered
+    FROM archive_snapshots AS snapshots
+    INNER JOIN accounts ON accounts.id = snapshots.account_id
+    LEFT JOIN import_runs AS runs
+      ON runs.snapshot_id = snapshots.id
+      AND runs.run_type = 'discovery'
+    GROUP BY
+      snapshots.id,
+      accounts.display_name,
+      snapshots.display_name,
+      snapshots.status,
+      snapshots.created_at
+    ORDER BY snapshots.created_at DESC
+    LIMIT 20
+  `).all() as ArchiveSnapshotSummary[];
+}

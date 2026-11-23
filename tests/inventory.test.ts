@@ -25,10 +25,14 @@ describe('inspectArchiveDirectory', () => {
     await writeFile(join(root, 'profile_information', 'profile.json'), '{}');
 
     const discovered: string[] = [];
+    const discoveredSizes = new Map<string, number | null | undefined>();
     const report = await inspectArchiveDirectory(root, {
       snapshotId: 'snapshot-test',
       accountId: 'account-test',
-      onFilesFound: (files) => discovered.push(...files.map((file) => file.relativePath))
+      onFilesFound: (files) => {
+        discovered.push(...files.map((file) => file.relativePath));
+        for (const file of files) discoveredSizes.set(file.relativePath, file.fileSizeBytes);
+      }
     });
 
     expect(report.snapshotId).toBe('snapshot-test');
@@ -42,6 +46,8 @@ describe('inspectArchiveDirectory', () => {
     expect(report.sectionFileCounts.root).toBe(1);
     expect(discovered).toHaveLength(4);
     expect(discovered).toContain('index.html');
+    expect(discoveredSizes.get('index.html')).toBe(Buffer.byteLength('<html>synthetic index</html>'));
+    expect(discoveredSizes.get('photos_and_videos/sample.jpg')).toBe(Buffer.byteLength('synthetic-media'));
     expect(report.truncated).toBe(false);
   });
 

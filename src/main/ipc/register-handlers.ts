@@ -2,7 +2,12 @@ import { app, dialog, ipcMain } from 'electron';
 import { basename } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
-import { beginDiscoverySession, completeDiscoverySession, failDiscoverySession, insertDiscoveredFiles } from '../database/archive-repository';
+import {
+  beginDiscoverySession,
+  completeDiscoverySession,
+  failDiscoverySession,
+  insertDiscoveredFiles
+} from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 
 let selectedBackupDirectory: string | null = null;
@@ -49,7 +54,7 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       const report = await inspectArchiveDirectory(sourcePath, {
         snapshotId: session.snapshotId,
         accountId: session.accountId,
-        onFileFound: (file) => insertDiscoveredFiles(database, session.snapshotId, [file])
+        onFilesFound: (files) => insertDiscoveredFiles(database, session.snapshotId, files)
       });
 
       completeDiscoverySession(database, session, report.totalFiles);

@@ -675,3 +675,42 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .import-coverage-row { align-items: stretch; flex-direction: column; }
   .import-coverage-statuses { justify-content: flex-start; }
 }
+
+
+.import-progress-panel {
+  margin-top: 12px;
+  padding: 12px 15px;
+  border: 1px solid #e5e9f3;
+  border-radius: 9px;
+  background: #fafbff;
+}
+.import-progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.import-progress-heading > div { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.import-progress-heading strong { color: #454b65; font-size: 10px; }
+.import-progress-heading span { color: #8d93a7; font-size: 9px; line-height: 1.5; }
+.import-progress-heading .import-progress-phase {
+  flex: 0 0 auto;
+  color: #5a78a1;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.import-progress-track {
+  height: 7px;
+  overflow: hidden;
+  margin-top: 11px;
+  border-radius: 8px;
+  background: #e9edf5;
+}
+.import-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7770d9, #8d84e6);
+  transition: width .18s ease-out;
+}
+.import-progress-note { margin: 8px 0 0; color: #989daf; font-size: 8px; }

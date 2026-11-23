@@ -235,3 +235,60 @@ export async function importFriendsSourceFile(
     throw new Error('The Friends source file could not be imported. See the local import report.');
   }
 }
+
+const FRIENDS_EXPORT_FILES = [
+  'friends.html',
+  'received_friend_requests.html',
+  'sent_friend_requests.html',
+  'rejected_friend_requests.html',
+  'removed_friends.html'
+] as const;
+
+export interface FriendsImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
+/**
+ * Imports only the five known Friends export HTML files for one snapshot.
+ * Completed files are left untouched; failed/unsupported files may be retried.
+ */
+export async function importFriendsSection(
+  database: DatabaseSync,
+  snapshotId: string,
+  archiveRoot: string
+): Promise<FriendsImportSectionResult> {
+  const placeholders = FRIENDS_EXPORT_FILES.map(() => '?').join(', ');
+  const files = database.prepare(`
+    SELECT id, file_name
+    FROM source_files
+    WHERE snapshot_id = ?
+      AND section_key = 'friends'
+      AND detected_format = 'html'
+      AND lower(file_name) IN (${placeholders})
+      AND status IN ('discovered', 'failed', 'unsupported')
+    ORDER BY relative_path
+  `).all(snapshotId, ...FRIENDS_EXPORT_FILES) as Array<{ id: number; file_name: string }>;
+
+  const summary: FriendsImportSectionResult = {
+    filesAttempted: 0,
+    recordsImported: 0,
+    unsupportedFiles: 0,
+    failedFiles: 0
+  };
+
+  for (const file of files) {
+    summary.filesAttempted += 1;
+    try {
+      const result = await importFriendsSourceFile(database, snapshotId, file.id, archiveRoot);
+      summary.recordsImported += result.recordsImported;
+      if (result.fileStatus === 'unsupported') summary.unsupportedFiles += 1;
+    } catch {
+      summary.failedFiles += 1;
+    }
+  }
+
+  return summary;
+}

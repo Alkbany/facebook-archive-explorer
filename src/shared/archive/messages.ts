@@ -7,6 +7,7 @@ export interface MessageConversationSummary {
 }
 
 export interface MessageMediaSummary {
+  id: number;
   relativePath: string;
   mediaKind: string;
   role: string | null;

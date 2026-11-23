@@ -4,6 +4,8 @@ import type {
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
   PostsImportSectionResult,
+  CommentsImportSectionResult,
+  CommentActivitySummary,
   PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,

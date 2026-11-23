@@ -28,6 +28,6 @@ The Git repository is for source code and generic documentation only. Never comm
 
 ## Sensitive data
 
-Contact details, payment records, precise location, IP addresses, login/session information, and other high-sensitivity records must be classified during import. Sensitive records are excluded from the default full-text search index. Sensitive values must not appear in logs or diagnostics.
+Contact details, payment records, precise location, IP addresses, login/session information, and other high-sensitivity records must be classified during import. Sensitive records are excluded from the default full-text search index. In the implemented Friends importer, optional contact information is stored only in a separate local record payload and is not copied into FTS5 title/body fields. Sensitive values must not appear in logs or diagnostics.
 
 AI features must be local-only, optional, configurable, and disabled by default.

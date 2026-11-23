@@ -140,7 +140,6 @@ function App() {
         window.desktopApi.listArchiveSnapshots()
       ]);
       setMediaGallery(media);
-      setPhotoAlbums(albums);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
       setSavedBackups(backups);
@@ -207,6 +206,7 @@ function App() {
       setReactionRecords(reactions);
       setConversations(foundConversations);
       setMediaGallery(media);
+      setPhotoAlbums(albums);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);

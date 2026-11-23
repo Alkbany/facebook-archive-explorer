@@ -55,7 +55,7 @@ export function listFallbackArchiveRecords(
   const total = count.total;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(requestedPage, pageCount);
-  const records = database.prepare(
+  const rows = database.prepare(
     'SELECT records.id AS id, records.section_key AS sectionKey, ' +
     'records.record_type AS recordType, records.title AS title, ' +
     'records.body_text AS body, records.event_time_raw AS dateRaw, ' +

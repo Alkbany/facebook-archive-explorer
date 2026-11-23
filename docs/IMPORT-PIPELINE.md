@@ -70,7 +70,7 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 
 ## Still not implemented
 
-- JSON import and ZIP discovery/import.
+- JSON import. ZIP discovery and streaming reads are implemented; broader JSON-backed section parsing remains future work.
 - Full resumable import orchestration across all sections and integrity reporting.
 - Structured photo albums, groups, events, Marketplace, saved items, and other remaining export sections; these require their own verified samples.
 - Album metadata enrichment (dimensions, duration, thumbnails, membership).

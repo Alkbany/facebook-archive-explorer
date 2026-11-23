@@ -70,6 +70,10 @@ export function registerIpcHandlers(database: DatabaseSync): void {
         return { status: 'cancelled' };
       }
 
+      selectedBackupDirectory = null;
+      selectedBackupKind = null;
+      selectedAccountId = null;
+      selectedSnapshotId = null;
       const selectedPath = result.filePaths[0];
       const selectedStats = await stat(selectedPath);
       if (selectedStats.isDirectory()) {

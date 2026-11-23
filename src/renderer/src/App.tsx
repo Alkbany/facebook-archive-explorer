@@ -461,7 +461,7 @@ function App() {
 
             <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder || !accountName.trim()}>
               <span className="button-icon">＋</span>
-              {isChoosingFolder ? 'Inspecting folder…' : 'Choose backup folder'}
+              {isChoosingFolder ? 'Inspecting backup…' : 'Choose backup folder or ZIP'}
             </button>
 
             {selectedFolder && (
@@ -469,12 +469,12 @@ function App() {
                 <span className="selected-folder-icon">✓</span>
                 <div>
                   <strong>{accountName} · {selectedFolder}</strong>
-                  <span>Discovery metadata was saved in the local database.</span>
+                  <span>Archive inventory saved locally. ZIP contents are read in place without extraction.</span>
                 </div>
               </div>
             )}
             {error && <p className="error-message">{error}</p>}
-            <p className="helper-text">Use the same label for backups from one account, or a different label for another account. Your original export is not moved or modified.</p>
+            <p className="helper-text">Use the same label for backups from one account, or a different label for another account. Original exports are never moved or modified; ZIP archives are read in place.</p>
           </div>
 
           <div className="welcome-art" aria-hidden="true">
@@ -499,7 +499,7 @@ function App() {
             <div className="inspection-heading">
               <div>
                 <p className="eyebrow">FIRST LOOK</p>
-                <h2>Folder inventory</h2>
+                <h2>Backup inventory</h2>
                 <span className="snapshot-id">Saved snapshot: {inspection.snapshotId.slice(0, 8)}</span>
                 <p>Names and file types only. No HTML, JSON, messages, or media contents were opened.</p>
               </div>

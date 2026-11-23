@@ -5,6 +5,7 @@ import type {
   DiscoveredArchiveFile
 } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
+import type { ArchiveInventoryOptions } from './inventory';
 import {
   forEachZipEntry,
   getSafeZipEntryPath,
@@ -37,11 +38,7 @@ function detectFormat(fileName: string): DetectedArchiveFormat {
 /** Inventories the ZIP central directory without extracting entries or reading their contents. */
 export async function inspectArchiveZip(
   selectedZipPath: string,
-  options: {
-    snapshotId: string;
-    accountId: string;
-    onFilesFound?: (files: readonly DiscoveredArchiveFile[]) => void;
-  }
+  options: ArchiveInventoryOptions
 ): Promise<ArchiveInspectionReport> {
   const report: ArchiveInspectionReport = {
     archiveName: basename(selectedZipPath, extname(selectedZipPath)),
@@ -58,6 +55,12 @@ export async function inspectArchiveZip(
     truncated: false
   };
   const noDataSections = new Set<string>();
+  const maxEntries = Number.isSafeInteger(options.maxEntries)
+    ? Math.max(1, Math.min(MAX_ENTRIES, options.maxEntries as number))
+    : MAX_ENTRIES;
+  const batchSize = Number.isSafeInteger(options.batchSize)
+    ? Math.max(1, Math.min(5_000, options.batchSize as number))
+    : BATCH_SIZE;
   let batch: DiscoveredArchiveFile[] = [];
   const flushBatch = () => {
     if (batch.length === 0) return;
@@ -89,8 +92,8 @@ export async function inspectArchiveZip(
 
     if (fileName.toLocaleLowerCase() === 'no-data.txt') noDataSections.add(sectionKey);
     batch.push({ relativePath, fileName, sectionKey, detectedFormat });
-    if (batch.length >= BATCH_SIZE) flushBatch();
-  }, MAX_ENTRIES);
+    if (batch.length >= batchSize) flushBatch();
+  }, maxEntries);
 
   flushBatch();
   report.truncated = iteration.truncated;

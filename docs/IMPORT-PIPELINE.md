@@ -86,7 +86,7 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 
 ## Import progress events
 
-Each section importer emits a start event, a progress event after each attempted file, and a completion event. The event contains only the section key, phase, file counts, record count, and unsupported/failed counts; it never includes archive paths, message text, or file contents. The main process forwards these events to the invoking renderer over a dedicated IPC channel. A disconnected progress listener cannot interrupt an import.
+Each section importer emits a start event, a progress event after each attempted file, and a completion event. The event contains only the section key, phase, file counts, record count, and unsupported/failed counts; it never includes archive paths, message text, or file contents. The main process forwards these events to the invoking renderer over a dedicated IPC channel. A disconnected progress listener cannot interrupt an import. A process-wide import lock serializes all import entry points; backup selection, opening another snapshot, database export, and database restore are rejected while an import is active.
 
 ## One-click import and resume behavior
 

@@ -175,12 +175,12 @@ export function listArchiveSnapshots(database: DatabaseSync): ArchiveSnapshotSum
       snapshots.display_name AS backupName,
       snapshots.status AS status,
       snapshots.created_at AS createdAt,
-      COALESCE(MAX(runs.files_discovered), 0) AS filesDiscovered
+      COALESCE(SUM(CASE WHEN runs.run_type = 'discovery' THEN runs.files_discovered ELSE 0 END), 0) AS filesDiscovered,
+      COALESCE(SUM(CASE WHEN runs.run_type = 'import' THEN runs.records_imported ELSE 0 END), 0) AS recordsImported
     FROM archive_snapshots AS snapshots
     INNER JOIN accounts ON accounts.id = snapshots.account_id
     LEFT JOIN import_runs AS runs
       ON runs.snapshot_id = snapshots.id
-      AND runs.run_type = 'discovery'
     GROUP BY
       snapshots.id,
       accounts.display_name,

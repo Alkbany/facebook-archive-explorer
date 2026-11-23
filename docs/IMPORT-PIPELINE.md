@@ -93,3 +93,12 @@ Do not delete or merge records because names, timestamps, or text look similar. 
 - `no-data`: an explicit no-data marker was observed.
 
 Runtime discovery remains authoritative.
+
+
+## Local application database backup and restore
+
+- Export uses the Node.js SQLite online-backup API to produce a consistent standalone database instead of manually copying the active database and WAL/SHM files.
+- A candidate restore file must be a regular non-empty SQLite file, pass `PRAGMA integrity_check` and `PRAGMA foreign_key_check`, contain the required archive tables, and use a schema version no newer than the running app.
+- Restore is refused while a database transaction, import, or discovery run is active.
+- The current database is backed up to a recovery file before the staged restore is swapped into place. Startup restores the previous file if the process was interrupted before the new file was installed.
+- Restoring restarts the application. The database file contains local archive indexes and imported records, not the original Facebook export folders, ZIP files, or media.

@@ -46,7 +46,7 @@ The development dependency installation requires an internet connection. The app
 
 The **Windows installer** workflow builds an NSIS installer on `main` and uploads it as the `facebook-archive-explorer-windows` GitHub Actions artifact. Open the latest successful Windows installer run in the repository's Actions tab, download the artifact ZIP, extract it, and run the included `Facebook Archive Explorer Setup` installer.
 
-Artifacts are retained for 14 days. The installer is currently **unsigned** because no code-signing certificate is configured; Windows may display an unknown-publisher or SmartScreen warning. This is a test build, not a public GitHub Release. Public Releases are created only for version tags beginning with `v`.
+Artifacts are retained for 14 days. Builds from `main` are test artifacts and may be unsigned if no signing certificate is configured; Smart App Control can block these builds. They are named `facebook-archive-explorer-windows-test` and are not intended as consumer-ready installers. Version-tag releases require valid Authenticode signatures for all packaged Windows executable binaries before upload. See [Windows code signing](docs/CODE-SIGNING.md) for the certificate setup.
 
 ## Current capabilities
 

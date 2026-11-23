@@ -30,29 +30,29 @@ describe('Friends directory repository', () => {
     snapshotId = 'friends-directory-snapshot';
     const timestamp = new Date().toISOString();
 
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO archive_snapshots (
         id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
       ) VALUES (?, ?, 'Synthetic friends export', 'directory', '/synthetic/friends', 'discovered', ?, ?)
-    \`).run(snapshotId, accountId, timestamp, timestamp);
+    `).run(snapshotId, accountId, timestamp, timestamp);
 
-    sourceFileId = Number(database.prepare(\`
+    sourceFileId = Number(database.prepare(`
       INSERT INTO source_files (
         snapshot_id, relative_path, file_name, section_key, detected_format, discovered_at
       ) VALUES (?, 'friends/friends.html', 'friends.html', 'friends', 'html', ?)
-    \`).run(snapshotId, timestamp).lastInsertRowid);
+    `).run(snapshotId, timestamp).lastInsertRowid);
   });
 
   afterEach(() => database.close());
 
   function addFriend(index: number, type: string, name: string, dateRaw: string | null = null): void {
     const timestamp = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO records (
         snapshot_id, source_file_id, source_record_index, section_key, record_type,
         title, event_time_raw, sensitivity, search_enabled, payload_json, created_at
       ) VALUES (?, ?, ?, 'friends', ?, ?, ?, 'personal', 1, ?, ?)
-    \`).run(
+    `).run(
       snapshotId,
       sourceFileId,
       index,
@@ -105,7 +105,7 @@ describe('Friends directory repository', () => {
 
   it('paginates large directories without loading every friend into the renderer', () => {
     for (let index = 0; index < 205; index += 1) {
-      addFriend(index, 'friend', \`Friend \${String(index).padStart(3, '0')}\`);
+      addFriend(index, 'friend', `Friend ${String(index).padStart(3, '0')}`);
     }
 
     const firstPage = listFriendDirectory(database, snapshotId, 'all', '', 1);

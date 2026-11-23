@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parseCommentsExport } from '../parsers/comments-parser';
 
@@ -21,7 +22,8 @@ function safeFailure(error: unknown): { code: string; message: string } {
 export async function importCommentsSection(
   database: DatabaseSync,
   snapshotId: string,
-  archiveRoot: string
+  archiveRoot: string,
+  onProgress?: ImportProgressReporter
 ): Promise<CommentsImportSectionResult> {
   const files = database.prepare(`
     SELECT id, relative_path FROM source_files
@@ -32,6 +34,17 @@ export async function importCommentsSection(
   const summary: CommentsImportSectionResult = {
     filesAttempted: 0, recordsImported: 0, unsupportedFiles: 0, failedFiles: 0
   };
+
+  const emitProgress = (phase: 'started' | 'progress' | 'completed') => reportImportProgress(onProgress, {
+    sectionKey: 'comments',
+    phase,
+    filesCompleted: summary.filesAttempted,
+    filesTotal: files.length,
+    recordsImported: summary.recordsImported,
+    unsupportedFiles: summary.unsupportedFiles,
+    failedFiles: summary.failedFiles
+  });
+  emitProgress('started');
 
   for (const file of files) {
     summary.filesAttempted += 1;
@@ -92,6 +105,8 @@ export async function importCommentsSection(
         .run(now, runId);
       summary.failedFiles += 1;
     }
+    emitProgress('progress');
   }
+  emitProgress('completed');
   return summary;
 }

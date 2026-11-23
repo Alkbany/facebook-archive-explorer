@@ -43,7 +43,7 @@ export function listFriendDirectory(
     throw new Error('The Friends page number is invalid.');
   }
 
-  const countsRow = database.prepare(\`
+  const countsRow = database.prepare(`
     SELECT
       COUNT(*) AS all,
       SUM(CASE WHEN record_type = 'friend' THEN 1 ELSE 0 END) AS friends,
@@ -53,7 +53,7 @@ export function listFriendDirectory(
       SUM(CASE WHEN record_type = 'removed' THEN 1 ELSE 0 END) AS removed
     FROM records
     WHERE snapshot_id = ? AND section_key = 'friends'
-  \`).get(snapshotId) as {
+  `).get(snapshotId) as {
     all: number;
     friends: number | null;
     received: number | null;
@@ -75,31 +75,31 @@ export function listFriendDirectory(
 
   const normalizedQuery = query.trim();
   if (normalizedQuery) {
-    const pattern = \`%\${escapeLikePattern(normalizedQuery)}%\`;
-    conditions.push(\`(
+    const pattern = `%${escapeLikePattern(normalizedQuery)}%`;
+    conditions.push(`(
       COALESCE(records.title, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
       OR COALESCE(records.event_time_raw, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
       OR source.relative_path LIKE ? ESCAPE '\\' COLLATE NOCASE
-    )\`);
+    )`);
     parameters.push(pattern, pattern, pattern);
   }
 
   const whereClause = conditions.join(' AND ');
-  const totalRow = database.prepare(\`
+  const totalRow = database.prepare(`
     SELECT COUNT(*) AS total
     FROM records
     INNER JOIN source_files AS source
       ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id
-    WHERE \${whereClause}
-  \`).get(...parameters) as { total: number };
+    WHERE ${whereClause}
+  `).get(...parameters) as { total: number };
 
   const total = totalRow.total;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(requestedPage, pageCount);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const records = database.prepare(\`
+  const records = database.prepare(`
     SELECT
       records.id AS id,
       records.title AS nameRaw,
@@ -111,11 +111,11 @@ export function listFriendDirectory(
     INNER JOIN source_files AS source
       ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id
-    WHERE \${whereClause}
+    WHERE ${whereClause}
     ORDER BY records.title COLLATE NOCASE, source.relative_path COLLATE NOCASE,
       records.source_record_index ASC
     LIMIT ? OFFSET ?
-  \`).all(...parameters, PAGE_SIZE, offset) as unknown as FriendDirectoryRecord[];
+  `).all(...parameters, PAGE_SIZE, offset) as unknown as FriendDirectoryRecord[];
 
   return {
     records,

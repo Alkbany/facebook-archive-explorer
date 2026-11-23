@@ -5,7 +5,7 @@ if (-not (Test-Path -LiteralPath $releaseDirectory -PathType Container)) {
   throw "Release directory was not created: $releaseDirectory"
 }
 
-$extensions = @('.exe', '.dll', '.node')
+$extensions = @('.exe', '.dll', '.node', '.sys', '.ocx')
 $binaries = @(Get-ChildItem -LiteralPath $releaseDirectory -Recurse -File |
   Where-Object { $extensions -contains $_.Extension.ToLowerInvariant() })
 

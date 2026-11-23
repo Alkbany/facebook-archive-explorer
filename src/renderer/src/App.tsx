@@ -1494,7 +1494,11 @@ function App() {
                     <input
                       className="conversation-filter"
                       value={albumFilter}
-                      onChange={(event) => setAlbumFilter(event.target.value)}
+                      onChange={(event) => {
+                        setAlbumFilter(event.target.value);
+                        setPhotoAlbumCovers({});
+                        setPhotoAlbumCoverFailures({});
+                      }}
                       placeholder="Filter photo albums…"
                     />
                     {photoAlbums.length === 0 ? (

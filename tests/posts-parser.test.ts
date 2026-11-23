@@ -17,7 +17,7 @@ describe('Facebook posts parser', () => {
     expect(result.records).toHaveLength(1);
     expect(result.records[0]).toMatchObject({
       authorRaw: 'تم النشر بواسطة Ahmed في MagicalGhast.',
-      bodyRaw: 'منشور تجريبيسطر تاني',
+      bodyRaw: 'منشور تجريبي\nسطر تاني',
       dateRaw: '١٥/١٠/٢٠١٨ ٧:٣٦ ص',
       permalinkRaw: 'https://www.facebook.com/dyi/l/?opaque=1',
       sourceCardIndex: 0

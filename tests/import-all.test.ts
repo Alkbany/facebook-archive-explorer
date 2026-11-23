@@ -130,9 +130,48 @@ describe('Import all supported data', () => {
       expect(file).toEqual({ status: 'failed', safe_error_code: 'IMPORT_INTERRUPTED' });
       const run = database.prepare('SELECT status FROM import_runs WHERE id = ?').get('run-' + id) as { status: string };
       expect(run.status).toBe('failed');
+      const issue = database.prepare(`
+        SELECT severity, issue_code, safe_message
+        FROM import_issues WHERE import_run_id = ?
+      `).get('run-' + id) as { severity: string; issue_code: string; safe_message: string };
+      expect(issue).toMatchObject({
+        severity: 'error',
+        issue_code: 'IMPORT_INTERRUPTED'
+      });
+      expect(issue.safe_message).toContain('Retry the section');
+      expect(issue.safe_message).not.toContain('your_posts.html');
       const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?').get(id) as { status: string };
       expect(snapshot.status).toBe('partial');
     }
+  });
+
+  it('creates a safe diagnostics record for an orphaned processing file without an import run', () => {
+    const accountId = getOrCreateAccount(database, 'Synthetic import-all account');
+    const now = new Date().toISOString();
+    const orphanSnapshotId = 'orphaned-processing-snapshot';
+    database.prepare(`
+      INSERT INTO archive_snapshots (
+        id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+      ) VALUES (?, ?, 'Orphaned import backup', 'directory', ?, 'completed', ?, ?)
+    `).run(orphanSnapshotId, accountId, root, now, now);
+    database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, 'posts/your_posts.html', 'your_posts.html', 'posts', 'html', 'processing', ?)
+    `).run(orphanSnapshotId, now);
+
+    expect(recoverAllInterruptedImports(database)).toBe(1);
+    const run = database.prepare(`
+      SELECT id, status, files_processed AS filesProcessed, errors_count AS errorsCount
+      FROM import_runs WHERE snapshot_id = ?
+    `).get(orphanSnapshotId) as { id: string; status: string; filesProcessed: number; errorsCount: number };
+    expect(run).toMatchObject({ status: 'failed', filesProcessed: 1, errorsCount: 1 });
+    const issue = database.prepare(`
+      SELECT severity, issue_code AS issueCode, source_file_id AS sourceFileId
+      FROM import_issues WHERE import_run_id = ?
+    `).get(run.id) as { severity: string; issueCode: string; sourceFileId: number };
+    expect(issue).toMatchObject({ severity: 'error', issueCode: 'IMPORT_INTERRUPTED' });
+    expect(issue.sourceFileId).toBeGreaterThan(0);
   });
 
   it('skips completed files on a second import pass', async () => {
@@ -165,9 +204,12 @@ describe('Import all supported data', () => {
       'MESSAGE_CARDS_NOT_FOUND',
       'POST_CARDS_NOT_FOUND'
     ]);
-    const interruptedRun = database.prepare("SELECT status FROM import_runs WHERE id = 'interrupted-run'")
-      .get() as { status: string };
-    expect(interruptedRun.status).toBe('failed');
+    const interruptedRun = database.prepare("SELECT status, errors_count FROM import_runs WHERE id = 'interrupted-run'")
+      .get() as { status: string; errors_count: number };
+    expect(interruptedRun).toEqual({ status: 'failed', errors_count: 5 });
+    const interruptionIssues = database.prepare("SELECT COUNT(*) AS count FROM import_issues WHERE import_run_id = 'interrupted-run'")
+      .get() as { count: number };
+    expect(interruptionIssues.count).toBe(5);
     const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
       .get(snapshotId) as { status: string };
     expect(snapshot.status).toBe('partial');

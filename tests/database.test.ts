@@ -7,7 +7,8 @@ import {
   beginDiscoverySession,
   completeDiscoverySession,
   getOrCreateAccount,
-  insertDiscoveredFiles
+  insertDiscoveredFiles,
+  listArchiveSnapshots
 } from '../src/main/database/archive-repository';
 
 const migrations = [
@@ -134,6 +135,17 @@ describe('local SQLite storage', () => {
     expect(files).toEqual([
       { relative_path: 'friends/friends.html', status: 'discovered' },
       { relative_path: 'location/no-data.txt', status: 'empty' }
+    ]);
+
+    expect(listArchiveSnapshots(database)).toEqual([
+      {
+        id: session.snapshotId,
+        accountName: 'Test Facebook account',
+        backupName: 'Synthetic export',
+        status: 'discovered',
+        createdAt: expect.any(String),
+        filesDiscovered: 2
+      }
     ]);
   });
 });

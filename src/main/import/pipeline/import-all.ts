@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import type { ImportAllSupportedDataResult } from '../../../shared/archive/inspection';
+import type { ImportAllSupportedDataResult, PhotoAlbumsImportSectionResult } from '../../../shared/archive/inspection';
 import { importFriendsSection } from './friends-importer';
 import { importMessagesSection } from './messages-importer';
 import { importPostsSection } from './posts-importer';
@@ -9,6 +9,27 @@ import { importReactionsSection } from './reactions-importer';
 import { importPhotoAlbumsSection } from './photo-albums-importer';
 import { importPhotoAlbumDetailsSection } from './photo-album-details-importer';
 import type { ImportProgressReporter } from './import-progress';
+
+/**
+ * Runs the reviewed Photos & Videos root-index importer followed by its
+ * explicitly referenced album-detail importer.
+ */
+export async function importPhotosAndVideosSection(
+  database: DatabaseSync,
+  snapshotId: string,
+  archiveRoot: string,
+  onProgress?: ImportProgressReporter
+): Promise<PhotoAlbumsImportSectionResult> {
+  const albumIndex = await importPhotoAlbumsSection(database, snapshotId, archiveRoot, onProgress);
+  const albumDetails = await importPhotoAlbumDetailsSection(database, snapshotId, archiveRoot, onProgress);
+  return {
+    filesAttempted: albumIndex.filesAttempted + albumDetails.filesAttempted,
+    recordsImported: albumIndex.recordsImported + albumDetails.recordsImported,
+    mediaReferences: albumIndex.mediaReferences + albumDetails.mediaReferences,
+    unsupportedFiles: albumIndex.unsupportedFiles + albumDetails.unsupportedFiles,
+    failedFiles: albumIndex.failedFiles + albumDetails.failedFiles
+  };
+}
 
 /**
  * Repairs file/run markers left by an interrupted import-all session.
@@ -145,15 +166,7 @@ export async function importAllSupportedData(
     const posts = await importPostsSection(database, snapshotId, archiveRoot, onProgress);
     const comments = await importCommentsSection(database, snapshotId, archiveRoot, onProgress);
     const reactions = await importReactionsSection(database, snapshotId, archiveRoot, onProgress);
-    const photoAlbumIndex = await importPhotoAlbumsSection(database, snapshotId, archiveRoot, onProgress);
-    const photoAlbumDetails = await importPhotoAlbumDetailsSection(database, snapshotId, archiveRoot, onProgress);
-    const photosAndVideos = {
-      filesAttempted: photoAlbumIndex.filesAttempted + photoAlbumDetails.filesAttempted,
-      recordsImported: photoAlbumIndex.recordsImported + photoAlbumDetails.recordsImported,
-      mediaReferences: photoAlbumIndex.mediaReferences + photoAlbumDetails.mediaReferences,
-      unsupportedFiles: photoAlbumIndex.unsupportedFiles + photoAlbumDetails.unsupportedFiles,
-      failedFiles: photoAlbumIndex.failedFiles + photoAlbumDetails.failedFiles
-    };
+    const photosAndVideos = await importPhotosAndVideosSection(database, snapshotId, archiveRoot, onProgress);
 
     const sections = { friends, messages, posts, comments, reactions, photosAndVideos };
     const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ArchiveInspectionReport } from '../../shared/archive/inspection';
+import type { ArchiveInspectionReport, ArchiveSnapshotSummary } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
@@ -9,6 +9,7 @@ function App() {
   const [accountName, setAccountName] = useState('My Facebook account');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
+  const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +17,10 @@ function App() {
     void window.desktopApi.getAppInfo()
       .then((info) => setVersion(info.appVersion))
       .catch(() => setError('Could not read application information.'));
+
+    void window.desktopApi.listArchiveSnapshots()
+      .then(setSavedBackups)
+      .catch(() => setError('Could not load saved backups from the local database.'));
   }, []);
 
   async function chooseFolder() {
@@ -31,6 +36,7 @@ function App() {
       setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
     } finally {
@@ -112,7 +118,7 @@ function App() {
               </div>
             )}
             {error && <p className="error-message">{error}</p>}
-            <p className="helper-text">Your original export is not moved or modified.</p>
+            <p className="helper-text">Use the same label for backups from one account, or a different label for another account. Your original export is not moved or modified.</p>
           </div>
 
           <div className="welcome-art" aria-hidden="true">
@@ -180,6 +186,37 @@ function App() {
             )}
           </section>
         )}
+
+
+        <section className="saved-backups-panel">
+          <div className="saved-backups-heading">
+            <div>
+              <p className="eyebrow">LOCAL DATABASE</p>
+              <h2>Saved backups</h2>
+            </div>
+            <span>{savedBackups.length} snapshots</span>
+          </div>
+          {savedBackups.length === 0 ? (
+            <p className="saved-backups-empty">No backup inventories saved yet.</p>
+          ) : (
+            <div className="saved-backups-list">
+              {savedBackups.map((backup) => (
+                <article className="saved-backup-item" key={backup.id}>
+                  <div className="saved-backup-mark">▤</div>
+                  <div className="saved-backup-copy">
+                    <strong>{backup.backupName}</strong>
+                    <span>{backup.accountName}</span>
+                  </div>
+                  <div className="saved-backup-meta">
+                    <strong>{backup.filesDiscovered.toLocaleString()} files</strong>
+                    <span>{backup.status === 'discovered' ? 'Inventory saved' : backup.status}</span>
+                    <small>{new Date(backup.createdAt).toLocaleString()}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="section-heading">
           <div>

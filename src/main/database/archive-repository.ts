@@ -10,6 +10,27 @@ export interface DiscoverySession {
 
 const now = (): string => new Date().toISOString();
 
+export function getOrCreateAccount(database: DatabaseSync, displayName: string): string {
+  const normalizedName = displayName.trim().replace(/\\s+/gu, ' ');
+  if (!normalizedName || normalizedName.length > 100 || /[\\u0000-\\u001F\\u007F]/u.test(normalizedName)) {
+    throw new Error('Account label must contain 1 to 100 printable characters.');
+  }
+
+  const existing = database.prepare(
+    'SELECT id FROM accounts WHERE display_name = ? COLLATE NOCASE'
+  ).get(normalizedName) as { id: string } | undefined;
+
+  if (existing) return existing.id;
+
+  const accountId = randomUUID();
+  const timestamp = now();
+  database.prepare(
+    'INSERT INTO accounts (id, display_name, created_at, updated_at) VALUES (?, ?, ?, ?)'
+  ).run(accountId, normalizedName, timestamp, timestamp);
+
+  return accountId;
+}
+
 export function beginDiscoverySession(
   database: DatabaseSync,
   archiveName: string,

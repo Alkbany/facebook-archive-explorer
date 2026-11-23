@@ -141,3 +141,34 @@ export function getMessageConversation(
     media: mediaQuery.all(row.id) as unknown as MessageMediaSummary[]
   }));
 }
+
+
+export function listMessageMediaGallery(
+  database: DatabaseSync,
+  snapshotId: string
+): Array<{
+  id: number; relativePath: string; mediaKind: string; role: string | null;
+  sourceFileId: number; conversationPath: string; sender: string | null;
+  timestampRaw: string | null; body: string | null;
+}> {
+  return database.prepare(`
+    SELECT assets.id AS id, assets.relative_path AS relativePath,
+      assets.media_kind AS mediaKind, links.role AS role,
+      source.id AS sourceFileId, source.relative_path AS conversationPath,
+      records.title AS sender, records.event_time_raw AS timestampRaw,
+      records.body_text AS body
+    FROM media_assets AS assets
+    INNER JOIN record_media AS links ON links.media_asset_id = assets.id
+    INNER JOIN records ON records.id = links.record_id
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+    WHERE assets.snapshot_id = ? AND records.snapshot_id = ?
+      AND records.section_key = 'messages'
+    ORDER BY source.relative_path COLLATE NOCASE,
+      records.source_record_index ASC, links.display_order ASC
+    LIMIT 300
+  `).all(snapshotId, snapshotId) as Array<{
+    id: number; relativePath: string; mediaKind: string; role: string | null;
+    sourceFileId: number; conversationPath: string; sender: string | null;
+    timestampRaw: string | null; body: string | null;
+  }>;
+}

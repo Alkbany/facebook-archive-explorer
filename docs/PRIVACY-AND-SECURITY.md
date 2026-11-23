@@ -32,3 +32,12 @@ The Git repository is for source code and generic documentation only. Never comm
 Contact details, payment records, precise location, IP addresses, login/session information, and other high-sensitivity records must be classified during import. Sensitive records are excluded from the default full-text search index. In the implemented Friends importer, optional contact information is stored only in a separate local record payload and is not copied into FTS5 title/body fields. Sensitive values must not appear in logs or diagnostics.
 
 AI features must be local-only, optional, configurable, and disabled by default.
+
+
+## Local application database backups
+
+- Database export uses the SQLite online backup API instead of copying the live database file and its WAL/SHM sidecars.
+- Before restore, the selected file is checked for SQLite integrity, foreign-key violations, required archive tables, and a schema version supported by this app.
+- A validated copy of the current database is preserved as a local pre-restore recovery file. The app restarts to reopen the restored database, and startup can recover the old file if the swap was interrupted.
+- The exported database is a normal, unencrypted SQLite file. It may contain personal archive metadata and imported records; store it somewhere private.
+- Database backups do not include Facebook export folders, ZIP files, or original media bytes. The saved archive references still depend on those original files remaining at their recorded paths.

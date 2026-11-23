@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openAppDatabase } from '../src/main/database/connection';
+import { applyMigrations, openAppDatabase } from '../src/main/database/connection';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -36,7 +36,6 @@ describe('local SQLite storage', () => {
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
     // Re-applying the same migration must be a no-op.
-    const { applyMigrations } = require('../src/main/database/connection') as typeof import('../src/main/database/connection');
     applyMigrations(database, [{ version: 1, name: 'initial_schema', sql: initialSchema }]);
 
     const finalCount = database.prepare(

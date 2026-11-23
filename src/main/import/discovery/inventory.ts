@@ -1,4 +1,4 @@
-import { opendir, realpath } from 'node:fs/promises';
+import { lstat, opendir, realpath } from 'node:fs/promises';
 import type { Dir } from 'node:fs';
 import { basename, extname, join, relative, sep } from 'node:path';
 import type {
@@ -150,11 +150,25 @@ export async function inspectArchiveDirectory(
           noDataSections.add(sectionKey);
         }
 
+        let fileSizeBytes: number | null = null;
+        try {
+          const fileMetadata = await lstat(absolutePath);
+          if (fileMetadata.isSymbolicLink()) {
+            report.skippedSymlinks += 1;
+            continue;
+          }
+          if (!fileMetadata.isFile()) continue;
+          fileSizeBytes = fileMetadata.size;
+        } catch {
+          // Preserve the discovered path; later import diagnostics report an unreadable file.
+        }
+
         batch.push({
           relativePath,
           fileName: entry.name,
           sectionKey,
-          detectedFormat
+          detectedFormat,
+          fileSizeBytes
         });
 
         if (batch.length >= batchSize) flushBatch();

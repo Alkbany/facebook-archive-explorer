@@ -52,7 +52,7 @@ function resolveLocalMediaPath(
   const base = baseHref && !/^[a-z][a-z0-9+.-]*:/iu.test(baseHref)
     ? baseHref
     : '.';
-  const resolved = posix.normalize(posix.resolve(dirname(sourceFile), base, value));
+  const resolved = posix.normalize(posix.join(dirname(sourceFile), base, value));
 
   if (resolved === '..' || resolved.startsWith('../') || resolved.startsWith('/')) {
     return null;

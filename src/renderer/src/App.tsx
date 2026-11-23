@@ -23,7 +23,11 @@ function App() {
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
-  const [postFilter, setPostFilter] = useState('');\n  const [commentsImport, setCommentsImport] = useState<CommentsImportSectionResult | null>(null);\n  const [commentRecords, setCommentRecords] = useState<CommentActivitySummary[]>([]);\n  const [commentFilter, setCommentFilter] = useState('');\n  const [isImportingComments, setIsImportingComments] = useState(false);
+  const [postFilter, setPostFilter] = useState('');
+  const [commentsImport, setCommentsImport] = useState<CommentsImportSectionResult | null>(null);
+  const [commentRecords, setCommentRecords] = useState<CommentActivitySummary[]>([]);
+  const [commentFilter, setCommentFilter] = useState('');
+  const [isImportingComments, setIsImportingComments] = useState(false);
   const [isImportingPosts, setIsImportingPosts] = useState(false);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
   const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
@@ -103,7 +107,22 @@ function App() {
     }
   }
 
-  async function importComments() {\n    setIsImportingComments(true);\n    setError(null);\n    try {\n      const result = await window.desktopApi.importCommentsForSelectedBackup();\n      setCommentsImport(result);\n      setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());\n      setSavedBackups(await window.desktopApi.listArchiveSnapshots());\n    } catch {\n      setError('Comments data could not be imported. Check the local import report.');\n    } finally {\n      setIsImportingComments(false);\n    }\n  }\n\n  async function importFriends() {
+  async function importComments() {
+    setIsImportingComments(true);
+    setError(null);
+    try {
+      const result = await window.desktopApi.importCommentsForSelectedBackup();
+      setCommentsImport(result);
+      setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Comments data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingComments(false);
+    }
+  }
+
+  async function importFriends() {
     setIsImportingFriends(true);
     setError(null);
 

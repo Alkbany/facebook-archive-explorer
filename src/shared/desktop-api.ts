@@ -1,7 +1,13 @@
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
 import type { ArchiveMediaGalleryItem } from './archive/media';
 import type { ArchiveSearchResult, SearchExportResult } from './archive/search';
-import type { ArchiveComparisonReport } from './archive/comparison';
+import type {
+  ArchiveComparisonReport,
+  ArchiveComparisonChangeKind,
+  ArchiveComparisonChangesPage,
+  ArchiveComparisonExportFormat,
+  ArchiveComparisonExportResult
+} from './archive/comparison';
 import type {
   ArchiveInspectionReport,
   ArchiveInspectionView,
@@ -75,7 +81,9 @@ export const IPC_CHANNELS = {
   listMediaForSelectedBackup: 'archive:list-media',
   searchRecordsForSelectedBackup: 'archive:search-records',
   exportSearchResultsForSelectedBackup: 'archive:export-search-results',
-  compareArchiveSnapshots: 'archive:compare-snapshots'
+  compareArchiveSnapshots: 'archive:compare-snapshots',
+  listArchiveComparisonChanges: 'archive:list-comparison-changes',
+  exportArchiveComparisonChanges: 'archive:export-comparison-changes'
 } as const;
 
 export interface DesktopApi {
@@ -111,4 +119,20 @@ export interface DesktopApi {
   searchRecordsForSelectedBackup(query: string, sectionKey: string | null): Promise<ArchiveSearchResult[]>;
   exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;
+  listArchiveComparisonChanges(
+    baselineSnapshotId: string,
+    comparedSnapshotId: string,
+    filter: ArchiveComparisonChangeKind,
+    sectionKey: string,
+    query: string,
+    page: number
+  ): Promise<ArchiveComparisonChangesPage>;
+  exportArchiveComparisonChanges(
+    baselineSnapshotId: string,
+    comparedSnapshotId: string,
+    filter: ArchiveComparisonChangeKind,
+    sectionKey: string,
+    query: string,
+    format: ArchiveComparisonExportFormat
+  ): Promise<ArchiveComparisonExportResult>;
 }

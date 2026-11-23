@@ -1,4 +1,4 @@
-import type { MessageConversationSummary, MessageRecordSummary } from './archive/messages';
+import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
 import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
@@ -24,6 +24,7 @@ export const IPC_CHANNELS = {
   importFriendsForSelectedBackup: 'archive:import-friends',
   importMessagesForSelectedBackup: 'archive:import-messages',
   listMessagesForSelectedBackup: 'archive:list-messages',
+  listMessageMediaForSelectedBackup: 'archive:list-message-media',
   getMessagesForSelectedConversation: 'archive:get-conversation-messages',
   getMessageMediaPreview: 'archive:get-message-media-preview'
 } as const;
@@ -36,6 +37,7 @@ export interface DesktopApi {
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;
   listMessagesForSelectedBackup(): Promise<MessageConversationSummary[]>;
+  listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
 }

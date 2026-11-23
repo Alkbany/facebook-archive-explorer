@@ -4,7 +4,7 @@ import { IPC_CHANNELS, type DesktopApi } from '../shared/desktop-api';
 const desktopApi: DesktopApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.getAppInfo),
   selectBackupDirectory: (accountName) => ipcRenderer.invoke(IPC_CHANNELS.selectBackupDirectory, accountName),
-  inspectSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.inspectSelectedBackup)
+  inspectSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.inspectSelectedBackup),\n  listArchiveSnapshots: () => ipcRenderer.invoke(IPC_CHANNELS.listArchiveSnapshots)
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

@@ -45,7 +45,7 @@ export function listFriendDirectory(
 
   const countsRow = database.prepare(`
     SELECT
-      COUNT(*) AS all,
+      COUNT(*) AS all_count,
       SUM(CASE WHEN record_type = 'friend' THEN 1 ELSE 0 END) AS friends,
       SUM(CASE WHEN record_type = 'received' THEN 1 ELSE 0 END) AS received,
       SUM(CASE WHEN record_type = 'sent' THEN 1 ELSE 0 END) AS sent,
@@ -54,7 +54,7 @@ export function listFriendDirectory(
     FROM records
     WHERE snapshot_id = ? AND section_key = 'friends'
   `).get(snapshotId) as {
-    all: number;
+    all_count: number;
     friends: number | null;
     received: number | null;
     sent: number | null;
@@ -120,7 +120,7 @@ export function listFriendDirectory(
   return {
     records,
     counts: {
-      all: countsRow.all,
+      all: countsRow.all_count,
       friends: countsRow.friends ?? 0,
       received: countsRow.received ?? 0,
       sent: countsRow.sent ?? 0,

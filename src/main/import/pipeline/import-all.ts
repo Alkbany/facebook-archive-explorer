@@ -7,6 +7,7 @@ import { importPostsSection } from './posts-importer';
 import { importCommentsSection } from './comments-importer';
 import { importReactionsSection } from './reactions-importer';
 import { importPhotoAlbumsSection } from './photo-albums-importer';
+import { importPhotoAlbumDetailsSection } from './photo-album-details-importer';
 import type { ImportProgressReporter } from './import-progress';
 
 /**
@@ -144,7 +145,15 @@ export async function importAllSupportedData(
     const posts = await importPostsSection(database, snapshotId, archiveRoot, onProgress);
     const comments = await importCommentsSection(database, snapshotId, archiveRoot, onProgress);
     const reactions = await importReactionsSection(database, snapshotId, archiveRoot, onProgress);
-    const photosAndVideos = await importPhotoAlbumsSection(database, snapshotId, archiveRoot, onProgress);
+    const photoAlbumIndex = await importPhotoAlbumsSection(database, snapshotId, archiveRoot, onProgress);
+    const photoAlbumDetails = await importPhotoAlbumDetailsSection(database, snapshotId, archiveRoot, onProgress);
+    const photosAndVideos = {
+      filesAttempted: photoAlbumIndex.filesAttempted + photoAlbumDetails.filesAttempted,
+      recordsImported: photoAlbumIndex.recordsImported + photoAlbumDetails.recordsImported,
+      mediaReferences: photoAlbumIndex.mediaReferences + photoAlbumDetails.mediaReferences,
+      unsupportedFiles: photoAlbumIndex.unsupportedFiles + photoAlbumDetails.unsupportedFiles,
+      failedFiles: photoAlbumIndex.failedFiles + photoAlbumDetails.failedFiles
+    };
 
     const sections = { friends, messages, posts, comments, reactions, photosAndVideos };
     const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {

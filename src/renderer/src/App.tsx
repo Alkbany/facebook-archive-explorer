@@ -899,7 +899,9 @@ function App() {
         <button type="button" className={activeNavigation === 'photos' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('photos', 'photo-albums-workspace')}><span>▧</span> Photos &amp; videos</button>
         <button type="button" className={activeNavigation === 'activity' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('activity', 'activity-tools')}><span>◷</span> Activity</button>
         <button type="button" className={activeNavigation === 'search' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('search', 'unified-search-panel')}><span>⌕</span> Search</button>
-        <button type="button" className={activeNavigation === 'other' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('other', 'fallback-records-workspace')}><span>▤</span> Other data</button>
+        {fallbackSections.length > 0 && (
+          <button type="button" className={activeNavigation === 'other' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('other', 'fallback-records-workspace')}><span>▤</span> Other data</button>
+        )}
 
         <div className="sidebar-bottom">
           <div className="local-indicator"><i /> Local workspace</div>

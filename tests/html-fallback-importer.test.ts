@@ -62,7 +62,7 @@ describe('generic HTML fallback importer', () => {
           snapshot_id, relative_path, file_name, section_key, detected_format,
           file_size_bytes, status, discovered_at
         ) VALUES (?, ?, ?, ?, 'html', ?, 'discovered', ?)
-      `).run(snapshotId, sample.path, sample.path.split('/').at(-1), sample.section,
+      `).run(snapshotId, sample.path, sample.path.split('/').pop() ?? sample.path, sample.section,
         Buffer.byteLength(sample.html), now);
     }
 

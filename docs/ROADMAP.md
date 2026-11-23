@@ -41,6 +41,7 @@
 - [ ] Implement other activity-card sections.
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
 - [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
+- [x] Add a bounded generic HTML fallback for unreviewed sections, preserving visible text and source provenance while keeping sensitive sections out of full-text search.
 - [ ] Add schema-specific JSON importers and parser fixtures for the remaining sections.
 
 ## Milestone 3 — Media and remaining activity

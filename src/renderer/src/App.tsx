@@ -33,7 +33,7 @@ import type {
   ArchiveComparisonExportFormat
 } from '../../shared/archive/comparison';
 
-const SECTION_TITLES = new Map([...ARCHIVE_SECTIONS.map((section) => [section.key, section.title] as const), ['json', 'Structured JSON'] as const]);
+const SECTION_TITLES = new Map([...ARCHIVE_SECTIONS.map((section) => [section.key, section.title] as const), ['json', 'Structured JSON'] as const, ['html_fallback', 'HTML fallback'] as const]);
 
 const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, string> = {
   discovered: 'Not processed',
@@ -966,7 +966,7 @@ function App() {
             <div className="friends-import-action import-all-action">
               <div>
                 <strong>Import all supported data</strong>
-                <span>Run Friends, Messages, Posts, Comments, Likes &amp; Reactions, and Photos &amp; Videos album importers in sequence. Completed files are skipped; failed or unsupported files remain retryable.</span>
+                <span>Run the reviewed section importers first, then bounded HTML and JSON fallbacks for other files. Completed files are skipped; failed or unsupported files remain retryable.</span>
                 {importAllSummary && (
                   <span className="import-all-summary">
                     {importAllSummary.filesAttempted} files checked · {importAllSummary.recordsImported} records imported ·
@@ -1080,16 +1080,18 @@ function App() {
                     {importCoverage.sections.map((section) => {
                       const capability = getArchiveImportCapability(section.sectionKey);
                       const capabilityLabel = section.jsonFiles > 0 && section.htmlFiles > 0
-                        ? (capability === 'not-implemented' ? 'Generic JSON · no HTML parser' : 'Generic JSON + reviewed HTML')
+                        ? (capability === 'not-implemented' ? 'Generic HTML + JSON fallback' : 'Generic JSON + reviewed HTML')
                         : section.jsonFiles > 0
                           ? 'Generic JSON importer'
                           : capability === 'known-html'
                             ? 'Known HTML exports'
                             : capability === 'sampled-html'
                               ? 'Sample-based HTML parser'
-                              : capability === 'media-index-only'
-                                ? 'Media inventory only'
-                                : 'No importer yet';
+                              : section.htmlFiles > 0 && capability === 'not-implemented'
+                            ? 'Generic HTML fallback'
+                            : capability === 'media-index-only'
+                              ? 'Media inventory only'
+                              : 'No importer yet';
                       return (
                       <article className="import-coverage-row" key={section.sectionKey}>
                         <div className="import-coverage-section">

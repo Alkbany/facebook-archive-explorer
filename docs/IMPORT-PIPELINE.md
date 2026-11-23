@@ -122,3 +122,10 @@ Runtime discovery remains authoritative.
 - Restore is refused while a database transaction, import, or discovery run is active.
 - The current database is backed up to a recovery file before the staged restore is swapped into place. Startup restores the previous file if the process was interrupted before the new file was installed.
 - Restoring restarts the application. The database file contains local archive indexes and imported records, not the original Facebook export folders, ZIP files, or media.
+
+
+## Generic fallbacks
+
+After reviewed section-specific HTML importers run, Import All checks remaining HTML files outside those reviewed sections. The generic HTML fallback reads at most 20 MiB per file, extracts visible text from semantic article/list/paragraph blocks, caps output at 5,000 records and 20,000 characters per record, and stores source path/card order. It does not execute scripts, fetch links, or modify source files. Sensitive and unknown sections are stored locally but excluded from full-text search.
+
+The JSON fallback separately reads JSON files with bounded file/record/count limits and preserves parsed values in a local payload. Neither fallback claims to understand an unreviewed Facebook schema. A reviewed section parser remains necessary for reliable field mapping, media relationships, and semantic date handling.

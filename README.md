@@ -66,7 +66,7 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 - The combined import reports file/record/media/error totals and live per-file progress for Friends, Messages, Posts, Comments, Likes & Reactions, and Photos & Videos album and photo pages; progress events contain counts and section names only. A main-process lock prevents overlapping imports and backup switching while an import is active. Completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
 - Snapshot-scoped Import Diagnostics lists safe error/warning/notices with source-file and card-position references; the latest 250 issues are shown while severity totals cover the full report.
 - Per-section Import Coverage separates content files from media inventory and shows completed, unsupported, failed, not processed, empty, and skipped file states. It also labels known HTML imports, sample-based parsers, media-only indexing, and sections with no importer yet.
-- Application startup repairs source files and import runs left in a `processing`/`running` state across every saved backup inside one SQLite savepoint, records safe `IMPORT_INTERRUPTED` diagnostics, and makes affected files eligible for retry from an individual importer or Import All. If recovery diagnostics cannot be written, all recovery updates roll back together. Full progress journaling, integrity reporting, and safe resume checkpoints remain planned.
+- Application startup repairs source files and import runs left in a `processing`/`running` state across every saved backup inside one SQLite savepoint, records safe `IMPORT_INTERRUPTED` diagnostics, and makes affected files eligible for retry from an individual importer or Import All. Each source file is committed atomically, completed files are skipped on retry, and pause/resume waits for the active file transaction to finish. Import Coverage includes consistency checks for records, media references, metadata, and unfinished work.
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
 - DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
 - DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.
@@ -84,11 +84,11 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 
 The following are genuine remaining product tasks; filename discovery alone is not treated as parser support:
 
-- Durable mid-file import checkpoints, user-controlled pause/resume, and full import-integrity reconciliation. Completed files are already skipped and failed/unsupported files can be retried between runs.
-- A schema-agnostic JSON fallback that stores root-level entries with original payloads and conservative text extraction. This is not a substitute for verified section-specific JSON parsers; unknown sections remain excluded from full-text search.
+- Durable checkpoints inside a single source file; current recovery boundaries are atomic per-file commits, and pause/resume takes effect after the active file finishes.
+- Schema-agnostic HTML and JSON fallbacks for files without a reviewed section parser. These preserve bounded extracted text and source provenance; they do not replace verified section-specific parsers. Unknown or sensitive sections remain excluded from full-text search.
 - Additional activity-card importers beyond the currently supported Friends, Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos album pages.
-- Additional photo/video metadata such as image dimensions and video duration where it can be read safely and consistently.
-- Groups, events, Marketplace, saved items, and remaining export sections. These need representative export samples and parser fixtures before implementation.
+- Video duration metadata and verified album-membership links. Image dimensions are now read from bounded image-header prefixes.
+- Verified section-specific importers for Groups, Events, Marketplace, Saved Items, and remaining export sections. Generic fallbacks may preserve visible text but cannot guarantee complete field mapping or relationships without representative export samples and parser fixtures.
 - Evidence-backed raw Facebook date parsing and date-range filters; raw date strings are preserved today.
 - Optional local embeddings and local LLM integration, disabled by default.
 - Large-archive performance benchmarks, complete real-backup end-to-end validation, clean-device Windows install/upgrade/uninstall testing, and final release privacy/security review.

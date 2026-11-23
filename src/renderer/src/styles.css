@@ -602,3 +602,76 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .import-issues-heading { align-items: stretch; flex-direction: column; }
   .import-issues-heading > button { width: 100%; }
 }
+
+
+.import-coverage-panel {
+  margin-top: 16px;
+  padding: 17px 19px;
+  border: 1px solid #e7e9f1;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 4px 15px #3d426006;
+}
+.import-coverage-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+.import-coverage-heading .eyebrow { margin: 0 0 5px; font-size: 8px; }
+.import-coverage-heading h3 { margin: 0 0 5px; color: #30354d; font-size: 14px; }
+.import-coverage-heading p:not(.eyebrow) { margin: 0; color: #9296a7; font-size: 9px; line-height: 1.55; }
+.import-coverage-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 13px;
+}
+.import-coverage-stats > div {
+  padding: 10px 9px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  background: #fcfcfe;
+}
+.import-coverage-stats strong, .import-coverage-stats span { display: block; }
+.import-coverage-stats strong { color: #343950; font-size: 17px; }
+.import-coverage-stats span { margin-top: 4px; color: #858a9d; font-size: 8px; }
+.import-coverage-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.import-coverage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid #eef0f5;
+  border-radius: 8px;
+  background: #fdfdff;
+}
+.import-coverage-section { display: flex; flex-direction: column; gap: 4px; min-width: 130px; }
+.import-coverage-section strong { color: #454a60; font-size: 9px; }
+.import-coverage-section span { color: #969bad; font-size: 8px; }
+.import-coverage-statuses { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.import-coverage-statuses span {
+  padding: 4px 6px;
+  border: 1px solid #edf0f5;
+  border-radius: 5px;
+  color: #81879a;
+  background: #fff;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.import-coverage-statuses .coverage-done { color: #47836c; border-color: #dceee5; background: #f4fbf7; }
+.import-coverage-statuses .coverage-unsupported { color: #8d6d36; border-color: #f0e6d2; background: #fffbf3; }
+.import-coverage-statuses .coverage-failed { color: #a45151; border-color: #f0dddd; background: #fff8f8; }
+.import-coverage-statuses .coverage-pending { color: #617d9c; border-color: #e1ebf5; background: #f7fbff; }
+.import-coverage-note { margin: 11px 0 0; color: #9297a8; font-size: 8px; line-height: 1.55; }
+@media (max-width: 1100px) {
+  .import-coverage-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .import-coverage-heading { align-items: stretch; flex-direction: column; }
+  .import-coverage-heading > button { width: 100%; }
+  .import-coverage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .import-coverage-row { align-items: stretch; flex-direction: column; }
+  .import-coverage-statuses { justify-content: flex-start; }
+}

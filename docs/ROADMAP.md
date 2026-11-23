@@ -68,5 +68,6 @@
 ## Milestone 6 — Windows release
 
 - [x] Add a Windows NSIS installer workflow that runs checks and publishes the installer as a GitHub Actions artifact (workflow configured; release artifact not yet generated).
-- [ ] Database backup/restore, large-archive performance tests, and final release validation.
+- [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
+- [ ] Large-archive performance tests, end-to-end backup/restore validation on Windows, privacy/security review, and final release checklist.
 - [ ] Privacy/security review and release checklist.

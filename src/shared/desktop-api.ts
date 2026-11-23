@@ -1,6 +1,7 @@
 import type {
   ArchiveInspectionReport,
-  ArchiveSnapshotSummary
+  ArchiveSnapshotSummary,
+  FriendsImportSectionResult
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -17,7 +18,8 @@ export const IPC_CHANNELS = {
   getAppInfo: 'app:get-info',
   selectBackupDirectory: 'archive:select-directory',
   inspectSelectedBackup: 'archive:inspect-selected',
-  listArchiveSnapshots: 'archive:list-snapshots'
+  listArchiveSnapshots: 'archive:list-snapshots',
+  importFriendsForSelectedBackup: 'archive:import-friends'
 } as const;
 
 export interface DesktopApi {
@@ -25,4 +27,5 @@ export interface DesktopApi {
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
+  importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
 }

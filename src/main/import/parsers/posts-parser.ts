@@ -27,7 +27,7 @@ const DATE_SELECTOR = 'div._3-94._2lem';
 const MEDIA_PATH_PREFIXES = ['photos_and_videos/', 'photos/'];
 
 function cleanText(value: string): string {
-  return value.replace(/\u00a0/gu, ' ').replace(/[\u200e\u200f\u202a-\u202e]/gu, '').trim();
+  return value.replace(/\u00a0/gu, ' ').trim();
 }
 
 function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>): PostMediaReference[] {
@@ -66,7 +66,9 @@ function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>):
 function extractBody($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>): string | null {
   const blocks: string[] = [];
   content.find('div._2pin').each((_index, element) => {
-    const text = cleanText($(element).text());
+    const block = $(element).clone();
+    block.find('br').replaceWith('\n');
+    const text = cleanText(block.text());
     if (text && !blocks.includes(text)) blocks.push(text);
   });
   if (blocks.length === 0) {

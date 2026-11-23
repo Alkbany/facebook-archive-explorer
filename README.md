@@ -76,3 +76,13 @@ Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 - [Import pipeline](docs/IMPORT-PIPELINE.md)
 - [Data model](docs/DATA-MODEL.md)
 - [Roadmap](docs/ROADMAP.md)
+
+
+## Current import support
+
+- Friends: five recognized HTML exports.
+- Messages: observed conversation HTML, local attachments, and a browsable media library.
+- Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
+- Audio/video attachments stream locally from the selected backup with byte-range seeking.
+
+Posts and Comments import support remains planned; their exact card structures must be validated before implementation.

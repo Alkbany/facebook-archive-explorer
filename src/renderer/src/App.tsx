@@ -11,7 +11,8 @@ import type {
   ReactionsImportSectionResult,
   ReactionRecordSummary,
   ImportAllSupportedDataResult,
-  ImportIssueReport
+  ImportIssueReport,
+  ImportCoverageReport
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -29,6 +30,8 @@ function App() {
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
   const [importIssueReport, setImportIssueReport] = useState<ImportIssueReport | null>(null);
   const [isRefreshingImportIssues, setIsRefreshingImportIssues] = useState(false);
+  const [importCoverage, setImportCoverage] = useState<ImportCoverageReport | null>(null);
+  const [isRefreshingImportCoverage, setIsRefreshingImportCoverage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
@@ -87,6 +90,7 @@ function App() {
     setError(null);
     setInspection(null);
     setImportIssueReport(null);
+    setImportCoverage(null);
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
@@ -117,13 +121,16 @@ function App() {
       setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
-      const [media, issues, backups] = await Promise.all([
+      const [media, issues, coverage, backups] = await Promise.all([
         window.desktopApi.listMediaForSelectedBackup(),
         window.desktopApi.listImportIssuesForSelectedBackup(),
+        window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listArchiveSnapshots()
       ]);
       setMediaGallery(media);
       setImportIssueReport(issues);
+      setImportCoverage(coverage);
+      setImportCoverage(coverage);
       setSavedBackups(backups);
     } catch {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
@@ -170,13 +177,14 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
         window.desktopApi.listMediaForSelectedBackup(),
-        window.desktopApi.listImportIssuesForSelectedBackup()
+        window.desktopApi.listImportIssuesForSelectedBackup(),
+        window.desktopApi.getImportCoverageForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -209,6 +217,17 @@ function App() {
       setError('The import diagnostics report could not be refreshed.');
     } finally {
       setIsRefreshingImportIssues(false);
+    }
+  }
+
+  async function refreshImportCoverage() {
+    setIsRefreshingImportCoverage(true);
+    try {
+      setImportCoverage(await window.desktopApi.getImportCoverageForSelectedBackup());
+    } catch {
+      setError('The archive import coverage could not be refreshed.');
+    } finally {
+      setIsRefreshingImportCoverage(false);
     }
   }
 
@@ -303,6 +322,7 @@ function App() {
       setPostRecords(await window.desktopApi.listPostsForSelectedBackup());
       await refreshMediaGallery();
       await refreshImportIssues();
+      await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Posts data could not be imported. Check the local import report.');
@@ -320,6 +340,7 @@ function App() {
       setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());
       await refreshMediaGallery();
       await refreshImportIssues();
+      await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Comments data could not be imported. Check the local import report.');
@@ -603,6 +624,60 @@ function App() {
               </button>
             </div>
 
+            <section className="import-coverage-panel">
+              <div className="import-coverage-heading">
+                <div>
+                  <p className="eyebrow">FILE PROCESSING STATUS</p>
+                  <h3>Import coverage</h3>
+                  <p>Shows what has been processed, what was rejected, and what has not been attempted yet.</p>
+                </div>
+                <button
+                  className="secondary-button"
+                  onClick={() => void refreshImportCoverage()}
+                  disabled={isRefreshingImportCoverage || isChoosingFolder || isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions}
+                >
+                  {isRefreshingImportCoverage ? 'Refreshing…' : 'Refresh coverage'}
+                </button>
+              </div>
+              {importCoverage && (
+                <>
+                  <div className="import-coverage-stats">
+                    <div><strong>{importCoverage.totals.totalFiles.toLocaleString()}</strong><span>Total files</span></div>
+                    <div><strong>{importCoverage.totals.mediaFiles.toLocaleString()}</strong><span>Media files</span></div>
+                    <div><strong>{importCoverage.totals.completedFiles.toLocaleString()}</strong><span>Completed</span></div>
+                    <div><strong>{importCoverage.totals.unsupportedFiles.toLocaleString()}</strong><span>Unsupported</span></div>
+                    <div><strong>{importCoverage.totals.failedFiles.toLocaleString()}</strong><span>Failed</span></div>
+                    <div><strong>{importCoverage.totals.unprocessedFiles.toLocaleString()}</strong><span>Not processed</span></div>
+                  </div>
+                  <div className="import-coverage-list">
+                    {importCoverage.sections.map((section) => (
+                      <article className="import-coverage-row" key={section.sectionKey}>
+                        <div className="import-coverage-section">
+                          <strong>{SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey}</strong>
+                          <span>
+                            {section.totalFiles.toLocaleString()} files · {section.htmlFiles} HTML · {section.jsonFiles} JSON · {section.mediaFiles} media
+                          </span>
+                        </div>
+                        <div className="import-coverage-statuses">
+                          {section.completedFiles > 0 && <span className="coverage-done">{section.completedFiles} done</span>}
+                          {section.unsupportedFiles > 0 && <span className="coverage-unsupported">{section.unsupportedFiles} unsupported</span>}
+                          {section.failedFiles > 0 && <span className="coverage-failed">{section.failedFiles} failed</span>}
+                          {section.unprocessedFiles > 0 && <span className="coverage-pending">{section.unprocessedFiles} not processed</span>}
+                          {section.emptyFiles > 0 && <span>{section.emptyFiles} empty</span>}
+                          {section.skippedFiles > 0 && <span>{section.skippedFiles} skipped</span>}
+                        </div>
+                      </article>
+                    ))}
+                    {importCoverage.sections.length === 0 && (
+                      <p className="import-issues-empty">No files were found in this backup.</p>
+                    )}
+                  </div>
+                  <p className="import-coverage-note">
+                    “Not processed” means no importer has attempted that file yet; it does not mean the section is supported. Media files are inventoried separately from content import status.
+                  </p>
+                </>
+              )}
+            </section>
             <section className="unified-search-panel">
               <div className="media-gallery-heading">
                 <div>

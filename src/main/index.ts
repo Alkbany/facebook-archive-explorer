@@ -1,14 +1,12 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'node:path';
+import type { DatabaseSync } from 'node:sqlite';
 import { openAppDatabase } from './database/connection';
 import { DATABASE_MIGRATIONS } from './database/migrations';
 import { registerIpcHandlers } from './ipc/register-handlers';
 
 let mainWindow: BrowserWindow | null = null;
-const database = openAppDatabase(
-  join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite'),
-  DATABASE_MIGRATIONS
-);
+let database: DatabaseSync | null = null;
 
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -38,7 +36,7 @@ function createMainWindow(): BrowserWindow {
       try {
         if (new URL(targetUrl).origin === developmentOrigin) return;
       } catch {
-        // Invalid navigation URLs are denied below.
+        // Invalid navigation URLs are denied.
       }
     } else if (targetUrl === window.webContents.getURL()) {
       return;
@@ -60,6 +58,10 @@ function createMainWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   app.setAppUserModelId('com.alkbany.facebookarchiveexplorer');
+  database = openAppDatabase(
+    join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite'),
+    DATABASE_MIGRATIONS
+  );
   registerIpcHandlers(database);
   createMainWindow();
 
@@ -72,7 +74,9 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => {
-  if (database.isOpen) database.close();
+  const currentDatabase = database;
+  database = null;
+  currentDatabase?.close();
 });
 
 app.on('window-all-closed', () => {

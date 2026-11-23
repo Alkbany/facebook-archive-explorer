@@ -11,6 +11,7 @@ export interface MessageMediaSummary {
   relativePath: string;
   mediaKind: string;
   role: string | null;
+  previewDataUrl?: string;
 }
 
 export interface MessageRecordSummary {

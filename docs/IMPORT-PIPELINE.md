@@ -24,7 +24,7 @@
 
 - The native picker selects a directory or `.zip` file and keeps its absolute path in the Electron main process.
 - The renderer receives only the selected folder's display name and a summary report, not the full local path.
-- The first pass reads directory entries and file extensions only. It does not open HTML, JSON, messages, photos, or other file contents.
+- The first pass reads directory entries, file extensions, and file-size metadata only. Directory sizes use `lstat` without following symbolic links; ZIP sizes come from the central directory. It does not open HTML, JSON, messages, photos, or other file contents.
 - A discovery session, account label, independent backup snapshot, and source-file rows are persisted in the local SQLite database.
 - The renderer can list saved backup inventories after the application restarts.
 - Symbolic links are skipped during discovery.

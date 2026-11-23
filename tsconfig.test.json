@@ -4,5 +4,10 @@
     "strict": true, "noEmit": true, "skipLibCheck": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["vitest.config.ts", "tests/**/*.ts", "src/shared/**/*.ts", "src/main/import/**/*.ts"]
+  "include": [
+    "vitest.config.ts",
+    "tests/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/main/**/*.ts"
+  ]
 }

@@ -60,13 +60,10 @@ async function readZipEntry(
 
 /** Reads a UTF-8 text file from a directory archive or a ZIP entry. */
 export async function readArchiveUtf8File(archiveRoot: string, relativePath: string, maxBytes = 50 * 1024 * 1024): Promise<string> {
-  try {
-    const sourceStats = await stat(archiveRoot);
-    if (sourceStats.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
-      return (await readZipEntry(archiveRoot, relativePath, maxBytes)).toString('utf8');
-    }
-  } catch {
-    // Let the directory reader below report a stable, safe ArchiveReadError.
+  let sourceStats;
+  try { sourceStats = await stat(archiveRoot); } catch { sourceStats = null; }
+  if (sourceStats?.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
+    return (await readZipEntry(archiveRoot, relativePath, maxBytes)).toString('utf8');
   }
   const filePath = await resolveSafeArchiveFile(archiveRoot, relativePath, maxBytes);
   return readFile(filePath, 'utf8');
@@ -74,13 +71,10 @@ export async function readArchiveUtf8File(archiveRoot: string, relativePath: str
 
 /** Reads bounded binary data from a directory archive or ZIP entry. */
 export async function readArchiveBinaryFile(archiveRoot: string, relativePath: string, maxBytes: number): Promise<Buffer> {
-  try {
-    const sourceStats = await stat(archiveRoot);
-    if (sourceStats.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
-      return await readZipEntry(archiveRoot, relativePath, maxBytes);
-    }
-  } catch {
-    // Let the directory reader below report a stable, safe ArchiveReadError.
+  let sourceStats;
+  try { sourceStats = await stat(archiveRoot); } catch { sourceStats = null; }
+  if (sourceStats?.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
+    return await readZipEntry(archiveRoot, relativePath, maxBytes);
   }
   const filePath = await resolveSafeArchiveFile(archiveRoot, relativePath, maxBytes);
   return readFile(filePath);

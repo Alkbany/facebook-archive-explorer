@@ -1,5 +1,5 @@
 import yauzl, { type Entry, type ZipFile } from 'yauzl';
-import type { Readable } from 'node:stream';
+import { Readable } from 'node:stream';
 
 export type ZipArchiveErrorCode =
   | 'INVALID_RELATIVE_PATH'
@@ -195,18 +195,63 @@ export async function openZipEntryReadStream(
         throw new ZipArchiveError('INVALID_RELATIVE_PATH');
       }
     }
-    const stream = await zip.openReadStreamPromise(entry, start === undefined && end === undefined
-      ? undefined
-      : { start: start ?? 0, end: (end ?? entry.uncompressedSize - 1) + 1 });
+    const hasRange = start !== undefined || end !== undefined;
+    const rangeStart = start ?? 0;
+    const rangeEnd = Math.min(end ?? entry.uncompressedSize - 1, entry.uncompressedSize - 1);
+
+    let source: Readable;
+    let stream: Readable;
+
+    if (!hasRange) {
+      source = await zip.openReadStreamPromise(entry);
+      stream = source;
+    } else if (entry.compressionMethod === 0) {
+      // Stored entries can be read directly by byte range without decoding.
+      stream = await zip.openReadStreamPromise(entry, {
+        start: rangeStart,
+        end: rangeEnd + 1,
+        decodeFileData: false
+      });
+      source = stream;
+    } else {
+      // yauzl cannot seek inside deflated data. Stream-decompress from the start,
+      // discard bytes before the requested range, and stop after the final byte.
+      source = await zip.openReadStreamPromise(entry);
+      stream = Readable.from((async function* readDecodedRange() {
+        let offset = 0;
+        try {
+          for await (const chunk of source) {
+            const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+            const chunkStart = offset;
+            const chunkEnd = chunkStart + buffer.length;
+            offset = chunkEnd;
+
+            if (chunkEnd <= rangeStart) continue;
+
+            const localStart = Math.max(0, rangeStart - chunkStart);
+            const localEnd = Math.min(buffer.length, rangeEnd - chunkStart + 1);
+            if (localEnd > localStart) yield buffer.subarray(localStart, localEnd);
+            if (chunkEnd > rangeEnd) return;
+          }
+        } finally {
+          if (!source.destroyed) source.destroy();
+        }
+      })(), { objectMode: false });
+    }
+
     let closed = false;
     const close = () => {
       if (closed) return;
       closed = true;
+      if (source !== stream && !source.destroyed) source.destroy();
       zip.close();
     };
     stream.once('close', close);
     stream.once('end', close);
     stream.once('error', close);
+    source.once('close', close);
+    source.once('end', close);
+    source.once('error', close);
     return { stream, size: entry.uncompressedSize, close };
   } catch (error) {
     zip.close();

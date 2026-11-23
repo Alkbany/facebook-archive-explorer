@@ -51,3 +51,26 @@ export function listCommentActivities(database: DatabaseSync, snapshotId: string
     LIMIT 2000
   `).all(snapshotId) as unknown as import('../../shared/archive/inspection').CommentActivitySummary[];
 }
+
+export function listPhotoAlbums(
+  database: DatabaseSync,
+  snapshotId: string
+): import('../../shared/archive/inspection').PhotoAlbumRecordSummary[] {
+  return database.prepare(`
+    SELECT records.id AS id,
+      source.relative_path AS sourcePath,
+      records.source_record_index AS sourceCardIndex,
+      records.title AS albumTitle,
+      json_extract(records.payload_json, '$.photo_count') AS photoCount,
+      json_extract(records.payload_json, '$.album_path') AS albumPath,
+      json_extract(records.payload_json, '$.cover_path') AS coverPath,
+      records.event_time_raw AS dateRaw
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ? AND records.section_key = 'photos_and_videos'
+      AND records.record_type = 'photo_album'
+    ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
+    LIMIT 1000
+  `).all(snapshotId) as unknown as import('../../shared/archive/inspection').PhotoAlbumRecordSummary[];
+}

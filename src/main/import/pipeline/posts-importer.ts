@@ -94,6 +94,7 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
         .run(now, parsed.records.length, unsupported ? 1 : 0, runId);
       database.exec('RELEASE posts_file');
       summary.recordsImported += parsed.records.length;
+      if (unsupported) summary.unsupportedFiles += 1;
     } catch (error) {
       database.exec('ROLLBACK TO posts_file');
       database.exec('RELEASE posts_file');

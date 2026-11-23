@@ -27,8 +27,16 @@ export type DirectorySelectionResult =
   | { status: 'cancelled' }
   | { status: 'selected'; folderName: string; accountName: string };
 
+export type DatabaseBackupExportResult =
+  | { status: 'cancelled' }
+  | { status: 'saved'; fileName: string; pagesCopied: number; sizeBytes: number };
+
+export type DatabaseBackupRestoreResult = { status: 'cancelled' | 'restarting' };
+
 export const IPC_CHANNELS = {
   getAppInfo: 'app:get-info',
+  exportLocalDatabaseBackup: 'database:export-backup',
+  restoreLocalDatabaseBackup: 'database:restore-backup',
   selectBackupDirectory: 'archive:select-directory',
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
@@ -54,6 +62,8 @@ export const IPC_CHANNELS = {
 
 export interface DesktopApi {
   getAppInfo(): Promise<AppInfo>;
+  exportLocalDatabaseBackup(): Promise<DatabaseBackupExportResult>;
+  restoreLocalDatabaseBackup(): Promise<DatabaseBackupRestoreResult>;
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;

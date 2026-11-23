@@ -7,7 +7,7 @@ import { inspectArchiveZip } from '../src/main/import/discovery/zip-inventory';
 import { getZipEntrySize, openZipEntryReadStream, readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
 import { readArchiveBinaryFile, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
 
-interface ZipFixtureEntry { name: string; content: Buffer; externalAttributes?: number; }
+interface ZipFixtureEntry { name: string; content: Buffer; externalAttributes?: number; compressionMethod?: 0 | 8; }
 
 function crc32(buffer: Buffer): number {
   let crc = 0xffffffff;
@@ -25,13 +25,14 @@ function makeDeflatedZip(entries: ZipFixtureEntry[]): Buffer {
   for (const item of entries) {
     const name = Buffer.from(item.name, 'utf8');
     const data = item.content;
-    const compressed = deflateRawSync(data);
+    const compressionMethod = item.compressionMethod ?? 8;
+    const compressed = compressionMethod === 8 ? deflateRawSync(data) : data;
     const crc = crc32(data);
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
     local.writeUInt16LE(0x0800, 6);
-    local.writeUInt16LE(8, 8);
+    local.writeUInt16LE(compressionMethod, 8);
     local.writeUInt32LE(crc, 14);
     local.writeUInt32LE(compressed.length, 18);
     local.writeUInt32LE(data.length, 22);
@@ -44,7 +45,7 @@ function makeDeflatedZip(entries: ZipFixtureEntry[]): Buffer {
     central.writeUInt16LE(0x0314, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(0x0800, 8);
-    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(compressionMethod, 10);
     central.writeUInt32LE(crc, 16);
     central.writeUInt32LE(compressed.length, 20);
     central.writeUInt32LE(data.length, 24);
@@ -77,7 +78,8 @@ describe('ZIP archive reader and inventory', () => {
     try {
       const zipPath = join(root, 'sample.zip');
       await writeFile(zipPath, makeDeflatedZip([
-        { name: 'posts/your_posts.html', content: Buffer.from('<html>synthetic</html>') }
+        { name: 'posts/your_posts.html', content: Buffer.from('<html>synthetic</html>') },
+        { name: 'photos_and_videos/stored.mp4', content: Buffer.from('stored-media-range'), compressionMethod: 0 }
       ]));
       await expect(readZipEntryBuffer(zipPath, 'posts/your_posts.html', 1024))
         .resolves.toEqual(Buffer.from('<html>synthetic</html>'));
@@ -93,6 +95,12 @@ describe('ZIP archive reader and inventory', () => {
       for await (const chunk of opened.stream) rangeChunks.push(Buffer.from(chunk));
       opened.close();
       expect(Buffer.concat(rangeChunks)).toEqual(Buffer.from('html>'));
+
+      const storedRange = await openZipEntryReadStream(zipPath, 'photos_and_videos/stored.mp4', 2, 8);
+      const storedChunks: Buffer[] = [];
+      for await (const chunk of storedRange.stream) storedChunks.push(Buffer.from(chunk));
+      storedRange.close();
+      expect(Buffer.concat(storedChunks)).toEqual(Buffer.from('ored-me'));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -68,6 +68,10 @@ After directory or ZIP discovery, every file classified as image, video, or audi
 
 The local Import Diagnostics report is scoped to the active snapshot. It joins issue records to their import run and source file, shows only the stored safe message and source-relative path, and extracts a source-card index when the parser recorded one. It does not display raw message text, raw archive payloads, or the full issue context JSON. The UI shows the latest 250 issues while severity totals are calculated across the full snapshot.
 
+## Import coverage
+
+The per-snapshot coverage summary groups discovered files by section and format. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
+
 ## Search and comparison
 
 FTS5 searches only records whose `search_enabled` flag is set. Message records remain excluded by default. Search results can be saved as JSON through the native save dialog. Snapshot comparison uses section key, source-relative HTML path, and original card index; it returns aggregate counts only and does not infer dates or compare binary file contents.

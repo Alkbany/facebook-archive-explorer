@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
 
 export interface MessageConversationSummary {
   sourceFileId: number;
@@ -171,4 +172,27 @@ export function listMessageMediaGallery(
     sourceFileId: number; conversationPath: string; sender: string | null;
     timestampRaw: string | null; body: string | null;
   }>;
+}
+
+ 
+/** Lists discovered media from all archive sections, including files without a parsed record association. */
+export function listArchiveMediaGallery(database: DatabaseSync, snapshotId: string): ArchiveMediaGalleryItem[] {
+  return database.prepare(`
+    SELECT assets.id AS id, records.id AS recordId,
+      assets.relative_path AS relativePath, assets.media_kind AS mediaKind,
+      links.role AS role, media_source.id AS sourceFileId,
+      COALESCE(media_source.relative_path, assets.relative_path) AS sourcePath,
+      COALESCE(records.section_key, media_source.section_key, 'other') AS sectionKey,
+      records.record_type AS recordType, records.source_record_index AS sourceCardIndex,
+      records.title AS title, records.body_text AS body,
+      records.event_time_raw AS timestampRaw
+    FROM media_assets AS assets
+    LEFT JOIN source_files AS media_source ON media_source.id = assets.source_file_id
+      AND media_source.snapshot_id = assets.snapshot_id
+    LEFT JOIN record_media AS links ON links.media_asset_id = assets.id
+    LEFT JOIN records ON records.id = links.record_id AND records.snapshot_id = assets.snapshot_id
+    WHERE assets.snapshot_id = ?
+    ORDER BY sourcePath COLLATE NOCASE, records.source_record_index ASC, links.display_order ASC
+    LIMIT 1000
+  `).all(snapshotId) as unknown as ArchiveMediaGalleryItem[];
 }

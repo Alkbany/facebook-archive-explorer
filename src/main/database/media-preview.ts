@@ -6,11 +6,11 @@ const MAX_IMAGE_PREVIEW_BYTES = 4 * 1024 * 1024;
 const MAX_AUDIO_VIDEO_PREVIEW_BYTES = 24 * 1024 * 1024;
 const MIME_BY_EXTENSION: Record<string, string> = {
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-  '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp', '.jfif': 'image/jpeg', '.heic': 'image/heic', '.tif': 'image/tiff', '.tiff': 'image/tiff',
   '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime',
-  '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4',
+  '.webm': 'video/webm', '.avi': 'video/x-msvideo', '.mkv': 'video/x-matroska', '.3gp': 'video/3gpp', '.3gpp': 'video/3gpp', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4',
   '.aac': 'audio/aac', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
-  '.opus': 'audio/ogg'
+  '.opus': 'audio/ogg', '.flac': 'audio/flac'
 };
 
 export async function getMessageMediaPreview(database: DatabaseSync, snapshotId: string, mediaAssetId: number): Promise<string> {

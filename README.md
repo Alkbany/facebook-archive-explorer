@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends, Messages, Likes & Reactions, and sampled Posts importers, with local activity browsers and streamed audio/video. Posts, JSON exports, ZIP archives, and streaming playback for large media are still pending.
+> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
 
 ## Product decisions
 
@@ -56,17 +56,18 @@ The development dependency installation requires an internet connection. The app
 - DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.
 - Searchable local Posts and Likes & Reactions activity panels, scoped to the selected backup.
 - Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
-- A message media library with image, sticker, video, and audio filters, linked back to sender and conversation context (first 300 references shown).
+- A unified media library that indexes all discovered image, video, and audio files across the backup, including files without an imported record association; imported context is shown when available (first 1,000 references shown).
 - In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking; images use bounded previews while original media remains in place.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
-- Arabic-aware search normalization and FTS5 schema are in place.
+- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, and Likes & Reactions, with section filtering and JSON export of search results.
+- Snapshot comparison for two backups of the same account, matching section, source-relative path, and original card index and reporting aggregate changes.
 
 ## Not implemented yet
 
-- Comments, photos/albums as standalone sections, groups, events, Marketplace, saved items, and other export sections.
+- Photos/albums as structured standalone sections, groups, events, Marketplace, saved items, and other export sections. The unified media inventory already lists discovered media files without requiring those parsers.
 - JSON import, ZIP discovery/import, resumable large-scale import orchestration, and full integrity reporting.
-- Unified search UI, archive comparison, and selected-data export.
+- Advanced raw-date filters, detailed record-level comparison views, and export formats beyond JSON.
 - Optional local embeddings and local LLM integration.
 
 Follow [the roadmap](docs/ROADMAP.md) for implementation status.
@@ -87,4 +88,4 @@ Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 - Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified, with a searchable local activity panel.
 - Audio/video attachments stream locally from the selected backup with byte-range seeking.
 
-Posts and Comments import support remains planned; their exact card structures must be validated before implementation.
+Posts and Comments have sampled HTML importers. Their production compatibility still needs validation against a complete real backup.

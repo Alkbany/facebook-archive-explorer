@@ -60,6 +60,7 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
         ON CONFLICT(snapshot_id, relative_path) DO UPDATE SET source_file_id=excluded.source_file_id, media_kind=excluded.media_kind
       `);
       const getMedia = database.prepare('SELECT id FROM media_assets WHERE snapshot_id = ? AND relative_path = ?');
+      const getSourceMedia = database.prepare('SELECT id FROM source_files WHERE snapshot_id = ? AND relative_path = ?');
       const linkMedia = database.prepare(`
         INSERT INTO record_media (record_id, media_asset_id, display_order, role)
         VALUES (?, ?, ?, 'post_attachment')
@@ -75,7 +76,15 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
         for (const media of record.media) {
           const kind = mediaKind(media.relativePath);
           if (!kind) continue;
-          insertMedia.run(snapshotId, file.id, media.relativePath, kind, now);
+          const sourceMedia = getSourceMedia.get(snapshotId, media.relativePath) as { id: number } | undefined;
+          if (!sourceMedia) {
+            database.prepare(`
+              INSERT INTO import_issues (import_run_id, source_file_id, severity, issue_code, safe_message, context_json, created_at)
+              VALUES (?, ?, 'warning', 'POST_MEDIA_NOT_IN_ARCHIVE', 'A post media reference was not found in the discovered archive inventory.', ?, ?)
+            `).run(runId, file.id, JSON.stringify({ sourceCardIndex: record.sourceCardIndex, mediaPath: media.relativePath }), now);
+            continue;
+          }
+          insertMedia.run(snapshotId, sourceMedia.id, media.relativePath, kind, now);
           const asset = getMedia.get(snapshotId, media.relativePath) as { id: number };
           linkMedia.run(savedRecord.id, asset.id, media.displayOrder);
           summary.mediaReferences += 1;

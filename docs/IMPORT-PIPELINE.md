@@ -48,12 +48,25 @@ Attachment references are resolved using the document's relative `base` element.
 
 Message records are marked sensitive and excluded from FTS5 by default. The conversation folder type is retained as payload metadata. Files with unrecognized card structures are marked unsupported, and empty cards generate warnings.
 
-## Not implemented yet
+## Posts and Comments activity importers
 
-- Importers for posts, photos, comments, reactions, groups, and remaining export sections.
+The sampled Posts and Comments card structures have DOM-based parsers and snapshot-scoped importers. Posts retain observed author labels, body text, raw dates, opaque Facebook links, and verified local media references. Comments retain their activity heading, group label, comment body, raw date, and opaque link separately. No parent-comment relationship or destination post is inferred from display text alone.
+
+## Unified media indexing
+
+After directory discovery, every file classified as image, video, or audio is registered in `media_assets` using its discovered binary source-file row. This does not open or copy media bytes. The media browser shows both unlinked files and associations created by supported record importers. Image previews remain bounded; audio and video use the local byte-range protocol where the browser supports the codec.
+
+## Search and comparison
+
+FTS5 searches only records whose `search_enabled` flag is set. Message records remain excluded by default. Search results can be saved as JSON through the native save dialog. Snapshot comparison uses section key, source-relative HTML path, and original card index; it returns aggregate counts only and does not infer dates or compare binary file contents.
+
+## Still not implemented
+
 - JSON import and ZIP discovery/import.
-- Full resumable import orchestration across all sections and integrity comparison.
-- Media gallery generation and media metadata enrichment (dimensions, duration, thumbnails).
+- Full resumable import orchestration across all sections and integrity reporting.
+- Structured photo albums, groups, events, Marketplace, saved items, and other remaining export sections; these require their own verified samples.
+- Album metadata enrichment (dimensions, duration, thumbnails, membership).
+- Advanced raw-date parsing and date filters.
 
 ## Resume safety
 

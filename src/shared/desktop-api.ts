@@ -1,4 +1,7 @@
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
+import type { ArchiveMediaGalleryItem } from './archive/media';
+import type { ArchiveSearchResult, SearchExportResult } from './archive/search';
+import type { ArchiveComparisonReport } from './archive/comparison';
 import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
@@ -38,7 +41,11 @@ export const IPC_CHANNELS = {
   listMessagesForSelectedBackup: 'archive:list-messages',
   listMessageMediaForSelectedBackup: 'archive:list-message-media',
   getMessagesForSelectedConversation: 'archive:get-conversation-messages',
-  getMessageMediaPreview: 'archive:get-message-media-preview'
+  getMessageMediaPreview: 'archive:get-message-media-preview',
+  listMediaForSelectedBackup: 'archive:list-media',
+  searchRecordsForSelectedBackup: 'archive:search-records',
+  exportSearchResultsForSelectedBackup: 'archive:export-search-results',
+  compareArchiveSnapshots: 'archive:compare-snapshots'
 } as const;
 
 export interface DesktopApi {
@@ -58,4 +65,8 @@ export interface DesktopApi {
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
+  listMediaForSelectedBackup(): Promise<ArchiveMediaGalleryItem[]>;
+  searchRecordsForSelectedBackup(query: string, sectionKey: string | null): Promise<ArchiveSearchResult[]>;
+  exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null): Promise<SearchExportResult>;
+  compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;
 }

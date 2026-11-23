@@ -20,7 +20,14 @@ const desktopApi: DesktopApi = {
   getMessagesForSelectedConversation: (sourceFileId) =>
     ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId),
   getMessageMediaPreview: (mediaAssetId) =>
-    ipcRenderer.invoke(IPC_CHANNELS.getMessageMediaPreview, mediaAssetId)
+    ipcRenderer.invoke(IPC_CHANNELS.getMessageMediaPreview, mediaAssetId),
+  listMediaForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMediaForSelectedBackup),
+  searchRecordsForSelectedBackup: (query, sectionKey) =>
+    ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey),
+  exportSearchResultsForSelectedBackup: (query, sectionKey) =>
+    ipcRenderer.invoke(IPC_CHANNELS.exportSearchResultsForSelectedBackup, query, sectionKey),
+  compareArchiveSnapshots: (baselineSnapshotId, comparedSnapshotId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.compareArchiveSnapshots, baselineSnapshotId, comparedSnapshotId)
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

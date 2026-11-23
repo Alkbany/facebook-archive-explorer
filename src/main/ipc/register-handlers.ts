@@ -1,5 +1,6 @@
 import { app, dialog, ipcMain } from 'electron';
 import { basename } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
 import {
@@ -20,6 +21,10 @@ import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
+import { indexDiscoveredMediaAssets } from '../database/media-indexer';
+import { listArchiveMediaGallery } from '../database/messages-repository';
+import { searchArchiveRecords } from '../database/search-repository';
+import { compareArchiveSnapshots } from '../database/comparison-repository';
 
 let selectedBackupDirectory: string | null = null;
 let selectedAccountId: string | null = null;
@@ -94,6 +99,7 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       });
 
       completeDiscoverySession(database, session, report.totalFiles);
+      indexDiscoveredMediaAssets(database, session.snapshotId);
       selectedSnapshotId = session.snapshotId;
       return report;
     } catch (error) {
@@ -110,6 +116,50 @@ export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.listMessageMediaForSelectedBackup, () => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing message attachments.');
     return listMessageMediaGallery(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing media.');
+    indexDiscoveredMediaAssets(database, selectedSnapshotId);
+    return listArchiveMediaGallery(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, (_event, query: unknown, sectionKey: unknown) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before searching the archive.');
+    if (typeof query !== 'string' || !(sectionKey === null || typeof sectionKey === 'string')) {
+      throw new Error('Invalid search request.');
+    }
+    return searchArchiveRecords(database, selectedSnapshotId, query, sectionKey);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.exportSearchResultsForSelectedBackup, async (_event, query: unknown, sectionKey: unknown) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before exporting search results.');
+    if (typeof query !== 'string' || !(sectionKey === null || typeof sectionKey === 'string')) {
+      throw new Error('Invalid export request.');
+    }
+    const results = searchArchiveRecords(database, selectedSnapshotId, query, sectionKey);
+    const save = await dialog.showSaveDialog({
+      title: 'Export archive search results',
+      defaultPath: 'facebook-archive-search-results.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (save.canceled || !save.filePath) return { status: 'cancelled' as const };
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      snapshotId: selectedSnapshotId,
+      query: query.trim(),
+      sectionKey,
+      records: results
+    };
+    await writeFile(save.filePath, JSON.stringify(payload, null, 2), { encoding: 'utf8', flag: 'w' });
+    return { status: 'saved' as const, fileName: basename(save.filePath), recordsExported: results.length };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.compareArchiveSnapshots, (_event, baselineId: unknown, comparedId: unknown) => {
+    if (typeof baselineId !== 'string' || typeof comparedId !== 'string') {
+      throw new Error('Choose two saved backup snapshots.');
+    }
+    return compareArchiveSnapshots(database, baselineId, comparedId);
   });
 
   ipcMain.handle(IPC_CHANNELS.getMessagesForSelectedConversation, (_event, sourceFileId: unknown) => {

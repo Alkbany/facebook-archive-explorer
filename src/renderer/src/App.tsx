@@ -12,7 +12,10 @@ import type {
   ReactionRecordSummary
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
-import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from '../../shared/archive/messages';
+import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
+import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
+import type { ArchiveSearchResult } from '../../shared/archive/search';
+import type { ArchiveComparisonReport } from '../../shared/archive/comparison';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
 
@@ -22,6 +25,15 @@ function App() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchSection, setSearchSection] = useState('all');
+  const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchExportStatus, setSearchExportStatus] = useState('');
+  const [comparisonBaselineId, setComparisonBaselineId] = useState('');
+  const [comparisonTargetId, setComparisonTargetId] = useState('');
+  const [comparisonReport, setComparisonReport] = useState<ArchiveComparisonReport | null>(null);
+  const [isComparingBackups, setIsComparingBackups] = useState(false);
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
@@ -39,7 +51,7 @@ function App() {
   const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
-  const [mediaGallery, setMediaGallery] = useState<MessageMediaGalleryItem[]>([]);
+  const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
   const [mediaFilter, setMediaFilter] = useState('all');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
@@ -63,6 +75,11 @@ function App() {
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
+    setSearchResults([]);
+    setSearchQuery('');
+    setSearchExportStatus('');
+    setComparisonReport(null);
+    setMediaGallery([]);
     setFriendsImport(null);
     setPostsImport(null);
     setPostRecords([]);
@@ -85,6 +102,7 @@ function App() {
       setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
+      setMediaGallery(await window.desktopApi.listMediaForSelectedBackup());
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
@@ -94,6 +112,58 @@ function App() {
   }
 
 
+  async function refreshMediaGallery() {
+    try {
+      setMediaGallery(await window.desktopApi.listMediaForSelectedBackup());
+    } catch {
+      setError('The local media index could not be refreshed.');
+    }
+  }
+
+  async function runArchiveSearch() {
+    setIsSearching(true);
+    setSearchExportStatus('');
+    setError(null);
+    try {
+      setSearchResults(await window.desktopApi.searchRecordsForSelectedBackup(
+        searchQuery, searchSection === 'all' ? null : searchSection
+      ));
+    } catch {
+      setSearchResults([]);
+      setError('Search could not be completed. Try a shorter search phrase.');
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  async function exportArchiveSearch() {
+    setSearchExportStatus('');
+    setError(null);
+    try {
+      const result = await window.desktopApi.exportSearchResultsForSelectedBackup(
+        searchQuery, searchSection === 'all' ? null : searchSection
+      );
+      setSearchExportStatus(result.status === 'saved'
+        ? `Saved ${result.recordsExported} records to ${result.fileName}.`
+        : 'Export cancelled.');
+    } catch {
+      setError('Search results could not be exported.');
+    }
+  }
+
+  async function compareBackups() {
+    setIsComparingBackups(true);
+    setComparisonReport(null);
+    setError(null);
+    try {
+      setComparisonReport(await window.desktopApi.compareArchiveSnapshots(comparisonBaselineId, comparisonTargetId));
+    } catch {
+      setError('These backups could not be compared. Choose two different backups belonging to the same account.');
+    } finally {
+      setIsComparingBackups(false);
+    }
+  }
+
   async function importPosts() {
     setIsImportingPosts(true);
     setError(null);
@@ -101,6 +171,7 @@ function App() {
       const result = await window.desktopApi.importPostsForSelectedBackup();
       setPostsImport(result);
       setPostRecords(await window.desktopApi.listPostsForSelectedBackup());
+      await refreshMediaGallery();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Posts data could not be imported. Check the local import report.');
@@ -116,6 +187,7 @@ function App() {
       const result = await window.desktopApi.importCommentsForSelectedBackup();
       setCommentsImport(result);
       setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());
+      await refreshMediaGallery();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Comments data could not be imported. Check the local import report.');
@@ -185,6 +257,7 @@ function App() {
       const result = await window.desktopApi.importReactionsForSelectedBackup();
       setReactionsImport(result);
       setReactionRecords(await window.desktopApi.listReactionsForSelectedBackup());
+      await refreshMediaGallery();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Likes & Reactions data could not be imported. Check the local import report.');
@@ -201,7 +274,7 @@ function App() {
       setMessagesImport(result);
       const foundConversations = await window.desktopApi.listMessagesForSelectedBackup();
       setConversations(foundConversations);
-      setMediaGallery(await window.desktopApi.listMessageMediaForSelectedBackup());
+      await refreshMediaGallery();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
@@ -334,6 +407,53 @@ function App() {
               <div><strong>{inspection.filesByFormat.media.toLocaleString()}</strong><span>Media files</span></div>
               <div><strong>{inspection.filesByFormat.other.toLocaleString()}</strong><span>Other files</span></div>
             </div>
+
+            <section className="unified-search-panel">
+              <div className="media-gallery-heading">
+                <div>
+                  <p className="eyebrow">LOCAL FULL-TEXT SEARCH</p>
+                  <h3>Search this backup</h3>
+                  <p>Searches indexed Friends, Posts, Comments, and Likes &amp; Reactions. Private message text remains excluded.</p>
+                </div>
+                <span>{searchResults.length.toLocaleString()} results</span>
+              </div>
+              <div className="unified-search-controls">
+                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') void runArchiveSearch(); }}
+                  maxLength={180} placeholder="Search names, posts, comments, or reactions…" aria-label="Search archive text" />
+                <select value={searchSection} onChange={(event) => setSearchSection(event.target.value)} aria-label="Filter search by section">
+                  <option value="all">All searchable sections</option>
+                  {ARCHIVE_SECTIONS.filter((section) => section.key !== 'messages' && section.evidence !== 'no-data').map((section) => (
+                    <option key={section.key} value={section.key}>{section.title}</option>
+                  ))}
+                </select>
+                <button className="secondary-button" onClick={() => void runArchiveSearch()} disabled={isSearching || !searchQuery.trim()}>
+                  {isSearching ? 'Searching…' : 'Search'}
+                </button>
+              </div>
+              <div className="search-results-list">
+                {searchResults.map((result) => (
+                  <article className="search-result-item" key={result.id}>
+                    <div className="search-result-heading">
+                      <strong>{SECTION_TITLES.get(result.sectionKey) ?? result.sectionKey}</strong>
+                      <span>{result.recordType.replaceAll('_', ' ')}</span>
+                    </div>
+                    {result.title && <strong>{result.title}</strong>}
+                    {result.body && <p>{result.body}</p>}
+                    <small>{result.dateRaw ?? 'Date not provided'} · {result.sourcePath} · card {result.sourceCardIndex + 1}</small>
+                  </article>
+                ))}
+                {searchResults.length === 0 && searchQuery.trim() && !isSearching && (
+                  <p className="conversation-empty">No matching indexed records. Import the relevant section first.</p>
+                )}
+              </div>
+              <div className="search-export-row">
+                <span>{searchExportStatus || (searchResults.length === 250 ? 'The result list is capped at 250 records.' : '')}</span>
+                <button className="secondary-button" onClick={() => void exportArchiveSearch()} disabled={!searchResults.length || isSearching}>
+                  Export results as JSON
+                </button>
+              </div>
+            </section>
 
             <div className="section-counts">
               <h3>Files by section</h3>
@@ -599,43 +719,43 @@ function App() {
                 )}
               </section>
             )}
-            {messagesImport && (
-              <section className="media-gallery-panel">
-                <div className="media-gallery-heading">
-                  <div>
-                    <p className="eyebrow">ATTACHMENTS FROM MESSAGES</p>
-                    <h3>Media library</h3>
-                    <p>Browse media references found in imported conversations. Original files stay in the backup.</p>
-                  </div>
-                  <span>{mediaGallery.length.toLocaleString()} items{mediaGallery.length === 300 ? ' · first 300 shown' : ''}</span>
+            <section className="media-gallery-panel">
+              <div className="media-gallery-heading">
+                <div>
+                  <p className="eyebrow">MEDIA DISCOVERED IN THIS BACKUP</p>
+                  <h3>Unified media library</h3>
+                  <p>Images, videos, and audio files are indexed from the full backup, including files not yet linked to an imported record. Original media stays in place.</p>
                 </div>
-                <div className="media-gallery-filters">
-                  {['all', 'image', 'sticker', 'video', 'audio'].map((kind) => (
-                    <button key={kind} className={mediaFilter === kind ? 'active' : ''} onClick={() => setMediaFilter(kind)}>
-                      {kind === 'all' ? 'All media' : kind}
-                    </button>
+                <span>{mediaGallery.length.toLocaleString()} references{mediaGallery.length === 1000 ? ' · first 1,000 shown' : ''}</span>
+              </div>
+              <div className="media-gallery-filters">
+                {['all', 'image', 'sticker', 'video', 'audio'].map((kind) => (
+                  <button key={kind} className={mediaFilter === kind ? 'active' : ''} onClick={() => setMediaFilter(kind)}>
+                    {kind === 'all' ? 'All media' : kind}
+                  </button>
+                ))}
+              </div>
+              {visibleMedia.length === 0 ? (
+                <div className="conversation-empty">No {mediaFilter === 'all' ? '' : mediaFilter + ' '}files of this type were found in the backup inventory.</div>
+              ) : (
+                <div className="media-gallery-list">
+                  {visibleMedia.map((media) => (
+                    <article className="media-gallery-item" key={media.id + ':' + (media.recordId ?? 'file')}>
+                      <div className="media-gallery-icon">{media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'}</div>
+                      <div className="media-gallery-copy">
+                        <strong>{media.relativePath.split('/').pop()}</strong>
+                        <span>{SECTION_TITLES.get(media.sectionKey) ?? media.sectionKey} · {media.mediaKind}</span>
+                        <small>{media.title ?? 'Not linked to an imported record'}{media.recordType ? ' · ' + media.recordType.replaceAll('_', ' ') : ''}</small>
+                        <small>{media.sourcePath}</small>
+                        {media.body && <small className="media-gallery-caption">{media.body}</small>}
+                        {media.timestampRaw && <small>{media.timestampRaw}</small>}
+                      </div>
+                      <button className="media-gallery-open" onClick={() => void openMedia(media)}>Open</button>
+                    </article>
                   ))}
                 </div>
-                {visibleMedia.length === 0 ? (
-                  <div className="conversation-empty">No {mediaFilter === 'all' ? '' : mediaFilter + ' '}attachments found in imported messages.</div>
-                ) : (
-                  <div className="media-gallery-list">
-                    {visibleMedia.map((media) => (
-                      <article className="media-gallery-item" key={media.id + ':' + media.sourceFileId}>
-                        <div className="media-gallery-icon">{media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'}</div>
-                        <div className="media-gallery-copy">
-                          <strong>{media.relativePath.split('/').pop()}</strong>
-                          <span>{media.sender || 'Unknown sender'} · {media.mediaKind}</span>
-                          <small>{media.conversationPath.split('/').slice(2, -1).join('/') || 'Conversation'}</small>
-                          {media.body && <small className="media-gallery-caption">{media.body}</small>}
-                        </div>
-                        <button className="media-gallery-open" onClick={() => void openMedia(media)}>Open</button>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
+              )}
+            </section>
             {friendsImport && (
               <p className="friends-import-result">
                 {friendsImport.filesAttempted} files checked · {friendsImport.recordsImported} records imported ·
@@ -686,6 +806,41 @@ function App() {
               ))}
             </div>
           )}
+          <div className="backup-compare-controls">
+            <label><span>Older backup</span>
+              <select value={comparisonBaselineId} onChange={(event) => setComparisonBaselineId(event.target.value)}>
+                <option value="">Select backup</option>
+                {savedBackups.map((backup) => <option key={backup.id} value={backup.id}>{backup.accountName} · {backup.backupName}</option>)}
+              </select>
+            </label>
+            <label><span>Newer backup</span>
+              <select value={comparisonTargetId} onChange={(event) => setComparisonTargetId(event.target.value)}>
+                <option value="">Select backup</option>
+                {savedBackups.map((backup) => <option key={backup.id} value={backup.id}>{backup.accountName} · {backup.backupName}</option>)}
+              </select>
+            </label>
+            <button className="secondary-button" onClick={() => void compareBackups()} disabled={!comparisonBaselineId || !comparisonTargetId || isComparingBackups}>
+              {isComparingBackups ? 'Comparing…' : 'Compare backups'}
+            </button>
+          </div>
+          {comparisonReport && (
+            <div className="comparison-report">
+              <p><strong>{comparisonReport.baseline.backupName}</strong> → <strong>{comparisonReport.compared.backupName}</strong></p>
+              <div className="comparison-stats">
+                <span><strong>{comparisonReport.added.toLocaleString()}</strong> added</span>
+                <span><strong>{comparisonReport.removed.toLocaleString()}</strong> removed</span>
+                <span><strong>{comparisonReport.changed.toLocaleString()}</strong> changed</span>
+                <span><strong>{comparisonReport.unchanged.toLocaleString()}</strong> unchanged</span>
+              </div>
+              {comparisonReport.sections.map((section) => (
+                <div className="section-count" key={section.sectionKey}>
+                  <span>{SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey}</span>
+                  <strong>+{section.added} · −{section.removed} · ~{section.changed}</strong>
+                </div>
+              ))}
+              <small>Matching uses section, source filename, and original card position. This compares imported records, not binary files or inferred dates.</small>
+            </div>
+          )}
         </section>
 
         <section className="section-heading">
@@ -712,14 +867,14 @@ function App() {
           <article className="feature-card">
             <div className="feature-icon icon-amber">◷</div>
             <h3>Activity history</h3>
-            <p>Posts, comments, reactions, groups, and account activity.</p>
-            <span className="feature-status">Planned</span>
+            <p>Posts, comments, reactions, and imported activity records.</p>
+            <span className="feature-status">Partially available</span>
           </article>
           <article className="feature-card">
             <div className="feature-icon icon-green">⌕</div>
             <h3>Unified search</h3>
-            <p>Search locally with filters for people, dates, sections, and media.</p>
-            <span className="feature-status">Planned</span>
+            <p>Search indexed local records by text and section, with JSON export of selected results.</p>
+            <span className="feature-status">Available</span>
           </article>
         </section>
 

@@ -16,7 +16,8 @@ import type {
   ReactionRecordSummary,
   ImportAllSupportedDataResult,
   ImportIssueReport,
-  ImportCoverageReport
+  ImportCoverageReport,
+  ImportProgressEvent
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -44,6 +45,7 @@ export const IPC_CHANNELS = {
   listArchiveSnapshots: 'archive:list-snapshots',
   listImportIssuesForSelectedBackup: 'archive:list-import-issues',
   getImportCoverageForSelectedBackup: 'archive:get-import-coverage',
+  importProgress: 'archive:import-progress',
   openSavedSnapshot: 'archive:open-saved-snapshot',
   importFriendsForSelectedBackup: 'archive:import-friends',
   importAllSupportedDataForSelectedBackup: 'archive:import-all-supported-data',
@@ -73,6 +75,7 @@ export interface DesktopApi {
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
   listImportIssuesForSelectedBackup(): Promise<ImportIssueReport>;
   getImportCoverageForSelectedBackup(): Promise<ImportCoverageReport>;
+  onImportProgress(listener: (progress: ImportProgressEvent) => void): () => void;
   openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionView>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;

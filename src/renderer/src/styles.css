@@ -164,3 +164,13 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
   .inventory-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .section-count-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.account-field { display: flex; flex-direction: column; gap: 6px; max-width: 310px; margin: 0 0 12px; }
+.account-field span { color: #7f8498; font-size: 10px; font-weight: 700; }
+.account-field input {
+  height: 36px; padding: 0 11px; border: 1px solid #e4e6ef; border-radius: 8px;
+  color: #343950; background: #fff; font: inherit; font-size: 11px; outline: none;
+}
+.account-field input:focus { border-color: #9b93e8; box-shadow: 0 0 0 3px #6558d315; }
+.account-field input:disabled { background: #f6f7fa; color: #9296a8; }
+.snapshot-id { display: inline-block; margin-top: 6px; color: #5d8a75; font-size: 9px; font-weight: 700; }

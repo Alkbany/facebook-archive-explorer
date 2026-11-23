@@ -23,13 +23,16 @@ export async function importAllSupportedData(
   const reactions = await importReactionsSection(database, snapshotId, archiveRoot);
 
   const sections = { friends, messages, posts, comments, reactions };
-  const totals = Object.values(sections).reduce((result, section) => ({
-    filesAttempted: result.filesAttempted + section.filesAttempted,
-    recordsImported: result.recordsImported + section.recordsImported,
-    mediaReferences: result.mediaReferences + ('mediaReferences' in section ? section.mediaReferences : 0),
-    unsupportedFiles: result.unsupportedFiles + section.unsupportedFiles,
-    failedFiles: result.failedFiles + section.failedFiles
-  }), {
+  const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {
+    const mediaReferences = 'mediaReferences' in section ? section.mediaReferences : 0;
+    return {
+      filesAttempted: result.filesAttempted + section.filesAttempted,
+      recordsImported: result.recordsImported + section.recordsImported,
+      mediaReferences: result.mediaReferences + mediaReferences,
+      unsupportedFiles: result.unsupportedFiles + section.unsupportedFiles,
+      failedFiles: result.failedFiles + section.failedFiles
+    };
+  }, {
     filesAttempted: 0,
     recordsImported: 0,
     mediaReferences: 0,

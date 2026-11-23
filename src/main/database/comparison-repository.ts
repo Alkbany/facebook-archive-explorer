@@ -1,5 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { ArchiveComparisonReport, ArchiveComparisonSection } from '../../shared/archive/comparison';
+import type {
+  ArchiveComparisonChangeKind,
+  ArchiveComparisonChangesPage
+} from '../../shared/archive/comparison';
 
 interface SnapshotRow {
   id: string; accountId: string; backupName: string; createdAt: string; files: number; records: number;
@@ -100,11 +104,6 @@ export function compareArchiveSnapshots(
 }
 
 
-import type {
-  ArchiveComparisonChangeKind,
-  ArchiveComparisonChangesPage
-} from '../../shared/archive/comparison';
-
 interface DetailedChangeRow {
   changeKind: 'added' | 'removed' | 'changed';
   sectionKey: string;
@@ -124,7 +123,7 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/gu, '\\$&');
 }
 
-const DETAILED_CHANGES_CTE = String.raw\`
+const DETAILED_CHANGES_CTE = String.raw`
   WITH baseline_records AS (
     SELECT source.relative_path AS sourcePath, records.section_key AS sectionKey,
       records.source_record_index AS sourceCardIndex, records.record_type AS recordType,
@@ -176,7 +175,7 @@ const DETAILED_CHANGES_CTE = String.raw\`
       OR current.dateRaw IS NOT previous.dateRaw
       OR current.payloadJson IS NOT previous.payloadJson
   )
-\`;
+`;
 
 function validateComparisonPair(
   database: DatabaseSync,
@@ -235,34 +234,34 @@ export function listArchiveComparisonChanges(
   const normalizedQuery = query.trim();
   if (normalizedQuery) {
     const pattern = '%' + escapeLikePattern(normalizedQuery) + '%';
-    conditions.push(String.raw\`(
-      changes.sourcePath LIKE ? ESCAPE '\\' COLLATE NOCASE
-      OR COALESCE(changes.previousTitle, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
-      OR COALESCE(changes.previousBody, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
-      OR COALESCE(changes.comparedTitle, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
-      OR COALESCE(changes.comparedBody, '') LIKE ? ESCAPE '\\' COLLATE NOCASE
-    )\`);
+    conditions.push(String.raw`(
+      changes.sourcePath LIKE ? ESCAPE '\' COLLATE NOCASE
+      OR COALESCE(changes.previousTitle, '') LIKE ? ESCAPE '\' COLLATE NOCASE
+      OR COALESCE(changes.previousBody, '') LIKE ? ESCAPE '\' COLLATE NOCASE
+      OR COALESCE(changes.comparedTitle, '') LIKE ? ESCAPE '\' COLLATE NOCASE
+      OR COALESCE(changes.comparedBody, '') LIKE ? ESCAPE '\' COLLATE NOCASE
+    )`);
     parameters.push(pattern, pattern, pattern, pattern, pattern);
   }
   const whereClause = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-  const totalRow = database.prepare(DETAILED_CHANGES_CTE + String.raw\`
-    SELECT COUNT(*) AS total FROM changes \${whereClause}
-  \`).get(...parameters) as { total: number };
+  const totalRow = database.prepare(DETAILED_CHANGES_CTE + String.raw`
+    SELECT COUNT(*) AS total FROM changes ${whereClause}
+  `).get(...parameters) as { total: number };
   const total = totalRow.total;
   const pageCount = Math.max(1, Math.ceil(total / requestedPageSize));
   const page = Math.min(requestedPage, pageCount);
   const offset = (page - 1) * requestedPageSize;
 
-  const changes = database.prepare(DETAILED_CHANGES_CTE + String.raw\`
+  const changes = database.prepare(DETAILED_CHANGES_CTE + String.raw`
     SELECT changeKind, sectionKey, sourcePath, sourceCardIndex,
       previousRecordType, previousTitle, previousBody, previousDateRaw,
       comparedRecordType, comparedTitle, comparedBody, comparedDateRaw
     FROM changes
-    \${whereClause}
+    ${whereClause}
     ORDER BY sectionKey COLLATE NOCASE, sourcePath COLLATE NOCASE,
       sourceCardIndex ASC, changeKind
     LIMIT ? OFFSET ?
-  \`).all(...parameters, requestedPageSize, offset) as unknown as DetailedChangeRow[];
+  `).all(...parameters, requestedPageSize, offset) as unknown as DetailedChangeRow[];
 
   return { changes, total, page, pageSize: requestedPageSize };
 }

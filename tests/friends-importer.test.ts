@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
-import { importFriendsSourceFile } from '../src/main/import/pipeline/friends-importer';
+import { importFriendsSection, importFriendsSourceFile } from '../src/main/import/pipeline/friends-importer';
 
 describe('Friends file import', () => {
   let database: DatabaseSync;
@@ -96,6 +96,63 @@ describe('Friends file import', () => {
     expect(indexedName).toHaveLength(1);
     expect(indexedContact).toHaveLength(0);
     await expect(readFile(filePath, 'utf8')).resolves.toBe(html);
+  });
+
+  it('imports only the five registered Friends export filenames', async () => {
+    const friendsHtml = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic First Person</div>
+      <div class="_3-94 _2lem">Raw date one</div>
+    </div>`;
+    const sentHtml = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic Second Person</div>
+      <div class="_3-94 _2lem">Raw date two</div>
+    </div>`;
+
+    await writeFile(join(root, 'friends', 'friends.html'), friendsHtml, 'utf8');
+    await writeFile(join(root, 'friends', 'sent_friend_requests.html'), sentHtml, 'utf8');
+    await writeFile(join(root, 'friends', 'unrecognized.html'), friendsHtml, 'utf8');
+
+    const timestamp = new Date().toISOString();
+    const sentFileId = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, ?, ?, 'friends', 'html', 'discovered', ?)
+    `).run(
+      snapshotId,
+      'friends/sent_friend_requests.html',
+      'sent_friend_requests.html',
+      timestamp
+    ).lastInsertRowid);
+    const unknownFileId = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, ?, ?, 'friends', 'html', 'discovered', ?)
+    `).run(
+      snapshotId,
+      'friends/unrecognized.html',
+      'unrecognized.html',
+      timestamp
+    ).lastInsertRowid);
+
+    const result = await importFriendsSection(database, snapshotId, root);
+
+    expect(result).toEqual({
+      filesAttempted: 2,
+      recordsImported: 2,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+
+    const unknownFile = database.prepare(
+      'SELECT status FROM source_files WHERE id = ?'
+    ).get(unknownFileId) as { status: string };
+    const importedCount = database.prepare(
+      'SELECT COUNT(*) AS count FROM records WHERE snapshot_id = ?'
+    ).get(snapshotId) as { count: number };
+
+    expect(unknownFile.status).toBe('discovered');
+    expect(importedCount.count).toBe(2);
+    expect(sentFileId).toBeGreaterThan(0);
   });
 
   it('marks an unrecognized Friends page as unsupported rather than importing zero records silently', async () => {

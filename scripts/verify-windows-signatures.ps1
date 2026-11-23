@@ -29,8 +29,16 @@ foreach ($binary in $binaries) {
     continue
   }
 
-  $ekuOids = @($signature.SignerCertificate.EnhancedKeyUsageList |
-    ForEach-Object { $_.ObjectId.Value })
+  $ekuOids = @()
+  $ekuExtensions = @($signature.SignerCertificate.Extensions |
+    Where-Object { $_.Oid.Value -eq '2.5.29.37' })
+  foreach ($extension in $ekuExtensions) {
+    $parsedEku = [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new(
+      $extension,
+      $extension.Critical
+    )
+    $ekuOids += @($parsedEku.EnhancedKeyUsages | ForEach-Object { $_.Value })
+  }
   if ($codeSigningEku -notin $ekuOids) {
     $failures += "$($binary.FullName): signer certificate does not include the Code Signing EKU"
     continue

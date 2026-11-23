@@ -40,12 +40,20 @@ Each imported record retains its record type, raw name, raw date, source file, a
 
 A file with no recognized Friends cards is marked unsupported and gets a safe import issue instead of being reported as successfully imported with zero records. Cards without readable names generate warnings while valid cards are still imported.
 
+## Messages conversation importer
+
+An explicit **Import Messages** action processes discovered HTML conversation files under `messages/inbox`, `messages/archived_threads`, `messages/filtered_threads`, and `messages/message_requests`. The parser uses the observed Facebook message-card DOM structure and retains source card order, sender text, message body, raw timestamp, and reaction text separately. Call-event text is classified as a best-effort record type without inferring call duration or outcome metadata.
+
+Attachment references are resolved using the document's relative `base` element. Only relative paths that remain inside the archive are considered, and they are linked only when the corresponding file exists in the discovered snapshot inventory. The importer stores references and media metadata; it does not copy media bytes or fetch external URLs. Audio and video are identified from their DOM elements, not from an MP4 extension alone.
+
+Message records are marked sensitive and excluded from FTS5 by default. The conversation folder type is retained as payload metadata. Files with unrecognized card structures are marked unsupported, and empty cards generate warnings.
+
 ## Not implemented yet
 
-- Importers for messages, posts, photos, comments, reactions, groups, and remaining export sections.
+- Importers for posts, photos, comments, reactions, groups, and remaining export sections.
 - JSON import and ZIP discovery/import.
 - Full resumable import orchestration across all sections and integrity comparison.
-- Automatic image/video/audio indexing and media gallery generation.
+- Media gallery generation and media metadata enrichment (dimensions, duration, thumbnails).
 
 ## Resume safety
 

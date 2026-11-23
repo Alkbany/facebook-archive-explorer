@@ -15,7 +15,9 @@ import type {
   ImportCoverageReport,
   ImportProgressEvent,
   PhotoAlbumRecordSummary,
-  PhotoAlbumDetailView
+  PhotoAlbumDetailView,
+  FriendDirectoryFilter,
+  FriendDirectoryView
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -24,6 +26,14 @@ import type { ArchiveSearchResult } from '../../shared/archive/search';
 import type { ArchiveComparisonReport } from '../../shared/archive/comparison';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
+
+const FRIEND_STATUS_LABELS: Record<FriendDirectoryView['records'][number]['recordType'], string> = {
+  friend: 'Friend',
+  received: 'Received request',
+  sent: 'Sent request',
+  rejected: 'Rejected request',
+  removed: 'Removed friend'
+};
 
 function App() {
   const [version, setVersion] = useState('0.1.0');
@@ -48,6 +58,12 @@ function App() {
   const [comparisonReport, setComparisonReport] = useState<ArchiveComparisonReport | null>(null);
   const [isComparingBackups, setIsComparingBackups] = useState(false);
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
+  const [friendDirectory, setFriendDirectory] = useState<FriendDirectoryView | null>(null);
+  const [friendTypeFilter, setFriendTypeFilter] = useState<FriendDirectoryFilter>('all');
+  const [friendQuery, setFriendQuery] = useState('');
+  const [friendPage, setFriendPage] = useState(1);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [activeNavigation, setActiveNavigation] = useState('overview');
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
   const [postFilter, setPostFilter] = useState('');
@@ -119,6 +135,10 @@ function App() {
     setIsLoadingPhotoAlbum(false);
     setImportAllSummary(null);
     setFriendsImport(null);
+    setFriendDirectory(null);
+    setFriendTypeFilter('all');
+    setFriendQuery('');
+    setFriendPage(1);
     setPostsImport(null);
     setPostRecords([]);
     setPostFilter('');
@@ -178,6 +198,10 @@ function App() {
     setIsLoadingPhotoAlbum(false);
     setImportAllSummary(null);
     setFriendsImport(null);
+    setFriendDirectory(null);
+    setFriendTypeFilter('all');
+    setFriendQuery('');
+    setFriendPage(1);
     setPostsImport(null);
     setPostRecords([]);
     setPostFilter('');
@@ -201,7 +225,7 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
@@ -209,7 +233,8 @@ function App() {
         window.desktopApi.listMediaForSelectedBackup(),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
-        window.desktopApi.listPhotoAlbumsForSelectedBackup()
+        window.desktopApi.listPhotoAlbumsForSelectedBackup(),
+        window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1)
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -217,6 +242,8 @@ function App() {
       setConversations(foundConversations);
       setMediaGallery(media);
       setPhotoAlbums(albums);
+      setFriendDirectory(friends);
+      setFriendPage(friends.page);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
@@ -396,6 +423,30 @@ function App() {
     }
   }
 
+  async function loadFriendsDirectory(filter: FriendDirectoryFilter, query: string, page: number) {
+    setIsLoadingFriends(true);
+    setFriendTypeFilter(filter);
+    setFriendQuery(query);
+    setFriendPage(page);
+    try {
+      const result = await window.desktopApi.listFriendsDirectoryForSelectedBackup(filter, query, page);
+      setFriendDirectory(result);
+      setFriendPage(result.page);
+    } catch {
+      setError('The Friends directory could not be loaded. Import Friends first and try again.');
+    } finally {
+      setIsLoadingFriends(false);
+    }
+  }
+
+  function navigateToSection(section: string, targetId: string) {
+    setActiveNavigation(section);
+    const target = document.getElementById(targetId)
+      ?? document.getElementById('import-actions')
+      ?? document.getElementById('welcome-panel');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async function importFriends() {
     setIsImportingFriends(true);
     setError(null);
@@ -403,6 +454,7 @@ function App() {
     try {
       const result = await window.desktopApi.importFriendsForSelectedBackup();
       setFriendsImport(result);
+      await loadFriendsDirectory('all', '', 1);
       await refreshImportIssues();
       await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
@@ -427,18 +479,23 @@ function App() {
       setCommentsImport(result.sections.comments);
       setReactionsImport(result.sections.reactions);
 
-      const [posts, comments, reactions, foundConversations, albums] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, albums, friends] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
-        window.desktopApi.listPhotoAlbumsForSelectedBackup()
+        window.desktopApi.listPhotoAlbumsForSelectedBackup(),
+        window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1)
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
       setReactionRecords(reactions);
       setConversations(foundConversations);
       setPhotoAlbums(albums);
+      setFriendDirectory(friends);
+      setFriendTypeFilter('all');
+      setFriendQuery('');
+      setFriendPage(friends.page);
       if (foundConversations.length > 0) {
         await loadConversation(foundConversations[0].sourceFileId);
       } else {
@@ -558,11 +615,12 @@ function App() {
         </div>
 
         <p className="nav-label">WORKSPACE</p>
-        <div className="nav-item nav-item-active"><span>⌂</span> Overview</div>
-        <div className="nav-item nav-item-muted"><span>▤</span> Conversations <small>Soon</small></div>
-        <div className="nav-item nav-item-muted"><span>▧</span> Photos &amp; videos <small>Soon</small></div>
-        <div className="nav-item nav-item-muted"><span>◷</span> Activity <small>Soon</small></div>
-        <div className="nav-item nav-item-muted"><span>⌕</span> Search <small>Soon</small></div>
+        <button type="button" className={activeNavigation === 'overview' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('overview', 'overview')}><span>⌂</span> Overview</button>
+        <button type="button" className={activeNavigation === 'friends' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('friends', 'friends-directory')}><span>♙</span> Friends</button>
+        <button type="button" className={activeNavigation === 'conversations' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('conversations', 'conversation-explorer')}><span>▤</span> Conversations</button>
+        <button type="button" className={activeNavigation === 'photos' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('photos', 'photo-albums-workspace')}><span>▧</span> Photos &amp; videos</button>
+        <button type="button" className={activeNavigation === 'activity' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('activity', 'activity-tools')}><span>◷</span> Activity</button>
+        <button type="button" className={activeNavigation === 'search' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('search', 'unified-search-panel')}><span>⌕</span> Search</button>
 
         <div className="sidebar-bottom">
           <div className="local-indicator"><i /> Local workspace</div>
@@ -572,7 +630,7 @@ function App() {
       </aside>
 
       <main className="main-content">
-        <header className="topbar">
+        <header className="topbar" id="overview">
           <div>
             <p className="eyebrow">YOUR PERSONAL ARCHIVE</p>
             <h1>Everything in its place.</h1>
@@ -581,7 +639,7 @@ function App() {
           <div className="privacy-pill"><i /> On this device</div>
         </header>
 
-        <section className="welcome-panel">
+        <section className="welcome-panel" id="welcome-panel">
           <div className="welcome-copy">
             <p className="panel-kicker">GET STARTED</p>
             <h2>Bring your archive into focus.</h2>
@@ -786,7 +844,7 @@ function App() {
                 </>
               )}
             </section>
-            <section className="unified-search-panel">
+            <section className="unified-search-panel" id="unified-search-panel">
               <div className="media-gallery-heading">
                 <div>
                   <p className="eyebrow">LOCAL FULL-TEXT SEARCH</p>
@@ -856,7 +914,7 @@ function App() {
             </div>
 
 
-            <div className="friends-import-action">
+            <div className="friends-import-action" id="import-actions">
               <div>
                 <strong>Friends</strong>
                 <span>Import the five recognized Friends HTML files. Other sections remain untouched.</span>
@@ -869,6 +927,87 @@ function App() {
                 {isImportingFriends ? 'Importing Friends…' : 'Import Friends'}
               </button>
             </div>
+            {(friendsImport || friendDirectory) && (
+              <section className="friends-directory-workspace" id="friends-directory">
+                <div className="friends-directory-heading">
+                  <div>
+                    <p className="eyebrow">PEOPLE IN THIS BACKUP</p>
+                    <h3>Friends directory</h3>
+                    <p>Current friends and request history, preserved as separate export categories.</p>
+                  </div>
+                  <span>{friendDirectory?.counts.all.toLocaleString() ?? '—'} records</span>
+                </div>
+                {friendsImport && (
+                  <p className="friends-import-result">
+                    {friendsImport.filesAttempted} files checked · {friendsImport.recordsImported} records imported ·
+                    {friendsImport.unsupportedFiles} unsupported · {friendsImport.failedFiles} failed
+                  </p>
+                )}
+                {friendDirectory && (
+                  <>
+                    <div className="friends-directory-tabs" role="group" aria-label="Filter Friends by export category">
+                      <button type="button" className={friendTypeFilter === 'all' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('all', friendQuery, 1)}>All <span>{friendDirectory.counts.all}</span></button>
+                      <button type="button" className={friendTypeFilter === 'friend' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('friend', friendQuery, 1)}>Friends <span>{friendDirectory.counts.friends}</span></button>
+                      <button type="button" className={friendTypeFilter === 'received' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('received', friendQuery, 1)}>Received <span>{friendDirectory.counts.received}</span></button>
+                      <button type="button" className={friendTypeFilter === 'sent' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('sent', friendQuery, 1)}>Sent <span>{friendDirectory.counts.sent}</span></button>
+                      <button type="button" className={friendTypeFilter === 'rejected' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('rejected', friendQuery, 1)}>Rejected <span>{friendDirectory.counts.rejected}</span></button>
+                      <button type="button" className={friendTypeFilter === 'removed' ? 'selected' : ''} onClick={() => void loadFriendsDirectory('removed', friendQuery, 1)}>Removed <span>{friendDirectory.counts.removed}</span></button>
+                    </div>
+                    <div className="friends-directory-search">
+                      <input
+                        value={friendQuery}
+                        onChange={(event) => setFriendQuery(event.target.value)}
+                        onKeyDown={(event) => { if (event.key === 'Enter') void loadFriendsDirectory(friendTypeFilter, friendQuery, 1); }}
+                        maxLength={100}
+                        placeholder="Find a person or search exported dates…"
+                        aria-label="Search Friends directory"
+                      />
+                      <button className="secondary-button" onClick={() => void loadFriendsDirectory(friendTypeFilter, friendQuery, 1)} disabled={isLoadingFriends}>
+                        {isLoadingFriends ? 'Searching…' : 'Search'}
+                      </button>
+                      {friendQuery && <button className="text-button" onClick={() => void loadFriendsDirectory(friendTypeFilter, '', 1)}>Clear</button>}
+                    </div>
+                    {isLoadingFriends ? (
+                      <p className="friends-directory-empty">Loading Friends…</p>
+                    ) : friendDirectory.records.length === 0 ? (
+                      <p className="friends-directory-empty">
+                        {friendDirectory.counts.all === 0
+                          ? 'No recognized Friends records have been imported from this backup yet.'
+                          : 'No people match this filter. Try another category or search phrase.'}
+                      </p>
+                    ) : (
+                      <div className="friends-directory-list">
+                        {friendDirectory.records.map((friend) => (
+                          <article className="friends-directory-row" key={friend.id}>
+                            <div className="friends-directory-avatar">{friend.nameRaw.trim().slice(0, 1).toLocaleUpperCase() || '•'}</div>
+                            <div className="friends-directory-copy">
+                              <strong>{friend.nameRaw}</strong>
+                              <small>{friend.dateRaw ?? 'No exported date'} · {friend.sourcePath} · item {friend.sourceCardIndex + 1}</small>
+                            </div>
+                            <span className={'friend-status friend-status-' + friend.recordType}>{FRIEND_STATUS_LABELS[friend.recordType]}</span>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                    <div className="friends-directory-pagination">
+                      <span>
+                        {friendDirectory.total === 0
+                          ? '0 records'
+                          : 'Showing ' + (((friendDirectory.page - 1) * friendDirectory.pageSize) + 1) + '–' +
+                            Math.min(friendDirectory.page * friendDirectory.pageSize, friendDirectory.total) +
+                            ' of ' + friendDirectory.total.toLocaleString()}
+                      </span>
+                      <div>
+                        <button className="secondary-button" onClick={() => void loadFriendsDirectory(friendTypeFilter, friendQuery, friendPage - 1)} disabled={isLoadingFriends || friendPage <= 1}>Previous</button>
+                        <span>Page {friendDirectory.page} / {Math.max(1, Math.ceil(friendDirectory.total / friendDirectory.pageSize))}</span>
+                        <button className="secondary-button" onClick={() => void loadFriendsDirectory(friendTypeFilter, friendQuery, friendPage + 1)} disabled={isLoadingFriends || friendPage >= Math.max(1, Math.ceil(friendDirectory.total / friendDirectory.pageSize))}>Next</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+
             <div className="friends-import-action">
               <div>
                 <strong>Messages</strong>
@@ -878,7 +1017,7 @@ function App() {
                 {isImportingMessages ? 'Importing Messages…' : 'Import Messages'}
               </button>
             </div>
-            <div className="friends-import-action">
+            <div className="friends-import-action" id="activity-tools">
               <div>
                 <strong>Posts</strong>
                 <span>Import sampled post cards, keep exported dates and authors, and link local photos/videos without copying them.</span>
@@ -894,7 +1033,7 @@ function App() {
               </p>
             )}
             {(postsImport || postRecords.length > 0) && (
-              <section className="conversation-workspace">
+              <section className="conversation-workspace" id="posts-explorer">
                 <div className="conversation-workspace-heading">
                   <div>
                     <p className="eyebrow">YOUR ACTIVITY</p>
@@ -919,8 +1058,8 @@ function App() {
               </section>
             )}
 
-            {photoAlbums.length > 0 && (
-              <section className="conversation-workspace photo-albums-workspace">
+            {(photoAlbums.length > 0 || isImportingAll) && (
+              <section className="conversation-workspace photo-albums-workspace" id="photo-albums-workspace">
                 {selectedPhotoAlbum ? (
                   <>
                     <div className="conversation-workspace-heading">

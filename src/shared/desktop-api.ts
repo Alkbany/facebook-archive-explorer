@@ -1,3 +1,5 @@
+import type { ArchiveInspectionReport } from './archive/inspection';
+
 export interface AppInfo {
   appName: string;
   appVersion: string;
@@ -6,14 +8,16 @@ export interface AppInfo {
 
 export type DirectorySelectionResult =
   | { status: 'cancelled' }
-  | { status: 'selected'; absolutePath: string };
+  | { status: 'selected'; folderName: string };
 
 export const IPC_CHANNELS = {
   getAppInfo: 'app:get-info',
-  selectBackupDirectory: 'archive:select-directory'
+  selectBackupDirectory: 'archive:select-directory',
+  inspectSelectedBackup: 'archive:inspect-selected'
 } as const;
 
 export interface DesktopApi {
   getAppInfo(): Promise<AppInfo>;
   selectBackupDirectory(): Promise<DirectorySelectionResult>;
+  inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
 }

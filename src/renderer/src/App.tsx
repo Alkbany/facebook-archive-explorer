@@ -6,7 +6,8 @@ const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, s
 
 function App() {
   const [version, setVersion] = useState('0.1.0');
-  const [accountName, setAccountName] = useState('My Facebook account');\n  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [accountName, setAccountName] = useState('My Facebook account');
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,8 @@ function App() {
       const selection = await window.desktopApi.selectBackupDirectory(accountName);
       if (selection.status === 'cancelled') return;
 
-      setSelectedFolder(selection.folderName);\n      setAccountName(selection.accountName);
+      setSelectedFolder(selection.folderName);
+      setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
     } catch {
@@ -83,7 +85,19 @@ function App() {
               Choose the Facebook export folder on your computer. The first pass only
               inventories filenames and file types; it does not open archive contents.
             </p>
-            <label className="account-field">\n              <span>Facebook account label</span>\n              <input\n                value={accountName}\n                onChange={(event) => setAccountName(event.target.value)}\n                maxLength={100}\n                placeholder="My Facebook account"\n                disabled={isChoosingFolder}\n              />\n            </label>\n            <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder || !accountName.trim()}>
+
+            <label className="account-field">
+              <span>Facebook account label</span>
+              <input
+                value={accountName}
+                onChange={(event) => setAccountName(event.target.value)}
+                maxLength={100}
+                placeholder="My Facebook account"
+                disabled={isChoosingFolder}
+              />
+            </label>
+
+            <button className="primary-button" onClick={chooseFolder} disabled={isChoosingFolder || !accountName.trim()}>
               <span className="button-icon">＋</span>
               {isChoosingFolder ? 'Inspecting folder…' : 'Choose backup folder'}
             </button>
@@ -123,7 +137,8 @@ function App() {
             <div className="inspection-heading">
               <div>
                 <p className="eyebrow">FIRST LOOK</p>
-                <h2>Folder inventory</h2>\n                <span className="snapshot-id">Saved snapshot: {inspection.snapshotId.slice(0, 8)}</span>
+                <h2>Folder inventory</h2>
+                <span className="snapshot-id">Saved snapshot: {inspection.snapshotId.slice(0, 8)}</span>
                 <p>Names and file types only. No HTML, JSON, messages, or media contents were opened.</p>
               </div>
               <span className="inspection-date">

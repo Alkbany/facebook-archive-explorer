@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parseMessageConversation } from '../parsers/messages-parser';
 
@@ -200,7 +201,8 @@ async function importOneConversation(
 export async function importMessagesSection(
   database: DatabaseSync,
   snapshotId: string,
-  archiveRoot: string
+  archiveRoot: string,
+  onProgress?: ImportProgressReporter
 ): Promise<MessagesImportSectionResult> {
   const files = database.prepare(`
     SELECT id, relative_path, file_name, detected_format
@@ -220,6 +222,17 @@ export async function importMessagesSection(
   const summary: MessagesImportSectionResult = {
     filesAttempted: 0, recordsImported: 0, unsupportedFiles: 0, failedFiles: 0, mediaReferences: 0
   };
+
+  const emitProgress = (phase: 'started' | 'progress' | 'completed') => reportImportProgress(onProgress, {
+    sectionKey: 'messages',
+    phase,
+    filesCompleted: summary.filesAttempted,
+    filesTotal: files.length,
+    recordsImported: summary.recordsImported,
+    unsupportedFiles: summary.unsupportedFiles,
+    failedFiles: summary.failedFiles
+  });
+  emitProgress('started');
   for (const file of files) {
     summary.filesAttempted += 1;
     try {
@@ -230,6 +243,8 @@ export async function importMessagesSection(
     } catch {
       summary.failedFiles += 1;
     }
+    emitProgress('progress');
   }
+  emitProgress('completed');
   return summary;
 }

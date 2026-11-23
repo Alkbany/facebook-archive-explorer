@@ -41,7 +41,7 @@ describe('generic HTML fallback importer', () => {
       {
         path: 'groups/groups.html',
         section: 'groups',
-        html: '<html><head><title>Groups</title><script>secret script text</script></head><body><article><h2>Chess Club</h2><p>Weekly chess games</p><time datetime="Raw Facebook date"></time></article><article><h2>Book Club</h2><p>Monthly reading meetings</p></article></body></html>'
+        html: '<html><head><title>Groups</title><script>secret script text</script></head><body><article><h2>Chess Club</h2><p>Weekly chess games</p><span hidden>Hidden overlay text</span><div style="display:none">Hidden style text</div><time datetime="Raw Facebook date"></time></article><article><h2>Book Club</h2><p>Monthly reading meetings</p></article></body></html>'
       },
       {
         path: 'security_and_login_information/login.html',
@@ -107,19 +107,41 @@ describe('generic HTML fallback importer', () => {
     expect(statuses.every((row) => row.status === 'completed' && row.parserKey === 'html_fallback')).toBe(true);
   });
 
-  it('does not take over HTML sections with reviewed importers', async () => {
+  it('does not take over HTML sections before their reviewed importer runs', async () => {
     const path = 'posts/your_posts.html';
     await writeFile(join(root, path), '<html><body><p>Reviewed section</p></body></html>', 'utf8');
     const now = new Date().toISOString();
     database.prepare(`
       INSERT INTO source_files (
         snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
-      ) VALUES (?, ?, 'your_posts.html', 'posts', 'html', 'unsupported', ?)
+      ) VALUES (?, ?, 'your_posts.html', 'posts', 'html', 'discovered', ?)
     `).run(snapshotId, path, now);
 
     const result = await importHtmlFallbackFilesSection(database, snapshotId, root);
     expect(result.filesAttempted).toBe(0);
     expect(database.prepare('SELECT COUNT(*) AS count FROM records WHERE snapshot_id = ?').get(snapshotId))
       .toMatchObject({ count: 0 });
+  });
+
+  it('preserves text when a reviewed section parser rejects the HTML layout', async () => {
+    const path = 'posts/unrecognized_layout.html';
+    const html = '<html><body><article><h2>Older post layout</h2><p>Text from an unsupported card</p></article></body></html>';
+    await writeFile(join(root, path), html, 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format,
+        file_size_bytes, status, discovered_at
+      ) VALUES (?, ?, 'unrecognized_layout.html', 'posts', 'html', ?, 'unsupported', ?)
+    `).run(snapshotId, path, Buffer.byteLength(html), now);
+
+    const result = await importHtmlFallbackFilesSection(database, snapshotId, root);
+    expect(result.filesAttempted).toBe(1);
+    expect(result.recordsImported).toBe(1);
+    expect(database.prepare('SELECT body_text AS body, search_enabled AS searchEnabled FROM records WHERE snapshot_id = ? AND section_key = \'posts\'')
+      .get(snapshotId)).toMatchObject({
+        body: 'Older post layout\\nText from an unsupported card',
+        searchEnabled: 1
+      });
   });
 });

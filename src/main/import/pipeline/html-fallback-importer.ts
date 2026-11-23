@@ -40,6 +40,7 @@ function cleanText(value: string): string {
 
 function extractElementText($: any, element: any): string {
   const clone = $(element).clone();
+  if (clone.is(HTML_NOISE_SELECTOR)) return '';
   clone.find(HTML_NOISE_SELECTOR).remove();
   clone.find('br').replaceWith('\n');
   clone.find('p, div, li, section, h1, h2, h3, h4, blockquote').each((_index: number, child: any) => {
@@ -238,8 +239,11 @@ export async function importHtmlFallbackFilesSection(
     FROM source_files
     WHERE snapshot_id = ? AND detected_format = 'html'
       AND status IN ('discovered', 'failed', 'unsupported')
-      AND section_key NOT IN (
-        'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
+      AND (
+        section_key NOT IN (
+          'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
+        )
+        OR status = 'unsupported'
       )
     ORDER BY section_key COLLATE NOCASE, relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as HtmlSourceFile[];

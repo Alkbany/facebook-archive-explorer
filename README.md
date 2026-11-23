@@ -85,7 +85,7 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 The following are genuine remaining product tasks; filename discovery alone is not treated as parser support:
 
 - Durable checkpoints inside a single source file; current recovery boundaries are atomic per-file commits, and pause/resume takes effect after the active file finishes.
-- Verified field-level parsing for unreviewed HTML and JSON exports; the implemented generic fallbacks preserve bounded text and source provenance but do not interpret every field or relationship.
+- Verified field-level parsing for unreviewed HTML and JSON exports; generic fallbacks preserve bounded text and source provenance (including HTML layouts rejected by a reviewed parser) but do not interpret every field or relationship.
 - Additional activity-card importers beyond the currently supported Friends, Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos album pages.
 - Video duration is read for MP4/MOV/M4V files when the movie header is present in a bounded 2 MiB prefix; other containers and files with later movie metadata remain unsupported. Sampled album-detail imports link recognized photos to local media assets.
 - Verified section-specific importers for Groups, Events, Marketplace, Saved Items, and remaining export sections. Generic fallbacks may preserve visible text but cannot guarantee complete field mapping or relationships without representative export samples and parser fixtures.

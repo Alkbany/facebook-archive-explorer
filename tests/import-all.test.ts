@@ -25,7 +25,8 @@ describe('Import all supported data', () => {
       'messages/inbox/thread-1',
       'posts',
       'comments',
-      'likes_and_reactions'
+      'likes_and_reactions',
+      'photos_and_videos'
     ];
     for (const folder of folders) await mkdir(join(root, folder), { recursive: true });
     const accountId = getOrCreateAccount(database, 'Synthetic import-all account');
@@ -41,7 +42,8 @@ describe('Import all supported data', () => {
       ['messages/inbox/thread-1/thread.html', 'thread.html', 'messages'],
       ['posts/your_posts.html', 'your_posts.html', 'posts'],
       ['comments/comments.html', 'comments.html', 'comments'],
-      ['likes_and_reactions/likes.html', 'likes.html', 'likes_and_reactions']
+      ['likes_and_reactions/likes.html', 'likes.html', 'likes_and_reactions'],
+      ['photos_and_videos/your_photos.html', 'your_photos.html', 'photos_and_videos']
     ] as const;
     for (const [path, name, section] of files) {
       await writeFile(join(root, path), '<html><body><p>Unrecognized synthetic structure</p></body></html>', 'utf8');
@@ -61,20 +63,20 @@ describe('Import all supported data', () => {
     const progress: ImportProgressEvent[] = [];
     const result = await importAllSupportedData(database, snapshotId, root, (event) => progress.push(event));
     expect(progress.filter((event) => event.phase === 'started').map((event) => event.sectionKey)).toEqual([
-      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions'
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
     ]);
-    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(5);
+    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(6);
     expect(progress.filter((event) => event.phase === 'completed').map((event) => event.sectionKey)).toEqual([
-      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions'
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
     ]);
     expect(progress.find((event) => event.sectionKey === 'posts' && event.phase === 'progress')).toMatchObject({
       filesCompleted: 1, filesTotal: 1, recordsImported: 0, unsupportedFiles: 1, failedFiles: 0
     });
     expect(result.totals).toEqual({
-      filesAttempted: 5,
+      filesAttempted: 6,
       recordsImported: 0,
       mediaReferences: 0,
-      unsupportedFiles: 5,
+      unsupportedFiles: 6,
       failedFiles: 0
     });
     expect(result.sections.friends.filesAttempted).toBe(1);
@@ -82,6 +84,7 @@ describe('Import all supported data', () => {
     expect(result.sections.posts.filesAttempted).toBe(1);
     expect(result.sections.comments.filesAttempted).toBe(1);
     expect(result.sections.reactions.filesAttempted).toBe(1);
+    expect(result.sections.photosAndVideos.filesAttempted).toBe(1);
 
     const statuses = database.prepare('SELECT status FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
       .all(snapshotId) as Array<{ status: string }>;
@@ -95,7 +98,7 @@ describe('Import all supported data', () => {
     await expect(importAllSupportedData(database, snapshotId, root, () => {
       throw new Error('Renderer progress listener is unavailable');
     })).resolves.toMatchObject({
-      totals: { filesAttempted: 5, unsupportedFiles: 5, failedFiles: 0 }
+      totals: { filesAttempted: 6, unsupportedFiles: 6, failedFiles: 0 }
     });
   });
 

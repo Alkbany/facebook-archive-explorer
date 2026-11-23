@@ -12,6 +12,14 @@
 8. **Indexing** — add eligible text to FTS5 according to sensitivity policy.
 9. **Reporting** — summarize processed, unsupported, empty, skipped, and failed files.
 
+## ZIP discovery (initial support)
+
+- ZIP files are selected as archives without extracting or rewriting the original file.
+- The central directory is read incrementally; entry contents are not decompressed during inventory.
+- Entries are normalized to safe archive-relative paths. Absolute paths, parent traversal, encrypted entries, and symbolic-link entries are rejected or skipped.
+- The inventory remains bounded by the same 100,000-entry safety cap and delivers discovered metadata in batches.
+- Text entries are read on demand with a strict byte limit. Large media remains in the ZIP and is not copied during discovery.
+
 ## Current discovery behavior
 
 - The native folder picker selects a directory and keeps its absolute path in the Electron main process.

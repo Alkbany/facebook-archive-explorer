@@ -19,7 +19,7 @@
 - [x] Add SQLite driver, migration runner, and repositories.
 - [x] Add one-click sequential import orchestration for the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
 - [ ] Add crash-safe resumable import orchestration for files interrupted while processing and full integrity reporting.
-- [ ] Add ZIP selection and streaming ZIP entry discovery.
+- [x] Add ZIP selection and streaming ZIP entry discovery.
 
 ## Milestone 2 — First reliable parsers
 

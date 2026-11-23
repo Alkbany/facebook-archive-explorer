@@ -11,7 +11,7 @@ import type { ImportProgressReporter } from './import-progress';
  * Repairs file/run markers left by an interrupted import-all session.
  * Per-file import runs are intentionally retained as the audit trail.
  */
-function recoverInterruptedImports(database: DatabaseSync, snapshotId: string): void {
+export function recoverInterruptedImports(database: DatabaseSync, snapshotId: string): void {
   const timestamp = new Date().toISOString();
   const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
     .get(snapshotId) as { status: string } | undefined;
@@ -42,6 +42,22 @@ function recoverInterruptedImports(database: DatabaseSync, snapshotId: string): 
       WHERE id = ? AND status = 'importing'
     `).run(timestamp, snapshotId);
   }
+}
+
+/** Repairs every interrupted import before a user can reopen or retry any section. */
+export function recoverAllInterruptedImports(database: DatabaseSync): number {
+  const interruptedSnapshots = database.prepare(`
+    SELECT id FROM archive_snapshots WHERE status = 'importing'
+    UNION
+    SELECT snapshot_id AS id FROM source_files WHERE status = 'processing'
+    UNION
+    SELECT snapshot_id AS id FROM import_runs WHERE run_type = 'import' AND status = 'running'
+  `).all() as Array<{ id: string }>;
+
+  for (const snapshot of interruptedSnapshots) {
+    recoverInterruptedImports(database, snapshot.id);
+  }
+  return interruptedSnapshots.length;
 }
 
 export async function importAllSupportedData(

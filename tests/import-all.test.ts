@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
-import { importAllSupportedData } from '../src/main/import/pipeline/import-all';
+import { importAllSupportedData, recoverAllInterruptedImports } from '../src/main/import/pipeline/import-all';
 import type { ImportProgressEvent } from '../src/shared/archive/inspection';
 
 describe('Import all supported data', () => {
@@ -97,6 +97,41 @@ describe('Import all supported data', () => {
     })).resolves.toMatchObject({
       totals: { filesAttempted: 5, unsupportedFiles: 5, failedFiles: 0 }
     });
+  });
+
+  it('recovers interrupted individual imports across all saved backups at startup', () => {
+    const accountId = getOrCreateAccount(database, 'Synthetic import-all account');
+    const now = new Date().toISOString();
+    const interruptedIds = ['interrupted-one', 'interrupted-two'];
+
+    for (const [index, id] of interruptedIds.entries()) {
+      database.prepare(`
+        INSERT INTO archive_snapshots (
+          id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+        ) VALUES (?, ?, ?, 'directory', ?, ?, ?, ?)
+      `).run(id, accountId, 'Interrupted backup ' + index, root, index === 0 ? 'importing' : 'discovered', now, now);
+      const fileId = database.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+        ) VALUES (?, 'posts/your_posts.html', 'your_posts.html', 'posts', 'html', 'processing', ?)
+      `).run(id, now).lastInsertRowid;
+      database.prepare(`
+        INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at, files_discovered)
+        VALUES (?, ?, 'import', 'running', ?, 1)
+      `).run('run-' + id, id, now);
+      expect(fileId).toBeGreaterThan(0);
+    }
+
+    expect(recoverAllInterruptedImports(database)).toBe(2);
+    for (const id of interruptedIds) {
+      const file = database.prepare('SELECT status, safe_error_code FROM source_files WHERE snapshot_id = ?')
+        .get(id) as { status: string; safe_error_code: string | null };
+      expect(file).toEqual({ status: 'failed', safe_error_code: 'IMPORT_INTERRUPTED' });
+      const run = database.prepare('SELECT status FROM import_runs WHERE id = ?').get('run-' + id) as { status: string };
+      expect(run.status).toBe('failed');
+      const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?').get(id) as { status: string };
+      expect(snapshot.status).toBe('partial');
+    }
   });
 
   it('skips completed files on a second import pass', async () => {

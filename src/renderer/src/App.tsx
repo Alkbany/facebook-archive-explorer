@@ -98,6 +98,7 @@ function App() {
   const [comparisonChangeFilter, setComparisonChangeFilter] = useState<ArchiveComparisonChangeKind>('all');
   const [comparisonChangeSection, setComparisonChangeSection] = useState('all');
   const [comparisonChangeQuery, setComparisonChangeQuery] = useState('');
+  const [comparisonAppliedQuery, setComparisonAppliedQuery] = useState('');
   const [comparisonChangePage, setComparisonChangePage] = useState(1);
   const [isLoadingComparisonChanges, setIsLoadingComparisonChanges] = useState(false);
   const [comparisonExportFormat, setComparisonExportFormat] = useState<ArchiveComparisonExportFormat>('csv');
@@ -465,6 +466,7 @@ function App() {
         baselineId, comparedId, filter, sectionKey, query, page
       );
       setComparisonChanges(result);
+      setComparisonAppliedQuery(query);
       setComparisonChangePage(result.page);
     } catch {
       setComparisonChanges(null);
@@ -483,7 +485,7 @@ function App() {
         comparisonTargetId,
         comparisonChangeFilter,
         comparisonChangeSection,
-        comparisonChangeQuery,
+        comparisonAppliedQuery,
         comparisonExportFormat
       );
       setComparisonExportStatus(result.status === 'saved'
@@ -501,6 +503,7 @@ function App() {
     setComparisonChangeFilter('all');
     setComparisonChangeSection('all');
     setComparisonChangeQuery('');
+    setComparisonAppliedQuery('');
     setComparisonChangePage(1);
     setComparisonExportStatus('');
     setError(null);
@@ -1994,7 +1997,7 @@ function App() {
                     <option value="csv">CSV spreadsheet</option>
                     <option value="json">JSON data</option>
                   </select>
-                  <button className="secondary-button" onClick={() => void exportComparisonChanges()} disabled={!comparisonChanges || comparisonChanges.total === 0}>
+                  <button className="secondary-button" onClick={() => void exportComparisonChanges()} disabled={!comparisonChanges || comparisonChanges.total === 0 || isLoadingComparisonChanges}>
                     Export filtered changes
                   </button>
                   {comparisonExportStatus && <span>{comparisonExportStatus}</span>}

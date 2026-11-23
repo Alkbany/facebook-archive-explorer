@@ -7,7 +7,8 @@ import {
   completeDiscoverySession,
   failDiscoverySession,
   getOrCreateAccount,
-  insertDiscoveredFiles,\n  listArchiveSnapshots
+  insertDiscoveredFiles,
+  listArchiveSnapshots
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 
@@ -56,7 +57,12 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     }
   );
 
-  ipcMain.handle(IPC_CHANNELS.listArchiveSnapshots, () => listArchiveSnapshots(database));\n\n  ipcMain.handle(IPC_CHANNELS.inspectSelectedBackup, async () => {
+  ipcMain.handle(
+    IPC_CHANNELS.listArchiveSnapshots,
+    () => listArchiveSnapshots(database)
+  );
+
+  ipcMain.handle(IPC_CHANNELS.inspectSelectedBackup, async () => {
     if (!selectedBackupDirectory || !selectedAccountId) {
       throw new Error('Select an archive folder before inspecting it.');
     }

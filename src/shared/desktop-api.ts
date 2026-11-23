@@ -3,7 +3,7 @@ import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
-  PostsImportSectionResult,
+  PostsImportSectionResult,\n  CommentsImportSectionResult,\n  CommentActivitySummary,
   PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
@@ -26,7 +26,7 @@ export const IPC_CHANNELS = {
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
   importFriendsForSelectedBackup: 'archive:import-friends',
-  importPostsForSelectedBackup: 'archive:import-posts',
+  importPostsForSelectedBackup: 'archive:import-posts',\n  importCommentsForSelectedBackup: 'archive:import-comments',\n  listCommentsForSelectedBackup: 'archive:list-comments',
   listPostsForSelectedBackup: 'archive:list-posts',
   importMessagesForSelectedBackup: 'archive:import-messages',
   importReactionsForSelectedBackup: 'archive:import-reactions',
@@ -44,7 +44,7 @@ export interface DesktopApi {
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
-  listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
+  listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;\n  importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;\n  listCommentsForSelectedBackup(): Promise<CommentActivitySummary[]>;
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;
   importReactionsForSelectedBackup(): Promise<ReactionsImportSectionResult>;
   listReactionsForSelectedBackup(): Promise<ReactionRecordSummary[]>;

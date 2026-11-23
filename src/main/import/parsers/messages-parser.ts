@@ -96,7 +96,9 @@ export function parseMessageConversation(html: string, sourceFile: string): Mess
     const card = $(element);
     const senderText = cleanText(card.find(SENDER_SELECTOR).first().text());
     const bodyElement = card.find(BODY_SELECTOR).first();
-    const bodyText = cleanText(bodyElement.text());
+    const bodyTextElement = bodyElement.clone();
+    bodyTextElement.find('ul._tqp').remove();
+    const bodyText = cleanText(bodyTextElement.text());
     const timestampText = cleanText(card.find(TIMESTAMP_SELECTOR).first().text());
 
     const reactionsRaw = card.find('ul._tqp li')

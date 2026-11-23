@@ -20,9 +20,7 @@ import type {
   PhotoAlbumDetailView,
   PhotoAlbumsImportSectionResult,
   FriendDirectoryFilter,
-  FriendDirectoryView,
-  ArchiveFileDirectoryView,
-  ArchiveFileStatus
+  FriendDirectoryView
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -497,23 +495,6 @@ function App() {
       setError('The Friends directory could not be loaded. Import Friends first and try again.');
     } finally {
       setIsLoadingFriends(false);
-    }
-  }
-
-  async function loadArchiveFiles(status: ArchiveFileStatus, sectionKey: string, query: string, page: number) {
-    setIsLoadingArchiveFiles(true);
-    setArchiveFileStatus(status);
-    setArchiveFileSection(sectionKey);
-    setArchiveFileQuery(query);
-    setArchiveFilePage(page);
-    try {
-      const result = await window.desktopApi.listArchiveFilesForSelectedBackup(status, sectionKey, query, page);
-      setArchiveFileDirectory(result);
-      setArchiveFilePage(result.page);
-    } catch {
-      setError('The archive file inventory could not be loaded. Inspect the backup again and retry.');
-    } finally {
-      setIsLoadingArchiveFiles(false);
     }
   }
 

@@ -24,6 +24,7 @@ function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; loading: boolean; error: string | null } | null>(null);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +95,7 @@ function App() {
           if (previewsLoaded >= 8) return media;
           previewsLoaded += 1;
           try {
-            return { ...media, previewDataUrl: await window.desktopApi.getMessageImagePreview(media.id) };
+            return { ...media, previewDataUrl: await window.desktopApi.getMessageMediaPreview(media.id) };
           } catch {
             return media;
           }
@@ -106,6 +107,20 @@ function App() {
       setConversationMessages([]);
     } finally {
       setIsLoadingConversation(false);
+    }
+  }
+
+  async function openMedia(media: { id: number; mediaKind: string; relativePath: string }) {
+    setActiveMedia({ ...media, dataUrl: null, loading: true, error: null });
+    try {
+      const dataUrl = await window.desktopApi.getMessageMediaPreview(media.id);
+      setActiveMedia((current) => current?.id === media.id
+        ? { ...current, dataUrl, loading: false }
+        : current);
+    } catch {
+      setActiveMedia((current) => current?.id === media.id
+        ? { ...current, loading: false, error: 'Preview unavailable. The file may be too large, missing, or unsupported.' }
+        : current);
     }
   }
 
@@ -362,9 +377,13 @@ function App() {
                                       {message.media.map((media) => (
                                         <div className="message-attachment" key={media.id} title={media.relativePath}>
                                           {media.previewDataUrl ? (
-                                            <img src={media.previewDataUrl} alt={media.mediaKind === 'sticker' ? 'Message sticker' : 'Message attachment'} loading="lazy" />
+                                            <button className="media-preview-trigger" onClick={() => void openMedia(media)} aria-label="Open image preview">
+                                              <img src={media.previewDataUrl} alt={media.mediaKind === 'sticker' ? 'Message sticker' : 'Message attachment'} loading="lazy" />
+                                            </button>
                                           ) : (
-                                            <span>{media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'} {media.mediaKind}</span>
+                                            <button className="media-open-button" onClick={() => void openMedia(media)}>
+                                              {media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'} Open {media.mediaKind}
+                                            </button>
                                           )}
                                         </div>
                                       ))}
@@ -478,6 +497,24 @@ function App() {
           <span>Built for local-first archive exploration.</span>
           <span>No archive upload · No telemetry · No external content fetching</span>
         </footer>
+        {activeMedia && (
+          <div className="media-viewer-backdrop" role="presentation" onClick={() => setActiveMedia(null)}>
+            <section className="media-viewer" role="dialog" aria-modal="true" aria-label="Attachment viewer" onClick={(event) => event.stopPropagation()}>
+              <header className="media-viewer-header">
+                <div><strong>{activeMedia.mediaKind.toLocaleUpperCase()}</strong><span>{activeMedia.relativePath.split('/').pop()}</span></div>
+                <button onClick={() => setActiveMedia(null)} aria-label="Close attachment viewer">×</button>
+              </header>
+              <div className="media-viewer-content">
+                {activeMedia.loading && <p>Loading attachment from this backup…</p>}
+                {activeMedia.error && <p className="media-viewer-error">{activeMedia.error}</p>}
+                {activeMedia.dataUrl && activeMedia.mediaKind === 'video' && <video src={activeMedia.dataUrl} controls autoPlay />}
+                {activeMedia.dataUrl && activeMedia.mediaKind === 'audio' && <audio src={activeMedia.dataUrl} controls autoPlay />}
+                {activeMedia.dataUrl && (activeMedia.mediaKind === 'image' || activeMedia.mediaKind === 'sticker') && <img src={activeMedia.dataUrl} alt="Selected archive attachment" />}
+              </div>
+              <footer>Loaded locally from the selected backup. Files larger than 24 MB are not previewed.</footer>
+            </section>
+          </div>
+        )}
       </main>
     </div>
   );

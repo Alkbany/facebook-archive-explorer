@@ -920,37 +920,123 @@ function App() {
             )}
 
             {photoAlbums.length > 0 && (
-              <section className="conversation-workspace">
-                <div className="conversation-workspace-heading">
-                  <div>
-                    <p className="eyebrow">YOUR LIBRARY</p>
-                    <h3>Photo albums</h3>
-                    <p>Album names, exported photo counts, preview links, and raw dates from the Photos &amp; Videos index.</p>
-                  </div>
-                  <span>{photoAlbums.length.toLocaleString()} albums</span>
-                </div>
-                <input
-                  className="conversation-filter"
-                  value={albumFilter}
-                  onChange={(event) => setAlbumFilter(event.target.value)}
-                  placeholder="Filter photo albums…"
-                />
-                <div className="media-gallery-list">
-                  {photoAlbums.filter((album) => [
-                    album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath
-                  ].join(' ').toLocaleLowerCase().includes(albumFilter.trim().toLocaleLowerCase())).map((album) => (
-                    <article className="media-gallery-item" key={album.id}>
-                      <div className="media-gallery-icon">▧</div>
-                      <div className="media-gallery-copy">
-                        <strong>{album.albumTitle}</strong>
-                        <span>{album.photoCount === null
-                          ? 'Photo count not available'
-                          : album.photoCount.toLocaleString() + (album.photoCount === 1 ? ' photo' : ' photos')}</span>
-                        <small>{album.dateRaw ?? 'Date not provided'} · {album.albumPath}</small>
+              <section className="conversation-workspace photo-albums-workspace">
+                {selectedPhotoAlbum ? (
+                  <>
+                    <div className="conversation-workspace-heading">
+                      <div>
+                        <p className="eyebrow">PHOTO ALBUM</p>
+                        <h3>{selectedPhotoAlbum.albumTitle}</h3>
+                        <p>
+                          {photoAlbumDetail?.photos.length.toLocaleString() ?? 0} photos loaded ·
+                          {selectedPhotoAlbum.photoCount === null
+                            ? ' exported count unavailable'
+                            : ' ' + selectedPhotoAlbum.photoCount.toLocaleString() + ' photos in export'}
+                        </p>
                       </div>
-                    </article>
-                  ))}
-                </div>
+                      <button className="secondary-button" onClick={closePhotoAlbum}>Back to albums</button>
+                    </div>
+                    {isLoadingPhotoAlbum ? (
+                      <p className="photo-album-empty">Loading photos and comments…</p>
+                    ) : photoAlbumDetail && photoAlbumDetail.photos.length > 0 ? (
+                      <div className="photo-album-photos">
+                        {photoAlbumDetail.photos.map((photo) => (
+                          <article className="photo-album-photo" key={photo.id}>
+                            <div className="photo-album-photo-heading">
+                              <div className="media-gallery-copy">
+                                <strong>{photo.captionRaw || 'Photo'}</strong>
+                                <small>{photo.dateRaw ?? 'Date not provided'} · {photo.sourcePath}</small>
+                              </div>
+                              {photo.imageAssetId !== null ? (
+                                <button
+                                  className="media-gallery-open"
+                                  onClick={() => void openMedia({
+                                    id: photo.imageAssetId as number,
+                                    mediaKind: 'image',
+                                    relativePath: photo.imagePath
+                                  })}
+                                >
+                                  View photo
+                                </button>
+                              ) : (
+                                <span className="photo-album-image-missing">Image file not found</span>
+                              )}
+                            </div>
+                            <div className="photo-album-comments">
+                              <strong>{photo.comments.length.toLocaleString()} comments</strong>
+                              {photo.comments.length > 0 ? (
+                                <div className="photo-album-comment-list">
+                                  {photo.comments.map((comment, index) => (
+                                    <div className="photo-album-comment" key={photo.id + '-' + index}>
+                                      <div>
+                                        <strong>{comment.authorRaw ?? 'Unknown commenter'}</strong>
+                                        <small>{comment.dateRaw ?? 'Date not provided'}</small>
+                                      </div>
+                                      <p>{comment.bodyRaw ?? 'No comment text in export'}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span>No comments in this export card.</span>
+                              )}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="photo-album-empty">
+                        {photoAlbumDetail?.detailFileStatus === 'discovered'
+                          ? 'The album page has not been imported yet. Run Import All Supported Data to load its photos and comments.'
+                          : photoAlbumDetail?.detailFileStatus === 'not_found'
+                            ? 'The album detail HTML file is not present in this backup.'
+                            : photoAlbumDetail?.detailFileStatus === 'unsupported'
+                              ? 'This album page did not match the supported photo-card layout.'
+                              : photoAlbumDetail?.detailFileStatus === 'failed'
+                                ? 'The album page could not be imported. Check Import Diagnostics.'
+                                : 'No photo cards were imported from this album.'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="conversation-workspace-heading">
+                      <div>
+                        <p className="eyebrow">YOUR LIBRARY</p>
+                        <h3>Photo albums</h3>
+                        <p>Open an album to browse its photos, captions, original dates, and exported comments.</p>
+                      </div>
+                      <span>{photoAlbums.length.toLocaleString()} albums</span>
+                    </div>
+                    <input
+                      className="conversation-filter"
+                      value={albumFilter}
+                      onChange={(event) => setAlbumFilter(event.target.value)}
+                      placeholder="Filter photo albums…"
+                    />
+                    <div className="media-gallery-list">
+                      {photoAlbums.filter((album) => [
+                        album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath
+                      ].join(' ').toLocaleLowerCase().includes(albumFilter.trim().toLocaleLowerCase())).map((album) => (
+                        <article className="media-gallery-item" key={album.id}>
+                          <div className="media-gallery-icon">▧</div>
+                          <div className="media-gallery-copy">
+                            <strong>{album.albumTitle}</strong>
+                            <span>
+                              {album.photoCount === null
+                                ? 'Photo count unavailable'
+                                : album.photoCount.toLocaleString() + (album.photoCount === 1 ? ' photo' : ' photos')}
+                              {' · '}{album.importedPhotoCount.toLocaleString()} imported
+                            </span>
+                            <small>{album.dateRaw ?? 'Date not provided'} · {album.detailStatus}</small>
+                          </div>
+                          <button className="media-gallery-open" onClick={() => void openPhotoAlbum(album)}>
+                            Open album
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                )}
               </section>
             )}
             <div className="friends-import-action">

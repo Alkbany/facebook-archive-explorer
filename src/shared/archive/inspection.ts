@@ -134,6 +134,19 @@ export interface ImportIssueReport {
 }
 
 
+
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions';
+
+export interface ImportProgressEvent {
+  sectionKey: ImportProgressSectionKey;
+  phase: 'started' | 'progress' | 'completed';
+  filesCompleted: number;
+  filesTotal: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
 export interface ImportCoverageSectionSummary {
   sectionKey: string;
   totalFiles: number;

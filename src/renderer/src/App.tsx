@@ -23,7 +23,7 @@ function App() {
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
-  const [postFilter, setPostFilter] = useState('');
+  const [postFilter, setPostFilter] = useState('');\n  const [commentsImport, setCommentsImport] = useState<CommentsImportSectionResult | null>(null);\n  const [commentRecords, setCommentRecords] = useState<CommentActivitySummary[]>([]);\n  const [commentFilter, setCommentFilter] = useState('');\n  const [isImportingComments, setIsImportingComments] = useState(false);
   const [isImportingPosts, setIsImportingPosts] = useState(false);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
   const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
@@ -103,7 +103,7 @@ function App() {
     }
   }
 
-  async function importFriends() {
+  async function importComments() {\n    setIsImportingComments(true);\n    setError(null);\n    try {\n      const result = await window.desktopApi.importCommentsForSelectedBackup();\n      setCommentsImport(result);\n      setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());\n      setSavedBackups(await window.desktopApi.listArchiveSnapshots());\n    } catch {\n      setError('Comments data could not be imported. Check the local import report.');\n    } finally {\n      setIsImportingComments(false);\n    }\n  }\n\n  async function importFriends() {
     setIsImportingFriends(true);
     setError(null);
 
@@ -386,6 +386,48 @@ function App() {
                       </div>
                     </article>
                   ))}
+                </div>
+              </section>
+            )}
+            <div className="friends-import-action">
+              <div>
+                <strong>Comments</strong>
+                <span>Import sampled comment/reply activity cards. Keep the original activity wording, group label, comment text, and raw date separately.</span>
+              </div>
+              <button className="secondary-button" onClick={importComments} disabled={isImportingComments}>
+                {isImportingComments ? 'Importing comments…' : 'Import Comments'}
+              </button>
+            </div>
+            {commentsImport && (
+              <p className="friends-import-result">
+                {commentsImport.filesAttempted} files checked · {commentsImport.recordsImported} comment activities imported ·
+                {commentsImport.unsupportedFiles} unsupported · {commentsImport.failedFiles} failed
+              </p>
+            )}
+            {commentsImport && (
+              <section className="conversation-workspace">
+                <div className="conversation-workspace-heading">
+                  <div>
+                    <p className="eyebrow">YOUR ACTIVITY</p>
+                    <h3>Comments &amp; replies</h3>
+                    <p>Facebook's original activity description is preserved; group names are separated from your comment text.</p>
+                  </div>
+                  <span>{commentRecords.length.toLocaleString()} records</span>
+                </div>
+                <input className="conversation-filter" value={commentFilter} onChange={(event) => setCommentFilter(event.target.value)} placeholder="Filter comments…" />
+                <div className="media-gallery-list">
+                  {commentRecords.filter((record) => [record.activityRaw, record.bodyRaw, record.groupRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(commentFilter.trim().toLocaleLowerCase())).map((record) => (
+                    <article className="media-gallery-item" key={record.id}>
+                      <div className="media-gallery-icon">C</div>
+                      <div className="media-gallery-copy">
+                        <strong>{record.activityRaw ?? 'Comment activity'}</strong>
+                        <span>{record.bodyRaw ?? 'No comment text in export'}</span>
+                        <small>{record.groupRaw ? `Group: ${record.groupRaw} · ` : ''}{record.dateRaw ?? 'Date not provided'}</small>
+                        <small>{record.sourcePath}</small>
+                      </div>
+                    </article>
+                  ))}
+                  {commentRecords.length === 0 && <p className="conversation-empty">No comment activities were imported from the recognized files.</p>}
                 </div>
               </section>
             )}

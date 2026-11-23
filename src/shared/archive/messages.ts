@@ -24,3 +24,15 @@ export interface MessageRecordSummary {
   recordType: string;
   media: MessageMediaSummary[];
 }
+
+export interface MessageMediaGalleryItem {
+  id: number;
+  relativePath: string;
+  mediaKind: string;
+  role: string | null;
+  sourceFileId: number;
+  conversationPath: string;
+  sender: string | null;
+  timestampRaw: string | null;
+  body: string | null;
+}

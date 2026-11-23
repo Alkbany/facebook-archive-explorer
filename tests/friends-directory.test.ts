@@ -103,6 +103,16 @@ describe('Friends directory repository', () => {
     expect(listFriendDirectory(database, snapshotId, 'all', 'friends/friends').total).toBe(3);
   });
 
+  it('treats SQL wildcard characters in a search as literal text', () => {
+    addFriend(0, 'friend', 'Literal 50%_match');
+    addFriend(1, 'friend', 'Literal 50XYmatch');
+    addFriend(2, 'friend', 'Literal 50X_match');
+
+    const result = listFriendDirectory(database, snapshotId, 'all', '50%_match');
+    expect(result.total).toBe(1);
+    expect(result.records[0].nameRaw).toBe('Literal 50%_match');
+  });
+
   it('paginates large directories without loading every friend into the renderer', () => {
     for (let index = 0; index < 205; index += 1) {
       addFriend(index, 'friend', `Friend ${String(index).padStart(3, '0')}`);

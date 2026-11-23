@@ -4,6 +4,7 @@ import type { ArchiveSearchResult, SearchExportResult } from './archive/search';
 import type { ArchiveComparisonReport } from './archive/comparison';
 import type {
   ArchiveInspectionReport,
+  ArchiveInspectionView,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
   PostsImportSectionResult,
@@ -56,7 +57,7 @@ export interface DesktopApi {
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
-  openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionReport>;
+  openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionView>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;

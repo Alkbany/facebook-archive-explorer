@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
-import type { ArchiveInspectionReport } from '../../shared/archive/inspection';
+import type { ArchiveInspectionView } from '../../shared/archive/inspection';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -83,7 +83,7 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     () => listArchiveSnapshots(database)
   );
 
-  ipcMain.handle(IPC_CHANNELS.openSavedSnapshot, async (_event, requestedSnapshotId: unknown): Promise<ArchiveInspectionReport> => {
+  ipcMain.handle(IPC_CHANNELS.openSavedSnapshot, async (_event, requestedSnapshotId: unknown): Promise<ArchiveInspectionView> => {
     if (typeof requestedSnapshotId !== 'string' || !requestedSnapshotId.trim()) {
       throw new Error('Choose a saved backup to open.');
     }

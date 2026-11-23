@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type {
-  ArchiveInspectionReport,
+  ArchiveInspectionView,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
   PostsImportSectionResult,
@@ -24,7 +24,7 @@ function App() {
   const [version, setVersion] = useState('0.1.0');
   const [accountName, setAccountName] = useState('My Facebook account');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
+  const [inspection, setInspection] = useState<ArchiveInspectionView | null>(null);
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
@@ -171,7 +171,7 @@ function App() {
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setInspection(null);
-      setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the folder again to reconnect it.');
+      setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the folder again to create a fresh inventory.');
     } finally {
       setIsChoosingFolder(false);
     }

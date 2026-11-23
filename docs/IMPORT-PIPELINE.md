@@ -70,7 +70,7 @@ The local Import Diagnostics report is scoped to the active snapshot. It joins i
 
 ## Import coverage
 
-The per-snapshot coverage summary groups discovered files by section and format. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
+The per-snapshot coverage summary groups discovered files by section and format. It labels importer capability separately from file state: Friends has five known HTML exports; Messages, Posts, Comments, and Likes & Reactions use sample-based HTML parsers; Photos & Videos currently has media inventory only; other sections have no importer yet. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
 
 ## Search and comparison
 

@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { basename } from 'node:path';
+import type { Element } from 'domhandler';
 
 export interface PostMediaReference {
   relativePath: string;
@@ -29,7 +30,7 @@ function cleanText(value: string): string {
   return value.replace(/\u00a0/gu, ' ').replace(/[\u200e\u200f\u202a-\u202e]/gu, '').trim();
 }
 
-function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<cheerio.Element>): PostMediaReference[] {
+function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>): PostMediaReference[] {
   const found: PostMediaReference[] = [];
   const seen = new Set<string>();
   content.find('img[src], video[src], audio[src], video source[src], audio source[src], a[href]').each((_index, element) => {
@@ -55,7 +56,7 @@ function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<cheerio.El
   return found;
 }
 
-function extractBody($: cheerio.CheerioAPI, content: cheerio.Cheerio<cheerio.Element>): string | null {
+function extractBody($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>): string | null {
   const blocks: string[] = [];
   content.find('div._2pin').each((_index, element) => {
     const text = cleanText($(element).text());

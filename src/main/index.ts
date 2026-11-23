@@ -6,6 +6,7 @@ import { DATABASE_MIGRATIONS } from './database/migrations';
 import { getSelectedSnapshotId, registerIpcHandlers } from './ipc/register-handlers';
 import { registerArchiveMediaProtocol } from './database/media-stream';
 import { recoverInterruptedDatabaseSwap } from './database/backup';
+import { recoverAllInterruptedImports } from './import/pipeline/import-all';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'archive-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -65,6 +66,7 @@ app.whenReady().then(() => {
   const databasePath = join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite');
   recoverInterruptedDatabaseSwap(databasePath);
   database = openAppDatabase(databasePath, DATABASE_MIGRATIONS);
+  recoverAllInterruptedImports(database);
   registerIpcHandlers(database, databasePath, DATABASE_MIGRATIONS.length);
   registerArchiveMediaProtocol(database, () => getSelectedSnapshotId());
   createMainWindow();

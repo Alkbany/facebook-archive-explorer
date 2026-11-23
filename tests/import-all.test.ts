@@ -102,14 +102,15 @@ describe('Import all supported data', () => {
   it('recovers interrupted individual imports across all saved backups at startup', () => {
     const accountId = getOrCreateAccount(database, 'Synthetic import-all account');
     const now = new Date().toISOString();
-    const interruptedIds = ['interrupted-one', 'interrupted-two'];
+    const interruptedIds = ['interrupted-one', 'interrupted-two', 'interrupted-three'];
+    const startingStatuses = ['importing', 'discovered', 'completed'] as const;
 
     for (const [index, id] of interruptedIds.entries()) {
       database.prepare(`
         INSERT INTO archive_snapshots (
           id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
         ) VALUES (?, ?, ?, 'directory', ?, ?, ?, ?)
-      `).run(id, accountId, 'Interrupted backup ' + index, root, index === 0 ? 'importing' : 'discovered', now, now);
+      `).run(id, accountId, 'Interrupted backup ' + index, root, startingStatuses[index], now, now);
       const fileId = database.prepare(`
         INSERT INTO source_files (
           snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
@@ -122,7 +123,7 @@ describe('Import all supported data', () => {
       expect(fileId).toBeGreaterThan(0);
     }
 
-    expect(recoverAllInterruptedImports(database)).toBe(2);
+    expect(recoverAllInterruptedImports(database)).toBe(3);
     for (const id of interruptedIds) {
       const file = database.prepare('SELECT status, safe_error_code FROM source_files WHERE snapshot_id = ?')
         .get(id) as { status: string; safe_error_code: string | null };

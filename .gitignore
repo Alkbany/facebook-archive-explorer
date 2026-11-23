@@ -4,22 +4,35 @@ dist/
 release/
 coverage/
 *.tsbuildinfo
+
+# Environment secrets
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+
+# Local databases and SQLite sidecars
 *.db
+*.db-*
 *.sqlite
+*.sqlite-*
 *.sqlite3
-*.db-wal
-*.db-shm
+*.sqlite3-*
+
+# User-owned archives, extracted data and local caches
+*.zip
 /backups/
 /archives/
 /archive-data/
 /user-data/
 /private-data/
-*.facebook-export.zip
+/local-data/
+/cache/
+/models/
+/test-fixtures/private/
+
+# Logs and operating system files
 *.log
 .DS_Store
 Thumbs.db

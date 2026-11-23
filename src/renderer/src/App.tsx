@@ -357,6 +357,7 @@ function App() {
       const result = await window.desktopApi.importFriendsForSelectedBackup();
       setFriendsImport(result);
       await refreshImportIssues();
+      await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Friends data could not be imported. Check the local import report.');
@@ -396,6 +397,7 @@ function App() {
 
       await refreshMediaGallery();
       await refreshImportIssues();
+      await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
       setImportAllSummary(result.totals);
     } catch {
@@ -453,6 +455,7 @@ function App() {
       setReactionRecords(await window.desktopApi.listReactionsForSelectedBackup());
       await refreshMediaGallery();
       await refreshImportIssues();
+      await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
     } catch {
       setError('Likes & Reactions data could not be imported. Check the local import report.');
@@ -471,6 +474,7 @@ function App() {
       setConversations(foundConversations);
       await refreshMediaGallery();
       await refreshImportIssues();
+      await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {

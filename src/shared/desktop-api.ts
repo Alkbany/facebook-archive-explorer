@@ -24,7 +24,8 @@ export const IPC_CHANNELS = {
   importFriendsForSelectedBackup: 'archive:import-friends',
   importMessagesForSelectedBackup: 'archive:import-messages',
   listMessagesForSelectedBackup: 'archive:list-messages',
-  getMessagesForSelectedConversation: 'archive:get-conversation-messages'
+  getMessagesForSelectedConversation: 'archive:get-conversation-messages',
+  getMessageImagePreview: 'archive:get-message-image-preview'
 } as const;
 
 export interface DesktopApi {
@@ -36,4 +37,5 @@ export interface DesktopApi {
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;
   listMessagesForSelectedBackup(): Promise<MessageConversationSummary[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
+  getMessageImagePreview(mediaAssetId: number): Promise<string>;
 }

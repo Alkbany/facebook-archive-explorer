@@ -20,6 +20,23 @@ export interface ZipEntryIterationSummary {
   truncated: boolean;
 }
 
+async function openZipArchive(zipPath: string): Promise<ZipFile> {
+  try {
+    return await yauzl.openPromise(zipPath, {
+      autoClose: false,
+      lazyEntries: true,
+      validateEntrySizes: true,
+      decodeStrings: true,
+      strictFileNames: false
+    });
+  } catch (error) {
+    if (error instanceof Error && /invalid relative path/iu.test(error.message)) {
+      throw new ZipArchiveError('INVALID_RELATIVE_PATH');
+    }
+    throw error;
+  }
+}
+
 function normalizeZipEntryName(fileName: string): string {
   const portable = fileName.replace(/\\/gu, '/');
   if (
@@ -63,13 +80,7 @@ export async function forEachZipEntry(
   onEntry: (entry: Entry) => void | Promise<void>,
   maxEntries = 100_000
 ): Promise<ZipEntryIterationSummary> {
-  const zip = await yauzl.openPromise(zipPath, {
-    autoClose: false,
-    lazyEntries: true,
-    validateEntrySizes: true,
-    decodeStrings: true,
-    strictFileNames: false
-  });
+  const zip = await openZipArchive(zipPath);
 
   let entriesRead = 0;
   let truncated = false;
@@ -122,13 +133,7 @@ export async function readZipEntryBuffer(
   relativePath: string,
   maxBytes: number
 ): Promise<Buffer> {
-  const zip = await yauzl.openPromise(zipPath, {
-    autoClose: false,
-    lazyEntries: true,
-    validateEntrySizes: true,
-    decodeStrings: true,
-    strictFileNames: false
-  });
+  const zip = await openZipArchive(zipPath);
 
   try {
     const entry = await findZipEntry(zip, relativePath);
@@ -161,13 +166,7 @@ export async function openZipEntryReadStream(
   start?: number,
   end?: number
 ): Promise<{ stream: Readable; size: number; close: () => void }> {
-  const zip = await yauzl.openPromise(zipPath, {
-    autoClose: false,
-    lazyEntries: true,
-    validateEntrySizes: true,
-    decodeStrings: true,
-    strictFileNames: false
-  });
+  const zip = await openZipArchive(zipPath);
   try {
     const entry = await findZipEntry(zip, relativePath);
     if (!entry.canDecodeFileData() || entry.isEncrypted()) throw new ZipArchiveError('NOT_A_FILE');

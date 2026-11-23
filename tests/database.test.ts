@@ -5,23 +5,29 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, openAppDatabase } from '../src/main/database/connection';
 import {
   beginDiscoverySession,
-  getOrCreateAccount,
   completeDiscoverySession,
+  getOrCreateAccount,
   insertDiscoveredFiles
 } from '../src/main/database/archive-repository';
 
-const initialSchema = readFileSync(
-  resolve(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'),
-  'utf8'
-);
+const migrations = [
+  {
+    version: 1,
+    name: 'initial_schema',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8')
+  },
+  {
+    version: 2,
+    name: 'unique_account_display_names',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8')
+  }
+] as const;
 
 describe('local SQLite storage', () => {
   let database: DatabaseSync;
 
   beforeEach(() => {
-    database = openAppDatabase(':memory:', [
-      { version: 1, name: 'initial_schema', sql: initialSchema }
-    ]);
+    database = openAppDatabase(':memory:', migrations);
   });
 
   afterEach(() => {
@@ -33,16 +39,16 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(initialCount.count).toBe(1);
+    expect(initialCount.count).toBe(2);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
-    applyMigrations(database, [{ version: 1, name: 'initial_schema', sql: initialSchema }]);
+    applyMigrations(database, migrations);
 
     const finalCount = database.prepare(
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(finalCount.count).toBe(1);
+    expect(finalCount.count).toBe(2);
   });
 
   it('indexes eligible text in FTS5 and blocks sensitive records from the index', () => {

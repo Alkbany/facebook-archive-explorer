@@ -74,6 +74,9 @@ describe('Import all supported data', () => {
     const statuses = database.prepare('SELECT status FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
       .all(snapshotId) as Array<{ status: string }>;
     expect(statuses.every((row) => row.status === 'unsupported')).toBe(true);
+    const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
+      .get(snapshotId) as { status: string };
+    expect(snapshot.status).toBe('partial');
   });
 
   it('skips completed files on a second import pass', async () => {
@@ -82,6 +85,9 @@ describe('Import all supported data', () => {
     const result = await importAllSupportedData(database, snapshotId, root);
     expect(result.totals.filesAttempted).toBe(0);
     expect(result.totals.failedFiles).toBe(0);
+    const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
+      .get(snapshotId) as { status: string };
+    expect(snapshot.status).toBe('completed');
   });
   it('recovers files and runs left in processing state after an interrupted session', async () => {
     const now = new Date().toISOString();
@@ -106,6 +112,9 @@ describe('Import all supported data', () => {
     const interruptedRun = database.prepare("SELECT status FROM import_runs WHERE id = 'interrupted-run'")
       .get() as { status: string };
     expect(interruptedRun.status).toBe('failed');
+    const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
+      .get(snapshotId) as { status: string };
+    expect(snapshot.status).toBe('partial');
   });
 
 });

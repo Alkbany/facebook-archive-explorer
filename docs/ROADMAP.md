@@ -20,7 +20,7 @@
 - [x] Add one-click sequential import orchestration for the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
 - [x] Report live per-file progress from all five section importers over a narrow IPC event channel.
 - [x] Serialize import requests and prevent backup switching while an import is active.
-- [x] Recover file/run markers left in `processing` when the next Import All session starts.
+- [x] Recover interrupted section imports and Import All runs across all snapshots during application startup.
 - [ ] Add durable checkpoints, user-controlled pause/resume, and full integrity reporting.
 - [x] Add ZIP selection and streaming ZIP entry discovery.
 - [x] Read HTML/JSON-sized entries from ZIP archives on demand without extraction.

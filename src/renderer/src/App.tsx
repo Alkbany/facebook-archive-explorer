@@ -132,6 +132,8 @@ function App() {
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
   const [photoAlbums, setPhotoAlbums] = useState<PhotoAlbumRecordSummary[]>([]);
   const [albumFilter, setAlbumFilter] = useState('');
+  const [photoAlbumCovers, setPhotoAlbumCovers] = useState<Record<number, string>>({});
+  const [photoAlbumCoverFailures, setPhotoAlbumCoverFailures] = useState<Record<number, boolean>>({});
   const [selectedPhotoAlbum, setSelectedPhotoAlbum] = useState<PhotoAlbumRecordSummary | null>(null);
   const [photoAlbumDetail, setPhotoAlbumDetail] = useState<PhotoAlbumDetailView | null>(null);
   const [isLoadingPhotoAlbum, setIsLoadingPhotoAlbum] = useState(false);
@@ -150,6 +152,52 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions || isImportingPhotos;
+
+  useEffect(() => {
+    let cancelled = false;
+    const visibleAlbums = photoAlbums.filter((album) =>
+      [album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(albumFilter.trim().toLocaleLowerCase())
+    ).slice(0, 8);
+    const pendingAlbums = visibleAlbums.filter((album) =>
+      album.coverAssetId !== null &&
+      !photoAlbumCovers[album.id] &&
+      !photoAlbumCoverFailures[album.id]
+    );
+
+    if (pendingAlbums.length > 0) {
+      void Promise.all(pendingAlbums.map(async (album) => {
+        try {
+          return {
+            albumId: album.id,
+            dataUrl: await window.desktopApi.getMessageMediaPreview(album.coverAssetId as number)
+          };
+        } catch {
+          return { albumId: album.id, dataUrl: null };
+        }
+      })).then((results) => {
+        if (cancelled) return;
+        const successful = results.filter((result): result is { albumId: number; dataUrl: string } => result.dataUrl !== null);
+        const failed = results.filter((result) => result.dataUrl === null);
+        if (successful.length > 0) {
+          setPhotoAlbumCovers((current) => ({
+            ...current,
+            ...Object.fromEntries(successful.map((result) => [result.albumId, result.dataUrl]))
+          }));
+        }
+        if (failed.length > 0) {
+          setPhotoAlbumCoverFailures((current) => ({
+            ...current,
+            ...Object.fromEntries(failed.map((result) => [result.albumId, true]))
+          }));
+        }
+      });
+    }
+
+    return () => { cancelled = true; };
+  }, [photoAlbums, albumFilter, photoAlbumCovers, photoAlbumCoverFailures]);
 
   useEffect(() => window.desktopApi.onImportProgress(setImportProgress), []);
 
@@ -183,6 +231,8 @@ function App() {
     setComparisonReport(null);
     setMediaGallery([]);
     setPhotoAlbums([]);
+    setPhotoAlbumCovers({});
+    setPhotoAlbumCoverFailures({});
     setAlbumFilter('');
     setSelectedPhotoAlbum(null);
     setPhotoAlbumDetail(null);
@@ -255,6 +305,8 @@ function App() {
     setComparisonReport(null);
     setMediaGallery([]);
     setPhotoAlbums([]);
+    setPhotoAlbumCovers({});
+    setPhotoAlbumCoverFailures({});
     setAlbumFilter('');
     setSelectedPhotoAlbum(null);
     setPhotoAlbumDetail(null);
@@ -1453,7 +1505,11 @@ function App() {
                         album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath
                       ].join(' ').toLocaleLowerCase().includes(albumFilter.trim().toLocaleLowerCase())).map((album) => (
                         <article className="media-gallery-item" key={album.id}>
-                          <div className="media-gallery-icon">▧</div>
+                          {album.coverAssetId !== null && photoAlbumCovers[album.id] ? (
+                            <img className="photo-album-cover" src={photoAlbumCovers[album.id]} alt={album.albumTitle + ' album cover'} />
+                          ) : (
+                            <div className="media-gallery-icon">▧</div>
+                          )}
                           <div className="media-gallery-copy">
                             <strong>{album.albumTitle}</strong>
                             <span>

@@ -4,6 +4,7 @@ import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
 import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
+import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from '../../shared/archive/comparison';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -29,7 +30,7 @@ import { getMessageConversation, listMessageConversations, listMessageMediaGalle
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredMediaAssets } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
-import { compareArchiveSnapshots } from '../database/comparison-repository';
+import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
 import { getImportCoverage } from '../database/import-coverage-repository';
@@ -350,6 +351,119 @@ export function registerIpcHandlers(
       throw new Error('Choose two saved backup snapshots.');
     }
     return compareArchiveSnapshots(database, baselineId, comparedId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listArchiveComparisonChanges, (
+    _event,
+    baselineId: unknown,
+    comparedId: unknown,
+    filter: unknown,
+    sectionKey: unknown,
+    query: unknown,
+    page: unknown
+  ) => {
+    if (typeof baselineId !== 'string' || typeof comparedId !== 'string') {
+      throw new Error('Choose two saved backup snapshots.');
+    }
+    if (typeof filter !== 'string' || typeof sectionKey !== 'string' || typeof query !== 'string') {
+      throw new Error('Invalid detailed comparison filter.');
+    }
+    if (!Number.isSafeInteger(page) || (page as number) < 1) {
+      throw new Error('Invalid detailed comparison page.');
+    }
+    return listArchiveComparisonChanges(
+      database,
+      baselineId,
+      comparedId,
+      filter as ArchiveComparisonChangeKind,
+      sectionKey,
+      query,
+      page as number
+    );
+  });
+
+  ipcMain.handle(IPC_CHANNELS.exportArchiveComparisonChanges, async (
+    _event,
+    baselineId: unknown,
+    comparedId: unknown,
+    filter: unknown,
+    sectionKey: unknown,
+    query: unknown,
+    format: unknown
+  ) => {
+    if (typeof baselineId !== 'string' || typeof comparedId !== 'string') {
+      throw new Error('Choose two saved backup snapshots.');
+    }
+    if (typeof filter !== 'string' || typeof sectionKey !== 'string' || typeof query !== 'string') {
+      throw new Error('Invalid comparison export filters.');
+    }
+    if (format !== 'csv' && format !== 'json') {
+      throw new Error('Choose CSV or JSON for the comparison export.');
+    }
+
+    const exportFormat = format as ArchiveComparisonExportFormat;
+    const firstPage = listArchiveComparisonChanges(
+      database, baselineId, comparedId, filter as ArchiveComparisonChangeKind, sectionKey, query, 1, 1000
+    );
+    const maximumExportRecords = 100000;
+    if (firstPage.total > maximumExportRecords) {
+      throw new Error('This comparison contains more than 100,000 matching changes. Narrow the filters before exporting.');
+    }
+
+    const changes = [...firstPage.changes];
+    const pageCount = Math.ceil(firstPage.total / firstPage.pageSize);
+    for (let page = 2; page <= pageCount; page += 1) {
+      const nextPage = listArchiveComparisonChanges(
+        database, baselineId, comparedId, filter as ArchiveComparisonChangeKind, sectionKey, query, page, 1000
+      );
+      changes.push(...nextPage.changes);
+    }
+
+    const save = await dialog.showSaveDialog({
+      title: 'Export detailed backup comparison',
+      defaultPath: 'facebook-archive-comparison.' + exportFormat,
+      filters: [exportFormat === 'csv'
+        ? { name: 'CSV spreadsheet', extensions: ['csv'] }
+        : { name: 'JSON data', extensions: ['json'] }]
+    });
+    if (save.canceled || !save.filePath) return { status: 'cancelled' as const };
+
+    let content: string;
+    if (exportFormat === 'json') {
+      content = JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        baselineSnapshotId: baselineId,
+        comparedSnapshotId: comparedId,
+        filter,
+        sectionKey,
+        query: query.trim(),
+        totalChanges: firstPage.total,
+        changes
+      }, null, 2);
+    } else {
+      const headers = [
+        'changeKind', 'sectionKey', 'sourcePath', 'sourceCardIndex',
+        'previousRecordType', 'previousTitle', 'previousBody', 'previousDateRaw',
+        'comparedRecordType', 'comparedTitle', 'comparedBody', 'comparedDateRaw'
+      ];
+      const csvCell = (value: unknown): string => {
+        const raw = value === null || value === undefined ? '' : String(value);
+        const spreadsheetSafe = /^[\s]*[=+\-@]/u.test(raw) ? "'" + raw : raw;
+        return '"' + spreadsheetSafe.replace(/"/gu, '""') + '"';
+      };
+      content = [
+        headers.map(csvCell).join(','),
+        ...changes.map((change) => headers.map((key) => csvCell(change[key as keyof typeof change])).join(','))
+      ].join('\r\n');
+    }
+
+    await writeFile(save.filePath, content, { encoding: 'utf8', flag: 'w' });
+    return {
+      status: 'saved' as const,
+      fileName: basename(save.filePath),
+      recordsExported: changes.length,
+      format: exportFormat
+    };
   });
 
   ipcMain.handle(IPC_CHANNELS.getMessagesForSelectedConversation, (_event, sourceFileId: unknown) => {

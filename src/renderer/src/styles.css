@@ -194,7 +194,7 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 .saved-backups-heading h2 { margin: 0; font-size: 16px; }
 .saved-backups-heading > span { color: #969bad; font-size: 9px; }
 .saved-backups-empty { margin: 0; color: #969bad; font-size: 10px; }
-.saved-backups-list { display: flex; flex-direction: column; }
+.saved-backups-list { display: flex; flex-direction: column; max-height: 440px; overflow-y: auto; overscroll-behavior: contain; padding-right: 3px; }
 .saved-backup-item {
   display: flex;
   align-items: center;

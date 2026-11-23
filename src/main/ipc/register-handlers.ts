@@ -11,9 +11,11 @@ import {
   listArchiveSnapshots
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
+import { importFriendsSection } from '../import/pipeline/friends-importer';
 
 let selectedBackupDirectory: string | null = null;
 let selectedAccountId: string | null = null;
+let selectedSnapshotId: string | null = null;
 
 export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
@@ -43,11 +45,13 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       if (result.canceled || result.filePaths.length === 0) {
         selectedBackupDirectory = null;
         selectedAccountId = null;
+        selectedSnapshotId = null;
         return { status: 'cancelled' };
       }
 
       selectedBackupDirectory = result.filePaths[0];
       selectedAccountId = getOrCreateAccount(database, accountName);
+      selectedSnapshotId = null;
 
       return {
         status: 'selected',
@@ -67,6 +71,7 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       throw new Error('Select an archive folder before inspecting it.');
     }
 
+    selectedSnapshotId = null;
     const sourcePath = selectedBackupDirectory;
     const archiveName = basename(sourcePath);
     const session = beginDiscoverySession(database, selectedAccountId, archiveName, sourcePath);
@@ -79,10 +84,19 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       });
 
       completeDiscoverySession(database, session, report.totalFiles);
+      selectedSnapshotId = session.snapshotId;
       return report;
     } catch (error) {
       failDiscoverySession(database, session);
       throw error;
     }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importFriendsForSelectedBackup, async () => {
+    if (!selectedBackupDirectory || !selectedSnapshotId) {
+      throw new Error('Inspect an archive folder before importing Friends data.');
+    }
+
+    return importFriendsSection(database, selectedSnapshotId, selectedBackupDirectory);
   });
 }

@@ -10,6 +10,7 @@ const desktopApi: DesktopApi = {
   inspectSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.inspectSelectedBackup),
   listArchiveSnapshots: () => ipcRenderer.invoke(IPC_CHANNELS.listArchiveSnapshots),
   listImportIssuesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listImportIssuesForSelectedBackup),
+  getImportCoverageForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.getImportCoverageForSelectedBackup),
   openSavedSnapshot: (snapshotId) => ipcRenderer.invoke(IPC_CHANNELS.openSavedSnapshot, snapshotId),
   importFriendsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importFriendsForSelectedBackup),
   importAllSupportedDataForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importAllSupportedDataForSelectedBackup),

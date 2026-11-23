@@ -51,6 +51,7 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 ## Current capabilities
 
 - A browsable Friends directory with separate current-friend, received-request, sent-request, rejected-request, and removed-friend filters; name/date/path search; and paginated results. Contact information remains excluded from the directory view and full-text index.
+- A read-only Archive Files browser showing all discovered source paths, formats, import states, record counts, and safe diagnostic codes, with section/status filters, search, and pagination. This includes files in unsupported sections.
 - A standalone **Import Photos & Videos** action that runs the same reviewed album-index and explicitly linked album-detail importers as Import All; it shares the global import lock and reports progress and diagnostics.
 - Functional sidebar navigation to Overview, Friends, Conversations, Photos & Videos, Activity, and Search. Navigation entries no longer advertise implemented modules as “Soon”.
 

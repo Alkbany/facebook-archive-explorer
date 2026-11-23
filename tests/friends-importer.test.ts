@@ -7,10 +7,6 @@ import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importFriendsSourceFile } from '../src/main/import/pipeline/friends-importer';
 
-const initialSchema = `
-  PRAGMA foreign_keys = ON;
-`;
-
 describe('Friends file import', () => {
   let database: DatabaseSync;
   let root: string;

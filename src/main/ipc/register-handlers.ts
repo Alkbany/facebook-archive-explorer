@@ -55,6 +55,18 @@ export function registerIpcHandlers(
     });
     if (selection.canceled || !selection.filePath) return { status: 'cancelled' as const };
 
+    const confirmation = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Export an unencrypted database backup?',
+      message: 'The SQLite backup will contain imported archive records and personal metadata.',
+      detail: 'This file is not encrypted or password-protected. Anyone who can open it may be able to read its contents. Save it in a private location and do not share it unless you intend to share the archive data.',
+      buttons: ['Export database', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true
+    });
+    if (confirmation.response !== 0) return { status: 'cancelled' as const };
+
     const exported = await exportDatabaseBackup(database, selection.filePath, supportedSchemaVersion);
     return { status: 'saved' as const, ...exported };
   });

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
-import { getOrCreateAccount } from '../src/main/database/archive-repository';
+import { getOrCreateAccount, listArchiveSnapshots } from '../src/main/database/archive-repository';
 import { indexDiscoveredMediaAssets } from '../src/main/database/media-indexer';
 import { listArchiveMediaGallery } from '../src/main/database/messages-repository';
 import { searchArchiveRecords } from '../src/main/database/search-repository';
@@ -113,6 +113,24 @@ describe('archive-wide media, search, and comparison', () => {
     const report = compareArchiveSnapshots(database, baselineId, comparedId);
     expect(report).toMatchObject({ added: 1, removed: 1, changed: 1, unchanged: 1 });
     expect(report.sections).toEqual([{ sectionKey: 'posts', added: 1, removed: 1, changed: 1 }]);
+  });
+
+  it('lists every saved backup instead of hiding snapshots beyond the latest twenty', () => {
+    const now = new Date().toISOString();
+    for (let index = 0; index < 25; index += 1) {
+      const id = 'additional-snapshot-' + index;
+      database.prepare(`
+        INSERT INTO archive_snapshots (
+          id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+        ) VALUES (?, ?, ?, 'directory', ?, 'discovered', ?, ?)
+      `).run(id, accountId, 'Backup ' + index, '/synthetic/' + id, now, now);
+    }
+
+    const backups = listArchiveSnapshots(database);
+    expect(backups).toHaveLength(27);
+    expect(backups.some((backup) => backup.id === baselineId)).toBe(true);
+    expect(backups.some((backup) => backup.id === comparedId)).toBe(true);
+    expect(new Set(backups.map((backup) => backup.id)).size).toBe(27);
   });
 
   it('rejects comparisons between backups from different accounts', () => {

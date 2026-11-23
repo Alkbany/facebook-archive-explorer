@@ -1,4 +1,5 @@
 import { readdir, realpath } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 import { basename, extname, join, relative, sep } from 'node:path';
 import type { ArchiveInspectionReport } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
@@ -11,8 +12,10 @@ const MEDIA_EXTENSIONS = new Set([
 ]);
 
 function sectionForPath(relativePath: string): string {
-  const firstSegment = relativePath.split(/[\\/]/u, 1)[0];
-  return getArchiveSection(firstSegment)?.key ?? (firstSegment || 'root');
+  const segments = relativePath.split(/[\\/]/u);
+  if (segments.length === 1) return 'root';
+  const firstSegment = segments[0];
+  return getArchiveSection(firstSegment)?.key ?? firstSegment;
 }
 
 function formatForFile(fileName: string): keyof ArchiveInspectionReport['filesByFormat'] {
@@ -51,7 +54,7 @@ export async function inspectArchiveDirectory(
     const currentDirectory = stack.pop();
     if (!currentDirectory) continue;
 
-    let entries;
+    let entries: Dirent[];
     try {
       entries = await readdir(currentDirectory, { withFileTypes: true });
     } catch {

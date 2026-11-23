@@ -22,4 +22,4 @@ Planned entities:
 6. Sensitive records are excluded from FTS5 by default.
 7. Similar records are not automatically collapsed.
 
-The first SQL schema is a proposal until a database driver, migration runner, and fixture tests are implemented.
+The SQLite runtime and versioned migration runner are implemented. The schema supports account labels, independent backup snapshots, source-file inventory, import runs, normalized records, FTS5 search, media references, and import issues. The current discovery stage writes metadata only; record parsing and persistence are still pending.

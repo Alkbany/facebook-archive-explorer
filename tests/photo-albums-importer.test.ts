@@ -79,7 +79,7 @@ describe('Photos & Videos album index import', () => {
       unsupportedFiles: 0, failedFiles: 0
     });
     expect(listPhotoAlbums(database, snapshotId)).toMatchObject([
-      { albumTitle: 'Instagram Photos', photoCount: 3, albumPath: 'photos_and_videos/album/0.html', coverPath: 'photos_and_videos/sample_album/cover.jpg' },
+      { albumTitle: 'Instagram Photos', photoCount: 3, albumPath: 'photos_and_videos/album/0.html', coverPath: 'photos_and_videos/sample_album/cover.jpg', coverAssetId: expect.any(Number) },
       { albumTitle: 'صور الغلاف', photoCount: 13, albumPath: 'photos_and_videos/album/1.html', coverPath: 'photos_and_videos/sample_album/cover-2.jpg' }
     ]);
     const linked = database.prepare('SELECT COUNT(*) AS count FROM record_media').get() as { count: number };

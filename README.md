@@ -56,8 +56,8 @@ Artifacts are retained for 14 days. The installer is currently **unsigned** beca
 - Independent backup snapshots persisted in SQLite, with a complete saved-backup history view (no fixed 20-snapshot limit).
 - A symlink-aware archive text reader with path containment and file-size checks for directory and ZIP sources.
 - DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
-- Explicit **Import Friends** action and one-click **Import All Supported Data** workflow, which sequentially runs the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
-- The combined import reports file/record/media/error totals and live per-file progress for Friends, Messages, Posts, Comments, and Likes & Reactions; progress events contain counts and section names only. A main-process lock prevents overlapping imports and backup switching while an import is active. Completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
+- Explicit **Import Friends** action and one-click **Import All Supported Data** workflow, which sequentially runs Friends, Messages, Posts, Comments, Likes & Reactions, and the sampled Photos & Videos album-index importer.
+- The combined import reports file/record/media/error totals and live per-file progress for Friends, Messages, Posts, Comments, Likes & Reactions, and the Photos & Videos album index; progress events contain counts and section names only. A main-process lock prevents overlapping imports and backup switching while an import is active. Completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
 - Snapshot-scoped Import Diagnostics lists safe error/warning/notices with source-file and card-position references; the latest 250 issues are shown while severity totals cover the full report.
 - Per-section Import Coverage separates content files from media inventory and shows completed, unsupported, failed, not processed, empty, and skipped file states. It also labels known HTML imports, sample-based parsers, media-only indexing, and sections with no importer yet.
 - Application startup repairs source files and import runs left in a `processing`/`running` state across every saved backup inside one SQLite savepoint, records safe `IMPORT_INTERRUPTED` diagnostics, and makes affected files eligible for retry from an individual importer or Import All. If recovery diagnostics cannot be written, all recovery updates roll back together. Full progress journaling, integrity reporting, and safe resume checkpoints remain planned.
@@ -66,7 +66,7 @@ Artifacts are retained for 14 days. The installer is currently **unsigned** beca
 - DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.
 - Searchable local Posts and Likes & Reactions activity panels, scoped to the selected backup.
 - Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
-- A unified media library that indexes all discovered image, video, and audio files across the backup, including files without an imported record association; imported context is shown when available (first 1,000 references shown).
+- A unified media library that indexes all discovered image, video, and audio files across the backup, including album preview images linked by the imported Photos & Videos index; imported context is shown when available (first 1,000 references shown).
 - In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking. This works for directory backups and ZIP backups without extraction; deflated ZIP media is streamed through decompression to satisfy byte ranges.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
@@ -76,7 +76,7 @@ Artifacts are retained for 14 days. The installer is currently **unsigned** beca
 
 ## Not implemented yet
 
-- Photos/albums as structured standalone sections, groups, events, Marketplace, saved items, and other export sections. The unified media inventory already lists discovered media files without requiring those parsers.
+- Album detail pages and per-photo metadata; the current Photos & Videos parser imports only the root album index. Groups, events, Marketplace, saved items, and other export sections also remain unsupported.
 - JSON-backed section import, resumable large-scale import orchestration with durable checkpoints, and full integrity reporting.
 - Advanced raw-date filters, detailed record-level comparison views, and export formats beyond JSON.
 - Optional local embeddings and local LLM integration.
@@ -102,6 +102,7 @@ ZIP backups can be selected, inventoried, reopened, and read on demand without e
 - Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
 - Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
 - Media: all discovered image/video/audio paths are indexed, with associated record context where a supported parser has linked them.
+- Photos & Videos: the root-level album index is parsed into searchable album summaries, retaining raw exported dates and numeric photo counts; a preview image is linked only when its relative path exists in the discovered image inventory. Album detail pages are not parsed yet.
 - Audio/video: supported local files stream from directory or ZIP backups with byte-range seeking; deflated ZIP entries are decompressed as a stream when seeking.
 
 The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.

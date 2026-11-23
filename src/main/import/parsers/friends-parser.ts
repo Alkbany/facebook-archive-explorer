@@ -35,9 +35,8 @@ const NAME_SELECTOR = 'div._3-96._2pio._2lek._2lel';
 const DATE_SELECTOR = 'div._3-94._2lem';
 const CONTACT_SELECTOR = 'div._3-96._2let';
 
-function readText(
-  $: cheerio.CheerioAPI,
-  root: cheerio.Cheerio<cheerio.Element>,
+function firstText(
+  root: cheerio.Cheerio<unknown>,
   selector: string
 ): string | null {
   const value = root.find(selector).first().text().replace(/\u00a0/gu, ' ').trim();
@@ -47,8 +46,8 @@ function readText(
 /**
  * Parses one of the five known Friends export pages.
  *
- * The parser deliberately keeps raw date text and does not infer what the date
- * represents. It also does not merge duplicate names or create profile IDs.
+ * Dates are retained as raw text; the parser does not infer their meaning.
+ * Duplicate names remain separate records with their original card positions.
  */
 export function parseFriendsExport(html: string, sourceFile: string): FriendParseResult {
   const fileName = basename(sourceFile).toLocaleLowerCase();
@@ -69,16 +68,16 @@ export function parseFriendsExport(html: string, sourceFile: string): FriendPars
 
   cards.each((sourceCardIndex, element) => {
     const card = $(element);
-    const nameRaw = readText($, card, NAME_SELECTOR);
+    const nameRaw = firstText(card, NAME_SELECTOR);
 
     if (!nameRaw) {
       result.issues.push({ code: 'missing_name', sourceCardIndex });
       return;
     }
 
-    const dateRaw = readText($, card, DATE_SELECTOR);
+    const dateRaw = firstText(card, DATE_SELECTOR);
     const contactInfoRaw = recordType === 'friend'
-      ? readText($, card, CONTACT_SELECTOR)
+      ? firstText(card, CONTACT_SELECTOR)
       : null;
 
     result.records.push({

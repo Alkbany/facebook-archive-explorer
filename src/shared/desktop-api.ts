@@ -7,6 +7,8 @@ import type {
   ArchiveInspectionView,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
+  FriendDirectoryFilter,
+  FriendDirectoryView,
   PostsImportSectionResult,
   CommentsImportSectionResult,
   CommentActivitySummary,
@@ -45,6 +47,7 @@ export const IPC_CHANNELS = {
   selectBackupDirectory: 'archive:select-directory',
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
+  listFriendsDirectoryForSelectedBackup: 'archive:list-friends-directory',
   listImportIssuesForSelectedBackup: 'archive:list-import-issues',
   getImportCoverageForSelectedBackup: 'archive:get-import-coverage',
   importProgress: 'archive:import-progress',
@@ -82,6 +85,7 @@ export interface DesktopApi {
   onImportProgress(listener: (progress: ImportProgressEvent) => void): () => void;
   openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionView>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
+  listFriendsDirectoryForSelectedBackup(filter: FriendDirectoryFilter, query: string, page: number): Promise<FriendDirectoryView>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
   listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;

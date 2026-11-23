@@ -64,6 +64,7 @@ export function listPhotoAlbums(
       json_extract(records.payload_json, '$.photo_count') AS photoCount,
       json_extract(records.payload_json, '$.album_path') AS albumPath,
       json_extract(records.payload_json, '$.cover_path') AS coverPath,
+      cover_asset.id AS coverAssetId,
       records.event_time_raw AS dateRaw,
       COALESCE(detail_source.status, 'not_found') AS detailStatus,
       COUNT(photo_records.id) AS importedPhotoCount
@@ -72,6 +73,8 @@ export function listPhotoAlbums(
       AND source.snapshot_id = records.snapshot_id
     LEFT JOIN source_files AS detail_source ON detail_source.snapshot_id = records.snapshot_id
       AND detail_source.relative_path = json_extract(records.payload_json, '$.album_path')
+    LEFT JOIN media_assets AS cover_asset ON cover_asset.snapshot_id = records.snapshot_id
+      AND cover_asset.relative_path = json_extract(records.payload_json, '$.cover_path')
     LEFT JOIN records AS photo_records ON photo_records.source_file_id = detail_source.id
       AND photo_records.snapshot_id = records.snapshot_id
       AND photo_records.section_key = 'photos_and_videos'

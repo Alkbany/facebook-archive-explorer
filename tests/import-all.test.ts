@@ -174,6 +174,39 @@ describe('Import all supported data', () => {
     expect(issue.sourceFileId).toBeGreaterThan(0);
   });
 
+  it('rolls back startup recovery changes if a diagnostic cannot be recorded', () => {
+    const now = new Date().toISOString();
+    database.prepare("UPDATE source_files SET status = 'processing' WHERE snapshot_id = ?").run(snapshotId);
+    database.prepare(`
+      INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at, files_discovered)
+      VALUES ('atomic-recovery-run', ?, 'import', 'running', ?, 5)
+    `).run(snapshotId, now);
+    database.exec(`
+      CREATE TRIGGER reject_recovery_diagnostics
+      BEFORE INSERT ON import_issues
+      BEGIN
+        SELECT RAISE(ABORT, 'synthetic diagnostics write failure');
+      END;
+    `);
+
+    expect(() => recoverAllInterruptedImports(database)).toThrow('synthetic diagnostics write failure');
+    const unchangedFiles = database.prepare('SELECT status FROM source_files WHERE snapshot_id = ?')
+      .all(snapshotId) as Array<{ status: string }>;
+    expect(unchangedFiles.every((file) => file.status === 'processing')).toBe(true);
+    const unchangedRun = database.prepare("SELECT status FROM import_runs WHERE id = 'atomic-recovery-run'")
+      .get() as { status: string };
+    expect(unchangedRun.status).toBe('running');
+    const unchangedSnapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
+      .get(snapshotId) as { status: string };
+    expect(unchangedSnapshot.status).toBe('discovered');
+
+    database.exec('DROP TRIGGER reject_recovery_diagnostics');
+    expect(recoverAllInterruptedImports(database)).toBe(1);
+    const recoveredFiles = database.prepare('SELECT status FROM source_files WHERE snapshot_id = ?')
+      .all(snapshotId) as Array<{ status: string }>;
+    expect(recoveredFiles.every((file) => file.status === 'failed')).toBe(true);
+  });
+
   it('skips completed files on a second import pass', async () => {
     await importAllSupportedData(database, snapshotId, root);
     database.prepare("UPDATE source_files SET status = 'completed' WHERE snapshot_id = ?").run(snapshotId);

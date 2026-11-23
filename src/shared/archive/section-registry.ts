@@ -26,6 +26,7 @@ export const ARCHIVE_SECTIONS: readonly ArchiveSectionDefinition[] = [
   { key: 'likes_and_reactions', title: 'Likes and reactions', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'location', title: 'Location', evidence: 'no-data', sensitivity: 'sensitive' },
   { key: 'marketplace', title: 'Marketplace', evidence: 'filename-only', sensitivity: 'personal' },
+  { key: 'messages', title: 'Messages', evidence: 'sampled', sensitivity: 'sensitive' },
   { key: 'other_activity', title: 'Other activity', evidence: 'filename-only', sensitivity: 'personal' },
   { key: 'pages', title: 'Pages', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'payment_history', title: 'Payment history', evidence: 'filename-only', sensitivity: 'sensitive' },

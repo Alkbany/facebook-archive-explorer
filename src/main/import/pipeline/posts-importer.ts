@@ -42,6 +42,8 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
     const startedAt = new Date().toISOString();
     database.prepare("INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at, files_discovered) VALUES (?, ?, 'import', 'running', ?, 1)")
       .run(runId, snapshotId, startedAt);
+    database.prepare("UPDATE source_files SET status = 'processing', safe_error_code = NULL WHERE id = ? AND snapshot_id = ?")
+      .run(file.id, snapshotId);
     database.exec('SAVEPOINT posts_file');
     try {
       const parsed = parsePostsExport(await readArchiveUtf8File(archiveRoot, file.relative_path), file.relative_path);

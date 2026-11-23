@@ -17,6 +17,8 @@
 - The native folder picker selects a directory and keeps its absolute path in the Electron main process.
 - The renderer receives only the selected folder's display name and a summary report, not the full local path.
 - The first pass reads directory entries and file extensions only. It does not open HTML, JSON, messages, photos, or other file contents.
+- A discovery session, account label, independent backup snapshot, and source-file rows are persisted in the local SQLite database.
+- The renderer can list saved backup inventories after the application restarts.
 - Symbolic links are skipped rather than followed.
 - Inaccessible folders are counted as warnings.
 - Inventory stops at a fixed entry limit and sets `truncated` when the limit is reached.

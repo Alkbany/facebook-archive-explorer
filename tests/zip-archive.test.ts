@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { deflateRawSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { inspectArchiveZip } from '../src/main/import/discovery/zip-inventory';
 import { getZipEntrySize, openZipEntryReadStream, readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
@@ -17,34 +18,35 @@ function crc32(buffer: Buffer): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function makeStoredZip(entries: ZipFixtureEntry[]): Buffer {
+function makeDeflatedZip(entries: ZipFixtureEntry[]): Buffer {
   const localParts: Buffer[] = [];
   const centralParts: Buffer[] = [];
   let localOffset = 0;
   for (const item of entries) {
     const name = Buffer.from(item.name, 'utf8');
     const data = item.content;
+    const compressed = deflateRawSync(data);
     const crc = crc32(data);
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
     local.writeUInt16LE(0x0800, 6);
-    local.writeUInt16LE(0, 8);
+    local.writeUInt16LE(8, 8);
     local.writeUInt32LE(crc, 14);
-    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(compressed.length, 18);
     local.writeUInt32LE(data.length, 22);
     local.writeUInt16LE(name.length, 26);
     local.writeUInt16LE(0, 28);
-    localParts.push(local, name, data);
+    localParts.push(local, name, compressed);
 
     const central = Buffer.alloc(46);
     central.writeUInt32LE(0x02014b50, 0);
     central.writeUInt16LE(0x0314, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(0x0800, 8);
-    central.writeUInt16LE(0, 10);
+    central.writeUInt16LE(8, 10);
     central.writeUInt32LE(crc, 16);
-    central.writeUInt32LE(data.length, 20);
+    central.writeUInt32LE(compressed.length, 20);
     central.writeUInt32LE(data.length, 24);
     central.writeUInt16LE(name.length, 28);
     central.writeUInt16LE(0, 30);
@@ -54,7 +56,7 @@ function makeStoredZip(entries: ZipFixtureEntry[]): Buffer {
     central.writeUInt32LE(item.externalAttributes ?? 0, 38);
     central.writeUInt32LE(localOffset, 42);
     centralParts.push(central, name);
-    localOffset += local.length + name.length + data.length;
+    localOffset += local.length + name.length + compressed.length;
   }
   const centralBytes = Buffer.concat(centralParts);
   const end = Buffer.alloc(22);
@@ -74,7 +76,7 @@ describe('ZIP archive reader and inventory', () => {
     const root = await mkdtemp(join(tmpdir(), 'archive-zip-read-'));
     try {
       const zipPath = join(root, 'sample.zip');
-      await writeFile(zipPath, makeStoredZip([
+      await writeFile(zipPath, makeDeflatedZip([
         { name: 'posts/your_posts.html', content: Buffer.from('<html>synthetic</html>') }
       ]));
       await expect(readZipEntryBuffer(zipPath, 'posts/your_posts.html', 1024))
@@ -100,7 +102,7 @@ describe('ZIP archive reader and inventory', () => {
     const root = await mkdtemp(join(tmpdir(), 'archive-zip-path-'));
     try {
       const zipPath = join(root, 'unsafe.zip');
-      await writeFile(zipPath, makeStoredZip([
+      await writeFile(zipPath, makeDeflatedZip([
         { name: '../outside.html', content: Buffer.from('unsafe') }
       ]));
       await expect(inspectArchiveZip(zipPath, { snapshotId: 's', accountId: 'a' }))
@@ -114,7 +116,7 @@ describe('ZIP archive reader and inventory', () => {
     const root = await mkdtemp(join(tmpdir(), 'archive-zip-inventory-'));
     try {
       const zipPath = join(root, 'facebook-export.zip');
-      await writeFile(zipPath, makeStoredZip([
+      await writeFile(zipPath, makeDeflatedZip([
         { name: 'friends/friends.html', content: Buffer.from('synthetic html') },
         { name: 'posts/your_posts.json', content: Buffer.from('{}') },
         { name: 'photos_and_videos/photo.jpg', content: Buffer.from('not-decoded-media') },

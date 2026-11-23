@@ -14,7 +14,7 @@ const MIME_BY_EXTENSION: Record<string, string> = {
 
 export function parseSingleByteRange(value: string | null, size: number): { start: number; end: number } | null | 'invalid' {
   if (!value) return null;
-  const match = /^bytes=(\\d*)-(\\d*)$/u.exec(value.trim());
+  const match = /^bytes=(\d*)-(\d*)$/u.exec(value.trim());
   if (!match || (!match[1] && !match[2]) || size < 1) return 'invalid';
   let start: number;
   let end: number;
@@ -38,7 +38,7 @@ export function registerArchiveMediaProtocol(
   protocol.handle('archive-media', async (request) => {
     try {
       const url = new URL(request.url);
-      if (url.hostname !== 'media' || !/^\\/\\d+$/u.test(url.pathname) || request.method !== 'GET') {
+      if (url.hostname !== 'media' || !/^\/\d+$/u.test(url.pathname) || request.method !== 'GET') {
         return new Response('Not found', { status: 404 });
       }
       const mediaAssetId = Number(url.pathname.slice(1));
@@ -56,7 +56,7 @@ export function registerArchiveMediaProtocol(
 
       const mimeType = MIME_BY_EXTENSION[extname(row.relativePath).toLowerCase()];
       const expectedKind = mimeType?.startsWith('video/') ? 'video' : mimeType?.startsWith('audio/') ? 'audio' : null;
-      if (!expectedKind || row.mediaKind !== expectedKind) return new Response('Unsupported media', { status: 415 });
+      if (!mimeType || !expectedKind || row.mediaKind !== expectedKind) return new Response('Unsupported media', { status: 415 });
 
       const filePath = await resolveSafeArchiveFile(row.sourcePath, row.relativePath, Number.POSITIVE_INFINITY);
       const fileStats = await stat(filePath);

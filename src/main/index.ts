@@ -5,6 +5,7 @@ import { openAppDatabase } from './database/connection';
 import { DATABASE_MIGRATIONS } from './database/migrations';
 import { getSelectedSnapshotId, registerIpcHandlers } from './ipc/register-handlers';
 import { registerArchiveMediaProtocol } from './database/media-stream';
+import { recoverInterruptedDatabaseSwap } from './database/backup';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'archive-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -61,11 +62,10 @@ function createMainWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   app.setAppUserModelId('com.alkbany.facebookarchiveexplorer');
-  database = openAppDatabase(
-    join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite'),
-    DATABASE_MIGRATIONS
-  );
-  registerIpcHandlers(database);
+  const databasePath = join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite');
+  recoverInterruptedDatabaseSwap(databasePath);
+  database = openAppDatabase(databasePath, DATABASE_MIGRATIONS);
+  registerIpcHandlers(database, databasePath, DATABASE_MIGRATIONS.length);
   registerArchiveMediaProtocol(database, () => getSelectedSnapshotId());
   createMainWindow();
 

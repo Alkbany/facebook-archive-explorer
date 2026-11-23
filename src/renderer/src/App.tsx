@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type {
   ArchiveInspectionView,
   ArchiveSnapshotSummary,
+  ArchiveFileDirectoryView,
+  ArchiveFileStatus,
   FriendsImportSectionResult,
   PostsImportSectionResult,
   CommentsImportSectionResult,
@@ -46,6 +48,12 @@ function App() {
   const [isRefreshingImportIssues, setIsRefreshingImportIssues] = useState(false);
   const [importCoverage, setImportCoverage] = useState<ImportCoverageReport | null>(null);
   const [isRefreshingImportCoverage, setIsRefreshingImportCoverage] = useState(false);
+  const [archiveFileDirectory, setArchiveFileDirectory] = useState<ArchiveFileDirectoryView | null>(null);
+  const [archiveFileStatus, setArchiveFileStatus] = useState<ArchiveFileStatus>('all');
+  const [archiveFileSection, setArchiveFileSection] = useState('all');
+  const [archiveFileQuery, setArchiveFileQuery] = useState('');
+  const [archiveFilePage, setArchiveFilePage] = useState(1);
+  const [isLoadingArchiveFiles, setIsLoadingArchiveFiles] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgressEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
@@ -123,6 +131,11 @@ function App() {
     setInspection(null);
     setImportIssueReport(null);
     setImportCoverage(null);
+    setArchiveFileDirectory(null);
+    setArchiveFileStatus('all');
+    setArchiveFileSection('all');
+    setArchiveFileQuery('');
+    setArchiveFilePage(1);
     setImportProgress(null);
     setSearchResults([]);
     setSearchQuery('');
@@ -164,15 +177,18 @@ function App() {
       setAccountName(selection.accountName);
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
-      const [media, issues, coverage, backups] = await Promise.all([
+      const [media, issues, coverage, backups, files] = await Promise.all([
         window.desktopApi.listMediaForSelectedBackup(),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
-        window.desktopApi.listArchiveSnapshots()
+        window.desktopApi.listArchiveSnapshots(),
+        window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1)
       ]);
       setMediaGallery(media);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
+      setArchiveFileDirectory(files);
+      setArchiveFilePage(files.page);
       setSavedBackups(backups);
     } catch {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
@@ -188,6 +204,11 @@ function App() {
     setInspection(null);
     setImportIssueReport(null);
     setImportCoverage(null);
+    setArchiveFileDirectory(null);
+    setArchiveFileStatus('all');
+    setArchiveFileSection('all');
+    setArchiveFileQuery('');
+    setArchiveFilePage(1);
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
@@ -230,7 +251,7 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
@@ -239,7 +260,8 @@ function App() {
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
-        window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1)
+        window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
+        window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1)
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -251,6 +273,8 @@ function App() {
       setFriendPage(friends.page);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
+      setArchiveFileDirectory(files);
+      setArchiveFilePage(files.page);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setInspection(null);
@@ -302,7 +326,13 @@ function App() {
   async function refreshImportCoverage() {
     setIsRefreshingImportCoverage(true);
     try {
-      setImportCoverage(await window.desktopApi.getImportCoverageForSelectedBackup());
+      const [coverage, files] = await Promise.all([
+        window.desktopApi.getImportCoverageForSelectedBackup(),
+        window.desktopApi.listArchiveFilesForSelectedBackup(archiveFileStatus, archiveFileSection, archiveFileQuery, archiveFilePage)
+      ]);
+      setImportCoverage(coverage);
+      setArchiveFileDirectory(files);
+      setArchiveFilePage(files.page);
     } catch {
       setError('The archive import coverage could not be refreshed.');
     } finally {
@@ -444,6 +474,23 @@ function App() {
     }
   }
 
+  async function loadArchiveFiles(status: ArchiveFileStatus, sectionKey: string, query: string, page: number) {
+    setIsLoadingArchiveFiles(true);
+    setArchiveFileStatus(status);
+    setArchiveFileSection(sectionKey);
+    setArchiveFileQuery(query);
+    setArchiveFilePage(page);
+    try {
+      const result = await window.desktopApi.listArchiveFilesForSelectedBackup(status, sectionKey, query, page);
+      setArchiveFileDirectory(result);
+      setArchiveFilePage(result.page);
+    } catch {
+      setError('The archive file inventory could not be loaded. Inspect the backup again and retry.');
+    } finally {
+      setIsLoadingArchiveFiles(false);
+    }
+  }
+
   function navigateToSection(section: string, targetId: string) {
     setActiveNavigation(section);
     const fallbackTargets: Record<string, string> = {
@@ -452,6 +499,7 @@ function App() {
       photos: 'photo-import-action',
       activity: 'activity-tools',
       search: 'unified-search-panel',
+      files: 'archive-files-workspace',
       overview: 'welcome-panel'
     };
     const target = document.getElementById(targetId)
@@ -651,6 +699,7 @@ function App() {
         <p className="nav-label">WORKSPACE</p>
         <button type="button" className={activeNavigation === 'overview' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('overview', 'overview')}><span>⌂</span> Overview</button>
         <button type="button" className={activeNavigation === 'friends' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('friends', 'friends-directory')}><span>♙</span> Friends</button>
+        <button type="button" className={activeNavigation === 'files' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('files', 'archive-files-workspace')}><span>▦</span> Files</button>
         <button type="button" className={activeNavigation === 'conversations' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('conversations', 'conversation-explorer')}><span>▤</span> Conversations</button>
         <button type="button" className={activeNavigation === 'photos' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('photos', 'photo-albums-workspace')}><span>▧</span> Photos &amp; videos</button>
         <button type="button" className={activeNavigation === 'activity' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('activity', 'activity-tools')}><span>◷</span> Activity</button>

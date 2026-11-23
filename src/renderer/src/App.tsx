@@ -970,6 +970,103 @@ function App() {
                 </>
               )}
             </section>
+            {archiveFileDirectory && (
+              <section className="archive-files-panel" id="archive-files-workspace">
+                <div className="archive-files-heading">
+                  <div>
+                    <p className="eyebrow">READ-ONLY BACKUP INVENTORY</p>
+                    <h3>Archive files</h3>
+                    <p>Browse every discovered file, including sections that do not have an importer yet.</p>
+                  </div>
+                  <span>{archiveFileDirectory.counts.all.toLocaleString()} files</span>
+                </div>
+                <div className="archive-files-stats">
+                  <div><strong>{archiveFileDirectory.counts.completed.toLocaleString()}</strong><span>Completed</span></div>
+                  <div><strong>{archiveFileDirectory.counts.discovered.toLocaleString()}</strong><span>Not processed</span></div>
+                  <div><strong>{archiveFileDirectory.counts.unsupported.toLocaleString()}</strong><span>Unsupported</span></div>
+                  <div><strong>{archiveFileDirectory.counts.failed.toLocaleString()}</strong><span>Failed</span></div>
+                  <div><strong>{archiveFileDirectory.counts.empty.toLocaleString()}</strong><span>Empty</span></div>
+                </div>
+                <div className="archive-files-controls">
+                  <input
+                    value={archiveFileQuery}
+                    onChange={(event) => setArchiveFileQuery(event.target.value)}
+                    onKeyDown={(event) => { if (event.key === 'Enter') void loadArchiveFiles(archiveFileStatus, archiveFileSection, archiveFileQuery, 1); }}
+                    maxLength={120}
+                    placeholder="Search names, paths, sections, or error codes…"
+                    aria-label="Search archive files"
+                  />
+                  <select
+                    value={archiveFileSection}
+                    onChange={(event) => void loadArchiveFiles(archiveFileStatus, event.target.value, archiveFileQuery, 1)}
+                    aria-label="Filter archive files by section"
+                  >
+                    <option value="all">All sections</option>
+                    {ARCHIVE_SECTIONS.map((section) => (
+                      <option key={section.key} value={section.key}>{section.title}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={archiveFileStatus}
+                    onChange={(event) => void loadArchiveFiles(event.target.value as ArchiveFileStatus, archiveFileSection, archiveFileQuery, 1)}
+                    aria-label="Filter archive files by status"
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="discovered">Not processed</option>
+                    <option value="queued">Queued</option>
+                    <option value="processing">Processing</option>
+                    <option value="completed">Completed</option>
+                    <option value="empty">Empty</option>
+                    <option value="unsupported">Unsupported</option>
+                    <option value="failed">Failed</option>
+                    <option value="skipped">Skipped</option>
+                  </select>
+                  <button className="secondary-button" onClick={() => void loadArchiveFiles(archiveFileStatus, archiveFileSection, archiveFileQuery, 1)} disabled={isLoadingArchiveFiles}>
+                    {isLoadingArchiveFiles ? 'Loading…' : 'Apply'}
+                  </button>
+                </div>
+                {isLoadingArchiveFiles ? (
+                  <p className="archive-files-empty">Loading file inventory…</p>
+                ) : archiveFileDirectory.records.length === 0 ? (
+                  <p className="archive-files-empty">No files match these filters.</p>
+                ) : (
+                  <div className="archive-files-list">
+                    {archiveFileDirectory.records.map((file) => (
+                      <article className="archive-file-row" key={file.id}>
+                        <div className={'archive-file-format archive-file-format-' + file.detectedFormat}>{file.detectedFormat.toUpperCase()}</div>
+                        <div className="archive-file-copy">
+                          <strong>{file.fileName}</strong>
+                          <span>{SECTION_TITLES.get(file.sectionKey) ?? file.sectionKey.replaceAll('_', ' ')} · {file.relativePath}</span>
+                          <small>
+                            {formatFileSize(file.fileSizeBytes)} · {file.recordCount.toLocaleString()} records
+                            {file.safeErrorCode ? ' · ' + file.safeErrorCode : ''}
+                            {file.processedAt ? ' · processed ' + file.processedAt : ''}
+                          </small>
+                        </div>
+                        <span className={'archive-file-status archive-file-status-' + file.status}>
+                          {ARCHIVE_FILE_STATUS_LABELS[file.status]}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className="archive-files-pagination">
+                  <span>
+                    {archiveFileDirectory.total === 0
+                      ? '0 files'
+                      : 'Showing ' + (((archiveFileDirectory.page - 1) * archiveFileDirectory.pageSize) + 1) + '–' +
+                        Math.min(archiveFileDirectory.page * archiveFileDirectory.pageSize, archiveFileDirectory.total) +
+                        ' of ' + archiveFileDirectory.total.toLocaleString()}
+                  </span>
+                  <div>
+                    <button className="secondary-button" onClick={() => void loadArchiveFiles(archiveFileStatus, archiveFileSection, archiveFileQuery, archiveFilePage - 1)} disabled={isLoadingArchiveFiles || archiveFilePage <= 1}>Previous</button>
+                    <span>Page {archiveFileDirectory.page} / {Math.max(1, Math.ceil(archiveFileDirectory.total / archiveFileDirectory.pageSize))}</span>
+                    <button className="secondary-button" onClick={() => void loadArchiveFiles(archiveFileStatus, archiveFileSection, archiveFileQuery, archiveFilePage + 1)} disabled={isLoadingArchiveFiles || archiveFilePage >= Math.max(1, Math.ceil(archiveFileDirectory.total / archiveFileDirectory.pageSize))}>Next</button>
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="unified-search-panel" id="unified-search-panel">
               <div className="media-gallery-heading">
                 <div>

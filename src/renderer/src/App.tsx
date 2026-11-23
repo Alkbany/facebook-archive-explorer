@@ -3,6 +3,8 @@ import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
+  PostsImportSectionResult,
+  PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
   ReactionRecordSummary
@@ -19,6 +21,10 @@ function App() {
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
+  const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
+  const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
+  const [postFilter, setPostFilter] = useState('');
+  const [isImportingPosts, setIsImportingPosts] = useState(false);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
   const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
   const [reactionRecords, setReactionRecords] = useState<ReactionRecordSummary[]>([]);
@@ -52,6 +58,9 @@ function App() {
     setError(null);
     setInspection(null);
     setFriendsImport(null);
+    setPostsImport(null);
+    setPostRecords([]);
+    setPostFilter('');
     setMessagesImport(null);
     setReactionsImport(null);
     setReactionRecords([]);
@@ -78,6 +87,21 @@ function App() {
     }
   }
 
+
+  async function importPosts() {
+    setIsImportingPosts(true);
+    setError(null);
+    try {
+      const result = await window.desktopApi.importPostsForSelectedBackup();
+      setPostsImport(result);
+      setPostRecords(await window.desktopApi.listPostsForSelectedBackup());
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Posts data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingPosts(false);
+    }
+  }
 
   async function importFriends() {
     setIsImportingFriends(true);

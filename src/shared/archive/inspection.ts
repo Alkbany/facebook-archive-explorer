@@ -133,6 +133,38 @@ export interface ImportIssueReport {
   counts: { info: number; warning: number; error: number };
 }
 
+
+export interface ImportCoverageSectionSummary {
+  sectionKey: string;
+  totalFiles: number;
+  htmlFiles: number;
+  jsonFiles: number;
+  textFiles: number;
+  mediaFiles: number;
+  otherFiles: number;
+  completedFiles: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+  unprocessedFiles: number;
+  emptyFiles: number;
+  skippedFiles: number;
+}
+
+export interface ImportCoverageReport {
+  totals: {
+    totalFiles: number;
+    contentFiles: number;
+    mediaFiles: number;
+    completedFiles: number;
+    unsupportedFiles: number;
+    failedFiles: number;
+    unprocessedFiles: number;
+    emptyFiles: number;
+    skippedFiles: number;
+  };
+  sections: ImportCoverageSectionSummary[];
+}
+
 export interface ImportAllSupportedDataResult {
   sections: {
     friends: FriendsImportSectionResult;

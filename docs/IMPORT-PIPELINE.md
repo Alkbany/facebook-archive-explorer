@@ -2,7 +2,7 @@
 
 ## Required stages
 
-1. **Selection** — the user selects one source directory. ZIP selection is planned but not implemented.
+1. **Selection** — the user selects one source directory or ZIP archive through the native picker.
 2. **Discovery** — inventory directory and file names without opening file contents or changing the source. The current implementation has a safety cap and reports when an inventory is incomplete.
 3. **Classification** — identify likely section and basic file format. Runtime discovery remains authoritative.
 4. **Validation** — check path containment, symbolic links, readability, and file-size limits before opening supported text files.
@@ -12,17 +12,17 @@
 8. **Indexing** — add eligible text to FTS5 according to sensitivity policy.
 9. **Reporting** — summarize processed, unsupported, empty, skipped, and failed files.
 
-## ZIP discovery (initial support)
+## ZIP discovery and reads
 
 - ZIP files are selected as archives without extracting or rewriting the original file.
 - The central directory is read incrementally; entry contents are not decompressed during inventory.
 - Entries are normalized to safe archive-relative paths. Absolute paths, parent traversal, encrypted entries, and symbolic-link entries are rejected or skipped.
 - The inventory remains bounded by the same 100,000-entry safety cap and delivers discovered metadata in batches.
-- Text entries are read on demand with a strict byte limit. Large media remains in the ZIP and is not copied during discovery.
+- Text entries are read on demand with a strict byte limit. Image previews are bounded. Audio/video entries remain in the ZIP and are streamed through the local media protocol with byte-range support; deflated entries are decompressed as a stream when seeking.
 
 ## Current discovery behavior
 
-- The native folder picker selects a directory and keeps its absolute path in the Electron main process.
+- The native picker selects a directory or `.zip` file and keeps its absolute path in the Electron main process.
 - The renderer receives only the selected folder's display name and a summary report, not the full local path.
 - The first pass reads directory entries and file extensions only. It does not open HTML, JSON, messages, photos, or other file contents.
 - A discovery session, account label, independent backup snapshot, and source-file rows are persisted in the local SQLite database.
@@ -62,7 +62,7 @@ The sampled Posts and Comments card structures have DOM-based parsers and snapsh
 
 ## Unified media indexing
 
-After directory discovery, every file classified as image, video, or audio is registered in `media_assets` using its discovered binary source-file row. This does not open or copy media bytes. The media browser shows both unlinked files and associations created by supported record importers. Image previews remain bounded; audio and video use the local byte-range protocol where the browser supports the codec.
+After directory or ZIP discovery, every file classified as image, video, or audio is registered in `media_assets` using its discovered source-file row. This does not open or copy media bytes. The media browser shows both unlinked files and associations created by supported record importers. Image previews remain bounded; audio and video use the local byte-range protocol where the browser supports the codec.
 
 ## Search and comparison
 
@@ -70,7 +70,7 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 
 ## Still not implemented
 
-- JSON import. ZIP discovery and streaming reads are implemented; broader JSON-backed section parsing remains future work.
+- JSON-backed section parsing; ZIP inventory and on-demand reads are implemented for HTML and media sources.
 - Full resumable import orchestration across all sections and integrity reporting.
 - Structured photo albums, groups, events, Marketplace, saved items, and other remaining export sections; these require their own verified samples.
 - Album metadata enrichment (dimensions, duration, thumbnails, membership).
@@ -80,7 +80,7 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 
 The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, and Likes & Reactions sequentially. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.
 
-This is not yet crash-safe resume orchestration: an abrupt process exit can leave a file marked as processing, and interrupted-file recovery has not yet been implemented. ZIP archives and unsupported sections are not part of this one-click action.
+At the beginning of the next Import All run, files left in `processing` and their still-running import rows are marked as interrupted/failed. The eligible failed files are then retried. Durable mid-file checkpoints, user-controlled pause/resume, and complete integrity reconciliation remain planned. ZIP archives use the same flow because importer reads are archive-source agnostic.
 
 ## Duplicate handling
 

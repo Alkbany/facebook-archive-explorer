@@ -51,6 +51,16 @@ export interface ReactionsImportSectionResult {
   failedFiles: number;
 }
 
+export interface ReactionRecordSummary {
+  id: number;
+  sourceFileId: number;
+  sourcePath: string;
+  sourceCardIndex: number;
+  reactionType: string | null;
+  descriptionRaw: string | null;
+  dateRaw: string | null;
+}
+
 export interface MessagesImportSectionResult {
   filesAttempted: number;
   recordsImported: number;

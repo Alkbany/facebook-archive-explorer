@@ -26,6 +26,7 @@ import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
 import { listFriendDirectory } from '../database/friends-repository';
 import { listArchiveFiles } from '../database/archive-files-repository';
+import { listFallbackArchiveRecords, listFallbackRecordSections } from '../database/fallback-records-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets } from '../database/media-indexer';
@@ -284,6 +285,22 @@ export function registerIpcHandlers(
       throw new Error('Invalid archive file page.');
     }
     return listArchiveFiles(database, selectedSnapshotId, status as ArchiveFileStatus, sectionKey, query, page as number);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listFallbackRecordSectionsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing preserved fallback records.');
+    return listFallbackRecordSections(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listFallbackArchiveRecordsForSelectedBackup, (_event, sectionKey: unknown, page: unknown) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing preserved fallback records.');
+    if (typeof sectionKey !== 'string' || !/^[a-z0-9_]{1,80}$/u.test(sectionKey)) {
+      throw new Error('Invalid fallback archive section.');
+    }
+    if (!Number.isSafeInteger(page) || (page as number) < 1) {
+      throw new Error('Invalid fallback archive page.');
+    }
+    return listFallbackArchiveRecords(database, selectedSnapshotId, sectionKey, page as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.listFriendsDirectoryForSelectedBackup, (_event, filter: unknown, query: unknown, page: unknown) => {

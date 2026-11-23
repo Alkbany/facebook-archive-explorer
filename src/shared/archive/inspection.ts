@@ -328,3 +328,31 @@ export interface ArchiveFileDirectoryView {
   page: number;
   pageSize: number;
 }
+
+
+export type ArchiveRecordSensitivity = 'standard' | 'personal' | 'sensitive';
+
+export interface FallbackArchiveSectionSummary {
+  sectionKey: string;
+  recordCount: number;
+  sensitivity: ArchiveRecordSensitivity;
+}
+
+export interface FallbackArchiveRecord {
+  id: number;
+  sectionKey: string;
+  recordType: 'html_item' | 'json_item';
+  title: string | null;
+  body: string | null;
+  dateRaw: string | null;
+  sourcePath: string;
+  sourceRecordIndex: number;
+  sensitivity: ArchiveRecordSensitivity;
+}
+
+export interface FallbackArchiveRecordsPage {
+  records: FallbackArchiveRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}

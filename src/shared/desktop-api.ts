@@ -30,7 +30,9 @@ import type {
   ImportAllSupportedDataResult,
   ImportIssueReport,
   ImportCoverageReport,
-  ImportProgressEvent
+  ImportProgressEvent,
+  FallbackArchiveSectionSummary,
+  FallbackArchiveRecordsPage
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -60,6 +62,8 @@ export const IPC_CHANNELS = {
   listArchiveFilesForSelectedBackup: 'archive:list-files',
   listImportIssuesForSelectedBackup: 'archive:list-import-issues',
   getImportCoverageForSelectedBackup: 'archive:get-import-coverage',
+  listFallbackRecordSectionsForSelectedBackup: 'archive:list-fallback-record-sections',
+  listFallbackArchiveRecordsForSelectedBackup: 'archive:list-fallback-records',
   importProgress: 'archive:import-progress',
   pauseImport: 'archive:pause-import',
   resumeImport: 'archive:resume-import',
@@ -97,6 +101,8 @@ export interface DesktopApi {
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
   listImportIssuesForSelectedBackup(): Promise<ImportIssueReport>;
   getImportCoverageForSelectedBackup(): Promise<ImportCoverageReport>;
+  listFallbackRecordSectionsForSelectedBackup(): Promise<FallbackArchiveSectionSummary[]>;
+  listFallbackArchiveRecordsForSelectedBackup(sectionKey: string, page: number): Promise<FallbackArchiveRecordsPage>;
   onImportProgress(listener: (progress: ImportProgressEvent) => void): () => void;
   pauseImport(): Promise<boolean>;
   resumeImport(): Promise<boolean>;

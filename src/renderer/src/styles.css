@@ -1644,3 +1644,100 @@ h1 {
   .friends-import-action { align-items: stretch; flex-direction: column; }
   .saved-backups-heading, .inspection-heading { align-items: flex-start; flex-direction: column; }
 }
+
+
+.fallback-records-panel {
+  margin: 18px 0 24px;
+  padding: 18px;
+  border: 1px solid #e7eaf1;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 4px 15px #3d426006;
+}
+.fallback-record-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+}
+.fallback-record-controls label {
+  display: flex;
+  flex: 1;
+  min-width: 220px;
+  max-width: 460px;
+  flex-direction: column;
+  gap: 6px;
+  color: #777d90;
+  font-size: 10px;
+}
+.fallback-record-controls select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #e4e6ef;
+  border-radius: 8px;
+  color: #41465d;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+}
+.fallback-sensitivity {
+  color: #8b8fa0;
+  font-size: 9px;
+}
+.fallback-sensitivity.sensitive { color: #a36c3b; }
+.fallback-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fallback-record-card {
+  padding: 12px 14px;
+  border: 1px solid #edf0f5;
+  border-radius: 9px;
+  background: #fcfcfe;
+}
+.fallback-record-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fallback-record-heading strong { color: #41465d; font-size: 11px; }
+.fallback-record-heading span { color: #8e92a2; font-size: 9px; white-space: nowrap; }
+.fallback-record-card p {
+  margin: 7px 0;
+  color: #555a6e;
+  font-size: 10px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fallback-record-card small {
+  color: #9a9eae;
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+.fallback-record-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: #8e92a2;
+  font-size: 9px;
+}
+.fallback-record-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fallback-records-empty, .fallback-record-note {
+  color: #8e92a2;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.fallback-record-note { margin: 12px 0 0; }

@@ -26,7 +26,12 @@ import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archi
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import type { ArchiveSearchResult } from '../../shared/archive/search';
-import type { ArchiveComparisonReport } from '../../shared/archive/comparison';
+import type {
+  ArchiveComparisonReport,
+  ArchiveComparisonChangeKind,
+  ArchiveComparisonChangesPage,
+  ArchiveComparisonExportFormat
+} from '../../shared/archive/comparison';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
 
@@ -89,6 +94,14 @@ function App() {
   const [comparisonBaselineId, setComparisonBaselineId] = useState('');
   const [comparisonTargetId, setComparisonTargetId] = useState('');
   const [comparisonReport, setComparisonReport] = useState<ArchiveComparisonReport | null>(null);
+  const [comparisonChanges, setComparisonChanges] = useState<ArchiveComparisonChangesPage | null>(null);
+  const [comparisonChangeFilter, setComparisonChangeFilter] = useState<ArchiveComparisonChangeKind>('all');
+  const [comparisonChangeSection, setComparisonChangeSection] = useState('all');
+  const [comparisonChangeQuery, setComparisonChangeQuery] = useState('');
+  const [comparisonChangePage, setComparisonChangePage] = useState(1);
+  const [isLoadingComparisonChanges, setIsLoadingComparisonChanges] = useState(false);
+  const [comparisonExportFormat, setComparisonExportFormat] = useState<ArchiveComparisonExportFormat>('csv');
+  const [comparisonExportStatus, setComparisonExportStatus] = useState('');
   const [isComparingBackups, setIsComparingBackups] = useState(false);
   const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
   const [friendDirectory, setFriendDirectory] = useState<FriendDirectoryView | null>(null);
@@ -433,12 +446,68 @@ function App() {
     }
   }
 
+  async function loadComparisonChanges(
+    baselineId: string,
+    comparedId: string,
+    filter: ArchiveComparisonChangeKind,
+    sectionKey: string,
+    query: string,
+    page: number
+  ) {
+    setIsLoadingComparisonChanges(true);
+    setComparisonChangeFilter(filter);
+    setComparisonChangeSection(sectionKey);
+    setComparisonChangeQuery(query);
+    setComparisonChangePage(page);
+    setComparisonExportStatus('');
+    try {
+      const result = await window.desktopApi.listArchiveComparisonChanges(
+        baselineId, comparedId, filter, sectionKey, query, page
+      );
+      setComparisonChanges(result);
+      setComparisonChangePage(result.page);
+    } catch {
+      setComparisonChanges(null);
+      setError('The detailed comparison could not be loaded. Run the comparison again and retry.');
+    } finally {
+      setIsLoadingComparisonChanges(false);
+    }
+  }
+
+  async function exportComparisonChanges() {
+    setComparisonExportStatus('');
+    setError(null);
+    try {
+      const result = await window.desktopApi.exportArchiveComparisonChanges(
+        comparisonBaselineId,
+        comparisonTargetId,
+        comparisonChangeFilter,
+        comparisonChangeSection,
+        comparisonChangeQuery,
+        comparisonExportFormat
+      );
+      setComparisonExportStatus(result.status === 'saved'
+        ? result.recordsExported.toLocaleString() + ' changes exported to ' + result.fileName
+        : 'Comparison export cancelled.');
+    } catch {
+      setError('The comparison could not be exported. Narrow the filters and try again.');
+    }
+  }
+
   async function compareBackups() {
     setIsComparingBackups(true);
     setComparisonReport(null);
+    setComparisonChanges(null);
+    setComparisonChangeFilter('all');
+    setComparisonChangeSection('all');
+    setComparisonChangeQuery('');
+    setComparisonChangePage(1);
+    setComparisonExportStatus('');
     setError(null);
     try {
-      setComparisonReport(await window.desktopApi.compareArchiveSnapshots(comparisonBaselineId, comparisonTargetId));
+      const report = await window.desktopApi.compareArchiveSnapshots(comparisonBaselineId, comparisonTargetId);
+      setComparisonReport(report);
+      await loadComparisonChanges(comparisonBaselineId, comparisonTargetId, 'all', 'all', '', 1);
     } catch {
       setError('These backups could not be compared. Choose two different backups belonging to the same account.');
     } finally {
@@ -1714,13 +1783,21 @@ function App() {
           </div>
           <div className="backup-compare-controls">
             <label><span>Older backup</span>
-              <select value={comparisonBaselineId} onChange={(event) => setComparisonBaselineId(event.target.value)}>
+              <select value={comparisonBaselineId} onChange={(event) => {
+                setComparisonBaselineId(event.target.value);
+                setComparisonReport(null);
+                setComparisonChanges(null);
+              }}>
                 <option value="">Select backup</option>
                 {savedBackups.map((backup) => <option key={backup.id} value={backup.id}>{backup.accountName} · {backup.backupName}</option>)}
               </select>
             </label>
             <label><span>Newer backup</span>
-              <select value={comparisonTargetId} onChange={(event) => setComparisonTargetId(event.target.value)}>
+              <select value={comparisonTargetId} onChange={(event) => {
+                setComparisonTargetId(event.target.value);
+                setComparisonReport(null);
+                setComparisonChanges(null);
+              }}>
                 <option value="">Select backup</option>
                 {savedBackups.map((backup) => <option key={backup.id} value={backup.id}>{backup.accountName} · {backup.backupName}</option>)}
               </select>
@@ -1797,6 +1874,132 @@ function App() {
                 </div>
               ))}
               <small>Matching uses section, source filename, and original card position. This compares imported records, not binary files or inferred dates.</small>
+              <div className="comparison-detail-panel">
+                <div className="comparison-detail-heading">
+                  <div>
+                    <p className="eyebrow">RECORD-LEVEL CHANGES</p>
+                    <h4>What changed between these backups</h4>
+                    <p>Compare the actual imported text and source position for each added, removed, or changed record.</p>
+                  </div>
+                  <span>{comparisonChanges?.total.toLocaleString() ?? '—'} changes</span>
+                </div>
+                <div className="comparison-detail-controls">
+                  <select
+                    value={comparisonChangeFilter}
+                    onChange={(event) => void loadComparisonChanges(
+                      comparisonBaselineId, comparisonTargetId, event.target.value as ArchiveComparisonChangeKind,
+                      comparisonChangeSection, comparisonChangeQuery, 1
+                    )}
+                    aria-label="Filter comparison change type"
+                  >
+                    <option value="all">All changes</option>
+                    <option value="added">Added</option>
+                    <option value="removed">Removed</option>
+                    <option value="changed">Changed</option>
+                  </select>
+                  <select
+                    value={comparisonChangeSection}
+                    onChange={(event) => void loadComparisonChanges(
+                      comparisonBaselineId, comparisonTargetId, comparisonChangeFilter,
+                      event.target.value, comparisonChangeQuery, 1
+                    )}
+                    aria-label="Filter comparison section"
+                  >
+                    <option value="all">All sections</option>
+                    {comparisonReport.sections.map((section) => (
+                      <option key={section.sectionKey} value={section.sectionKey}>
+                        {SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={comparisonChangeQuery}
+                    onChange={(event) => setComparisonChangeQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') void loadComparisonChanges(
+                        comparisonBaselineId, comparisonTargetId, comparisonChangeFilter,
+                        comparisonChangeSection, comparisonChangeQuery, 1
+                      );
+                    }}
+                    maxLength={160}
+                    placeholder="Search changed text or source path…"
+                    aria-label="Search comparison changes"
+                  />
+                  <button
+                    className="secondary-button"
+                    onClick={() => void loadComparisonChanges(
+                      comparisonBaselineId, comparisonTargetId, comparisonChangeFilter,
+                      comparisonChangeSection, comparisonChangeQuery, 1
+                    )}
+                    disabled={isLoadingComparisonChanges}
+                  >
+                    {isLoadingComparisonChanges ? 'Loading…' : 'Apply'}
+                  </button>
+                </div>
+                {isLoadingComparisonChanges ? (
+                  <p className="comparison-detail-empty">Loading changed records…</p>
+                ) : comparisonChanges && comparisonChanges.changes.length > 0 ? (
+                  <div className="comparison-change-list">
+                    {comparisonChanges.changes.map((change) => (
+                      <article className={'comparison-change-card comparison-change-' + change.changeKind}
+                        key={change.changeKind + '-' + change.sectionKey + '-' + change.sourcePath + '-' + change.sourceCardIndex}>
+                        <div className="comparison-change-header">
+                          <span className={'comparison-change-badge comparison-change-badge-' + change.changeKind}>{change.changeKind}</span>
+                          <strong>{SECTION_TITLES.get(change.sectionKey) ?? change.sectionKey}</strong>
+                          <small>{change.sourcePath} · item {change.sourceCardIndex + 1}</small>
+                        </div>
+                        <div className="comparison-change-columns">
+                          <div className="comparison-change-version">
+                            <span>Older backup</span>
+                            {change.previousTitle && <strong>{change.previousTitle}</strong>}
+                            <p>{change.previousBody ?? (change.changeKind === 'added' ? 'Not present in the older backup.' : 'No text in the older record.')}</p>
+                            <small>{change.previousDateRaw ?? 'No exported date'}{change.previousRecordType ? ' · ' + change.previousRecordType.replaceAll('_', ' ') : ''}</small>
+                          </div>
+                          <div className="comparison-change-version">
+                            <span>Newer backup</span>
+                            {change.comparedTitle && <strong>{change.comparedTitle}</strong>}
+                            <p>{change.comparedBody ?? (change.changeKind === 'removed' ? 'Not present in the newer backup.' : 'No text in the newer record.')}</p>
+                            <small>{change.comparedDateRaw ?? 'No exported date'}{change.comparedRecordType ? ' · ' + change.comparedRecordType.replaceAll('_', ' ') : ''}</small>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="comparison-detail-empty">No changes match these filters.</p>
+                )}
+                {comparisonChanges && (
+                  <div className="comparison-detail-pagination">
+                    <span>
+                      {comparisonChanges.total === 0 ? '0 changes' :
+                        'Showing ' + (((comparisonChanges.page - 1) * comparisonChanges.pageSize) + 1) + '–' +
+                        Math.min(comparisonChanges.page * comparisonChanges.pageSize, comparisonChanges.total) +
+                        ' of ' + comparisonChanges.total.toLocaleString()}
+                    </span>
+                    <div>
+                      <button className="secondary-button" onClick={() => void loadComparisonChanges(
+                        comparisonBaselineId, comparisonTargetId, comparisonChangeFilter,
+                        comparisonChangeSection, comparisonChangeQuery, comparisonChangePage - 1
+                      )} disabled={isLoadingComparisonChanges || comparisonChangePage <= 1}>Previous</button>
+                      <span>Page {comparisonChanges.page} / {Math.max(1, Math.ceil(comparisonChanges.total / comparisonChanges.pageSize))}</span>
+                      <button className="secondary-button" onClick={() => void loadComparisonChanges(
+                        comparisonBaselineId, comparisonTargetId, comparisonChangeFilter,
+                        comparisonChangeSection, comparisonChangeQuery, comparisonChangePage + 1
+                      )} disabled={isLoadingComparisonChanges || comparisonChangePage >= Math.max(1, Math.ceil(comparisonChanges.total / comparisonChanges.pageSize))}>Next</button>
+                    </div>
+                  </div>
+                )}
+                <div className="comparison-export-controls">
+                  <select value={comparisonExportFormat} onChange={(event) => setComparisonExportFormat(event.target.value as ArchiveComparisonExportFormat)} aria-label="Comparison export format">
+                    <option value="csv">CSV spreadsheet</option>
+                    <option value="json">JSON data</option>
+                  </select>
+                  <button className="secondary-button" onClick={() => void exportComparisonChanges()} disabled={!comparisonChanges || comparisonChanges.total === 0}>
+                    Export filtered changes
+                  </button>
+                  {comparisonExportStatus && <span>{comparisonExportStatus}</span>}
+                </div>
+              </div>
             </div>
           )}
         </section>

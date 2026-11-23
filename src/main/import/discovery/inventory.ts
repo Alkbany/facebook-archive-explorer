@@ -24,6 +24,14 @@ export interface ArchiveInventoryOptions {
   snapshotId: string;
   accountId: string;
   onFilesFound?: (files: readonly DiscoveredArchiveFile[]) => void;
+  /** Internal test seam. Production calls omit this and retain the 100,000-entry cap. */
+  maxEntries?: number;
+  /** Internal test seam. Production calls omit this and retain batches of 500. */
+  batchSize?: number;
+}
+
+function boundedOption(value: number | undefined, fallback: number, maximum: number): number {
+  return Number.isSafeInteger(value) ? Math.max(1, Math.min(maximum, value as number)) : fallback;
 }
 
 function sectionForPath(relativePath: string): string {
@@ -71,6 +79,8 @@ export async function inspectArchiveDirectory(
     truncated: false
   };
   const noDataSections = new Set<string>();
+  const maxEntries = boundedOption(options.maxEntries, MAX_ENTRIES, MAX_ENTRIES);
+  const batchSize = boundedOption(options.batchSize, BATCH_SIZE, 5_000);
   let visitedEntries = 0;
   let batch: DiscoveredArchiveFile[] = [];
   let callbackFailure: unknown = null;
@@ -101,7 +111,7 @@ export async function inspectArchiveDirectory(
     try {
       for await (const entry of directory) {
         visitedEntries += 1;
-        if (visitedEntries > MAX_ENTRIES) {
+        if (visitedEntries > maxEntries) {
           report.truncated = true;
           stack.length = 0;
           break;
@@ -147,7 +157,7 @@ export async function inspectArchiveDirectory(
           detectedFormat
         });
 
-        if (batch.length >= BATCH_SIZE) flushBatch();
+        if (batch.length >= batchSize) flushBatch();
       }
     } catch (error) {
       if (callbackFailure !== null) throw callbackFailure;

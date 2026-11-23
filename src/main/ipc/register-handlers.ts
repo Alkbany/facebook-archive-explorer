@@ -13,7 +13,7 @@ import {
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
-import { getMessageConversation, listMessageConversations } from '../database/messages-repository';
+import { getMessageConversation, listMessageConversations, listMessageMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
 
 let selectedBackupDirectory: string | null = null;
@@ -98,6 +98,11 @@ export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.listMessagesForSelectedBackup, () => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing conversations.');
     return listMessageConversations(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listMessageMediaForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing message attachments.');
+    return listMessageMediaGallery(database, selectedSnapshotId);
   });
 
   ipcMain.handle(IPC_CHANNELS.getMessagesForSelectedConversation, (_event, sourceFileId: unknown) => {

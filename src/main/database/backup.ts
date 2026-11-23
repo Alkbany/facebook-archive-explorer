@@ -108,15 +108,33 @@ async function replaceFileWithRollback(sourcePath: string, destinationPath: stri
   }
 }
 
+function assertDatabaseIdle(database: DatabaseSync): void {
+  if (!database.isOpen) throw new Error('The application database is not open.');
+  if (database.isTransaction) throw new Error('A database operation is active. Finish it before continuing.');
+  const activeRun = database.prepare(
+    "SELECT 1 AS active FROM import_runs WHERE status = 'running' LIMIT 1"
+  ).get();
+  if (activeRun) throw new Error('An import or discovery operation is still active. Finish it before continuing.');
+}
+
+function pathsMatch(first: string, second: string): boolean {
+  const left = resolve(first);
+  const right = resolve(second);
+  return process.platform === 'win32'
+    ? left.toLocaleLowerCase() === right.toLocaleLowerCase()
+    : left === right;
+}
+
 /** Creates a consistent SQLite backup, including committed WAL data, without copying live DB sidecars. */
 export async function exportDatabaseBackup(
   database: DatabaseSync,
   outputPath: string,
   supportedSchemaVersion: number
 ): Promise<DatabaseBackupExportResult> {
+  assertDatabaseIdle(database);
   const sourcePath = database.location();
   if (!sourcePath) throw new Error('The active database has no file location and cannot be exported.');
-  if (resolve(sourcePath).toLocaleLowerCase() === resolve(outputPath).toLocaleLowerCase()) {
+  if (pathsMatch(sourcePath, outputPath)) {
     throw new Error('Choose a different destination from the active application database.');
   }
 
@@ -151,18 +169,12 @@ export async function restoreDatabaseBackup(
   databasePath: string,
   supportedSchemaVersion: number
 ): Promise<string> {
+  assertDatabaseIdle(database);
   const livePath = resolve(databasePath);
   const selectedPath = resolve(sourcePath);
-  if (livePath.toLocaleLowerCase() === selectedPath.toLocaleLowerCase()) {
+  if (pathsMatch(livePath, selectedPath)) {
     throw new Error('The active application database cannot be restored over itself.');
   }
-  if (!database.isOpen) throw new Error('The application database is not open.');
-  if (database.isTransaction) throw new Error('A database operation is active. Finish it before restoring a backup.');
-  const activeRun = database.prepare(
-    "SELECT 1 AS active FROM import_runs WHERE status = 'running' LIMIT 1"
-  ).get();
-  if (activeRun) throw new Error('An import or discovery operation is still active. Finish it before restoring a backup.');
-
   await validateDatabaseBackup(selectedPath, supportedSchemaVersion);
   await mkdir(dirname(livePath), { recursive: true });
 

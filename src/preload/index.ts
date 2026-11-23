@@ -30,6 +30,7 @@ const desktopApi: DesktopApi = {
   importMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importMessagesForSelectedBackup),
   importReactionsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importReactionsForSelectedBackup),
   listReactionsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listReactionsForSelectedBackup),
+  listPhotoAlbumsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listPhotoAlbumsForSelectedBackup),
   listMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessagesForSelectedBackup),
   listMessageMediaForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessageMediaForSelectedBackup),
   getMessagesForSelectedConversation: (sourceFileId) =>

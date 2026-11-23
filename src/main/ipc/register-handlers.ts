@@ -13,6 +13,7 @@ import {
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
+import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
 
@@ -121,6 +122,11 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       throw new Error('Invalid attachment selection.');
     }
     return getMessageMediaPreview(database, selectedSnapshotId, mediaAssetId as number);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importReactionsForSelectedBackup, async () => {
+    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Likes & Reactions data.');
+    return importReactionsSection(database, selectedSnapshotId, selectedBackupDirectory);
   });
 
   ipcMain.handle(IPC_CHANNELS.importMessagesForSelectedBackup, async () => {

@@ -413,3 +413,40 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 .media-viewer-content p { color: #fff; font-size: 12px; text-align: center; }
 .media-viewer-content .media-viewer-error { color: #ffcfb8; }
 .media-viewer > footer { padding: 10px 15px; color: #858a9c; font-size: 9px; text-align: center; }
+
+
+.media-gallery-panel {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid #e7e9f1;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 4px 15px #3d426006;
+}
+.media-gallery-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 19px 13px;
+  border-bottom: 1px solid #eef0f5;
+}
+.media-gallery-heading .eyebrow { margin: 0 0 5px; font-size: 8px; }
+.media-gallery-heading h3 { margin: 0 0 5px; color: #30354d; font-size: 14px; }
+.media-gallery-heading p:not(.eyebrow) { margin: 0; color: #9296a7; font-size: 9px; }
+.media-gallery-heading > span { color: #6c63bd; font-size: 9px; white-space: nowrap; }
+.media-gallery-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 17px; border-bottom: 1px solid #f0f1f5; }
+.media-gallery-filters button {
+  padding: 6px 10px; border: 1px solid #e8e9f0; border-radius: 20px;
+  color: #858a9b; background: #fff; cursor: pointer; font: inherit; font-size: 9px; text-transform: capitalize;
+}
+.media-gallery-filters button.active { border-color: #dcd8fb; color: #5e52c7; background: #f4f2ff; }
+.media-gallery-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; max-height: 420px; overflow: auto; }
+.media-gallery-item { display: flex; min-width: 0; align-items: center; gap: 9px; padding: 9px; border: 1px solid #eef0f5; border-radius: 9px; background: #fdfdff; }
+.media-gallery-icon { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border-radius: 8px; background: #f0efff; color: #665bc3; font-size: 13px; }
+.media-gallery-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.media-gallery-copy strong { overflow: hidden; color: #41465c; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.media-gallery-copy span, .media-gallery-copy small { overflow: hidden; color: #9297a8; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.media-gallery-copy .media-gallery-caption { color: #777d90; }
+.media-gallery-open { padding: 6px 9px; border: 1px solid #e4e1fa; border-radius: 7px; color: #6258ba; background: #f7f6ff; cursor: pointer; font: inherit; font-size: 8px; }
+@media (max-width: 1050px) { .media-gallery-list { grid-template-columns: minmax(0, 1fr); } }

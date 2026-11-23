@@ -122,7 +122,7 @@ export function getMessageConversation(
   `).all(sourceFileId, snapshotId) as unknown as MessageRow[];
 
   const mediaQuery = database.prepare(`
-    SELECT assets.relative_path AS relativePath, assets.media_kind AS mediaKind,
+    SELECT assets.id AS id, assets.relative_path AS relativePath, assets.media_kind AS mediaKind,
       links.role AS role
     FROM record_media AS links
     INNER JOIN media_assets AS assets ON assets.id = links.media_asset_id

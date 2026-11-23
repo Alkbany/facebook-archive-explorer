@@ -3,7 +3,8 @@ import type {
   ArchiveInspectionReport,
   ArchiveSnapshotSummary,
   FriendsImportSectionResult,
-  MessagesImportSectionResult
+  MessagesImportSectionResult,
+  ReactionsImportSectionResult
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -23,6 +24,7 @@ export const IPC_CHANNELS = {
   listArchiveSnapshots: 'archive:list-snapshots',
   importFriendsForSelectedBackup: 'archive:import-friends',
   importMessagesForSelectedBackup: 'archive:import-messages',
+  importReactionsForSelectedBackup: 'archive:import-reactions',
   listMessagesForSelectedBackup: 'archive:list-messages',
   listMessageMediaForSelectedBackup: 'archive:list-message-media',
   getMessagesForSelectedConversation: 'archive:get-conversation-messages',
@@ -36,6 +38,7 @@ export interface DesktopApi {
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;
+  importReactionsForSelectedBackup(): Promise<ReactionsImportSectionResult>;
   listMessagesForSelectedBackup(): Promise<MessageConversationSummary[]>;
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;

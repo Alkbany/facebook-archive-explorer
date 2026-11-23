@@ -92,6 +92,14 @@ describe('Archive file directory repository', () => {
     expect(listArchiveFiles(database, snapshotId, 'all', 'all', 'posts/your_posts').records[0].status).toBe('failed');
   });
 
+  it('treats percent and underscore characters in file searches literally', () => {
+    addFile(0, { path: 'posts/%_literal.html', section: 'posts', format: 'html', status: 'discovered' });
+    addFile(1, { path: 'posts/abcliteral.html', section: 'posts', format: 'html', status: 'discovered' });
+    const result = listArchiveFiles(database, snapshotId, 'all', 'all', '%_literal');
+    expect(result.total).toBe(1);
+    expect(result.records[0].relativePath).toBe('posts/%_literal.html');
+  });
+
   it('paginates large inventories and clamps requests beyond the final page', () => {
     for (let index = 0; index < 205; index += 1) {
       addFile(index, {

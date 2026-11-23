@@ -26,19 +26,21 @@
 - [x] Add synthetic, non-personal HTML fixtures for the Friends parser and importer.
 - [x] Store Friends records with source-card provenance; keep optional contact details outside FTS5.
 - [x] Report missing-name cards and unrecognized Friends page structures.
-- [ ] Implement and test the observed message HTML structure.
+- [x] Implement and test the observed message HTML structure and local media references.
+- [x] Add synthetic fixtures for message cards, reactions, call-event text, and attachments.
 - [ ] Implement parsers for posts, comments, reactions, and other activity-card sections.
 - [ ] Add parser fixtures for all remaining supported sections.
 
 ## Milestone 3 — Media and remaining activity
 
-- [ ] Photos, albums, video, audio, stickers, and attachments.
+- [ ] Photos, albums, video, audio, stickers, and attachments as browsable media.
 - [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
 
 ## Milestone 4 — Browsing and search
 
+- [x] Initial conversation list, local filter, and source-order message timeline.
+- [ ] In-app attachment preview/playback and full media viewer.
 - [ ] Unified search with section and date filters.
-- [ ] Conversation and media viewers.
 - [ ] Timeline and album browsing.
 - [ ] Archive comparison and selected-data export.
 

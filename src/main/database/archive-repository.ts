@@ -11,8 +11,13 @@ export interface DiscoverySession {
 const now = (): string => new Date().toISOString();
 
 export function getOrCreateAccount(database: DatabaseSync, displayName: string): string {
-  const normalizedName = displayName.trim().replace(/\\s+/gu, ' ');
-  if (!normalizedName || normalizedName.length > 100 || /[\\u0000-\\u001F\\u007F]/u.test(normalizedName)) {
+  const normalizedName = displayName.trim().replace(/\s+/gu, ' ');
+
+  if (
+    !normalizedName ||
+    normalizedName.length > 100 ||
+    /[\u0000-\u001F\u007F]/u.test(normalizedName)
+  ) {
     throw new Error('Account label must contain 1 to 100 printable characters.');
   }
 
@@ -33,26 +38,22 @@ export function getOrCreateAccount(database: DatabaseSync, displayName: string):
 
 export function beginDiscoverySession(
   database: DatabaseSync,
+  accountId: string,
   archiveName: string,
   sourcePath: string
 ): DiscoverySession {
-  const timestamp = now();
-  const accountRow = database.prepare(
-    'SELECT id FROM accounts ORDER BY created_at LIMIT 1'
-  ).get() as { id: string } | undefined;
+  const account = database.prepare(
+    'SELECT id FROM accounts WHERE id = ?'
+  ).get(accountId) as { id: string } | undefined;
 
-  const accountId = accountRow?.id ?? randomUUID();
+  if (!account) throw new Error('The selected account does not exist.');
+
+  const timestamp = now();
   const snapshotId = randomUUID();
   const importRunId = randomUUID();
 
   database.exec('BEGIN IMMEDIATE');
   try {
-    if (!accountRow) {
-      database.prepare(
-        'INSERT INTO accounts (id, display_name, created_at, updated_at) VALUES (?, ?, ?, ?)'
-      ).run(accountId, 'Facebook account', timestamp, timestamp);
-    }
-
     database.prepare(`
       INSERT INTO archive_snapshots (
         id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
@@ -89,6 +90,7 @@ export function insertDiscoveredFiles(
 
   const timestamp = now();
   database.exec('SAVEPOINT source_file_batch');
+
   try {
     for (const file of files) {
       const status = file.fileName.toLocaleLowerCase() === 'no-data.txt' ? 'empty' : 'discovered';
@@ -117,6 +119,7 @@ export function completeDiscoverySession(
 ): void {
   const timestamp = now();
   database.exec('BEGIN IMMEDIATE');
+
   try {
     database.prepare(`
       UPDATE import_runs
@@ -140,6 +143,7 @@ export function completeDiscoverySession(
 export function failDiscoverySession(database: DatabaseSync, session: DiscoverySession): void {
   const timestamp = now();
   database.exec('BEGIN IMMEDIATE');
+
   try {
     database.prepare(`
       UPDATE import_runs

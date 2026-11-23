@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { ArchiveInspectionReport, ArchiveSnapshotSummary } from '../../shared/archive/inspection';
+import type {
+  ArchiveInspectionReport,
+  ArchiveSnapshotSummary,
+  FriendsImportSectionResult
+} from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS } from '../../shared/archive/section-registry';
 
 const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
@@ -10,6 +14,8 @@ function App() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [inspection, setInspection] = useState<ArchiveInspectionReport | null>(null);
   const [savedBackups, setSavedBackups] = useState<ArchiveSnapshotSummary[]>([]);
+  const [friendsImport, setFriendsImport] = useState<FriendsImportSectionResult | null>(null);
+  const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +33,7 @@ function App() {
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
+    setFriendsImport(null);
 
     try {
       const selection = await window.desktopApi.selectBackupDirectory(accountName);
@@ -41,6 +48,22 @@ function App() {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
     } finally {
       setIsChoosingFolder(false);
+    }
+  }
+
+
+  async function importFriends() {
+    setIsImportingFriends(true);
+    setError(null);
+
+    try {
+      const result = await window.desktopApi.importFriendsForSelectedBackup();
+      setFriendsImport(result);
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Friends data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingFriends(false);
     }
   }
 
@@ -173,6 +196,27 @@ function App() {
               </div>
             </div>
 
+
+            <div className="friends-import-action">
+              <div>
+                <strong>Friends</strong>
+                <span>Import the five recognized Friends HTML files. Other sections remain untouched.</span>
+              </div>
+              <button
+                className="secondary-button"
+                onClick={importFriends}
+                disabled={isImportingFriends}
+              >
+                {isImportingFriends ? 'Importing Friends…' : 'Import Friends'}
+              </button>
+            </div>
+            {friendsImport && (
+              <p className="friends-import-result">
+                {friendsImport.filesAttempted} files checked · {friendsImport.recordsImported} records imported ·
+                {friendsImport.unsupportedFiles} unsupported · {friendsImport.failedFiles} failed
+              </p>
+            )}
+
             {inspection.noDataSections.length > 0 && (
               <p className="inventory-note">
                 Explicit no-data markers: {inspection.noDataSections.join(', ')}
@@ -208,7 +252,7 @@ function App() {
                     <span>{backup.accountName}</span>
                   </div>
                   <div className="saved-backup-meta">
-                    <strong>{backup.filesDiscovered.toLocaleString()} files</strong>
+                    <strong>{backup.filesDiscovered.toLocaleString()} files · {backup.recordsImported.toLocaleString()} records</strong>
                     <span>{backup.status === 'discovered' ? 'Inventory saved' : backup.status}</span>
                     <small>{new Date(backup.createdAt).toLocaleString()}</small>
                   </div>

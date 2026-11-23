@@ -73,7 +73,7 @@ function parseAlbumHeading(headingRaw: string): {
   };
 }
 
-function getCoverPath($: cheerio.CheerioAPI, card: cheerio.Cheerio<Element>): string | null {
+function getCoverPath(card: cheerio.Cheerio<Element>): string | null {
   const image = card.find('a[href] img[src]').first();
   const raw = image.attr('src');
   if (!raw) return null;
@@ -128,7 +128,7 @@ export function parsePhotoAlbumsIndex(html: string, sourceFile: string): PhotoAl
       albumTitle: parsedHeading.albumTitle,
       headingRaw: cleanText(headingRaw),
       albumPath,
-      coverPath: getCoverPath($, card),
+      coverPath: getCoverPath(card),
       dateRaw,
       sourceFile: normalizedSource,
       sourceCardIndex

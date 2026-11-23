@@ -19,7 +19,7 @@ describe('archive section catalogue', () => {
   it('describes parser availability separately from sampled section evidence', () => {
     expect(getArchiveImportCapability('friends')).toBe('known-html');
     expect(getArchiveImportCapability('messages')).toBe('sampled-html');
-    expect(getArchiveImportCapability('photos_and_videos')).toBe('media-index-only');
+    expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html');
     expect(getArchiveImportCapability('groups')).toBe('not-implemented');
     expect(getArchiveImportCapability('unknown-section')).toBe('not-implemented');
   });

@@ -5,7 +5,9 @@
   "description": "A local-first Windows desktop application for exploring personal Facebook exports.",
   "type": "module",
   "main": "./out/main/index.js",
-  "engines": {"node": ">=22.12.0"},
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -15,19 +17,46 @@
     "test:watch": "vitest",
     "package:win": "npm run build && electron-builder --win nsis"
   },
-  "dependencies": {"react": "^19.1.0", "react-dom": "^19.1.0"},
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
   "devDependencies": {
-    "@types/node": "^22.15.30", "@types/react": "^19.1.8", "@types/react-dom": "^19.1.5",
-    "@vitejs/plugin-react": "^4.6.0", "electron": "^37.2.6", "electron-builder": "^26.0.12",
-    "electron-vite": "^4.0.0", "typescript": "^5.8.3", "vite": "^6.3.5", "vitest": "^3.2.4"
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.6.0",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^4.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
   },
   "build": {
     "appId": "com.alkbany.facebookarchiveexplorer",
     "productName": "Facebook Archive Explorer",
     "asar": true,
-    "directories": {"output": "release"},
-    "files": ["out/**/*", "package.json"],
-    "win": {"target": [{"target": "nsis", "arch": ["x64"]}]},
-    "nsis": {"oneClick": false, "allowToChangeInstallationDirectory": true}
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

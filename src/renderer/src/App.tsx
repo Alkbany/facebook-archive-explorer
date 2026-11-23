@@ -351,6 +351,46 @@ function App() {
             </div>
             <div className="friends-import-action">
               <div>
+                <strong>Posts</strong>
+                <span>Import sampled post cards, keep exported dates and authors, and link local photos/videos without copying them.</span>
+              </div>
+              <button className="secondary-button" onClick={importPosts} disabled={isImportingPosts}>
+                {isImportingPosts ? 'Importing posts…' : 'Import Posts'}
+              </button>
+            </div>
+            {postsImport && (
+              <p className="friends-import-result">
+                {postsImport.filesAttempted} files checked · {postsImport.recordsImported} posts imported ·
+                {postsImport.mediaReferences} media references · {postsImport.unsupportedFiles} unsupported · {postsImport.failedFiles} failed
+              </p>
+            )}
+            {postsImport && (
+              <section className="conversation-workspace">
+                <div className="conversation-workspace-heading">
+                  <div>
+                    <p className="eyebrow">YOUR ACTIVITY</p>
+                    <h3>Posts</h3>
+                    <p>Original author labels and raw exported dates are preserved. Only local archive media is linked.</p>
+                  </div>
+                  <span>{postRecords.length.toLocaleString()} records</span>
+                </div>
+                <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} placeholder="Filter posts…" />
+                <div className="media-gallery-list">
+                  {postRecords.filter((record) => [record.authorRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase())).map((record) => (
+                    <article className="media-gallery-item" key={record.id}>
+                      <div className="media-gallery-icon">P</div>
+                      <div className="media-gallery-copy">
+                        <strong>{record.authorRaw ?? 'Post'}</strong>
+                        <span>{record.bodyRaw ?? 'No text in export'}{record.mediaCount ? ` · ${record.mediaCount} attachments` : ''}</span>
+                        <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+            <div className="friends-import-action">
+              <div>
                 <strong>Likes &amp; Reactions</strong>
                 <span>Import observed reaction cards while keeping their original descriptions and raw dates.</span>
               </div>

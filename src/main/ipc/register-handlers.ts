@@ -10,7 +10,7 @@ import {
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 
-let selectedBackupDirectory: string | null = null;
+let selectedBackupDirectory: string | null = null;\nlet selectedAccountId: string | null = null;
 
 export function registerIpcHandlers(database: DatabaseSync): void {
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
@@ -21,7 +21,7 @@ export function registerIpcHandlers(database: DatabaseSync): void {
 
   ipcMain.handle(
     IPC_CHANNELS.selectBackupDirectory,
-    async (): Promise<DirectorySelectionResult> => {
+    async (_event, requestedAccountName: unknown): Promise<DirectorySelectionResult> => {
       const result = await dialog.showOpenDialog({
         title: 'Choose your Facebook export folder',
         buttonLabel: 'Select folder',
@@ -42,13 +42,13 @@ export function registerIpcHandlers(database: DatabaseSync): void {
   );
 
   ipcMain.handle(IPC_CHANNELS.inspectSelectedBackup, async () => {
-    if (!selectedBackupDirectory) {
+    if (!selectedBackupDirectory || !selectedAccountId) {
       throw new Error('Select an archive folder before inspecting it.');
     }
 
     const sourcePath = selectedBackupDirectory;
     const archiveName = basename(sourcePath);
-    const session = beginDiscoverySession(database, archiveName, sourcePath);
+    const session = beginDiscoverySession(database, selectedAccountId, archiveName, sourcePath);
 
     try {
       const report = await inspectArchiveDirectory(sourcePath, {

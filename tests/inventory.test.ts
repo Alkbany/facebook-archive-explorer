@@ -15,7 +15,7 @@ describe('inspectArchiveDirectory', () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it('counts files by format and maps known top-level sections', async () => {
+  it('counts files by format, classifies sections, and emits metadata in batches', async () => {
     await mkdir(join(root, 'following_and_followers'), { recursive: true });
     await mkdir(join(root, 'photos_and_videos'), { recursive: true });
     await mkdir(join(root, 'profile_information'), { recursive: true });
@@ -24,8 +24,15 @@ describe('inspectArchiveDirectory', () => {
     await writeFile(join(root, 'photos_and_videos', 'sample.jpg'), 'synthetic-media');
     await writeFile(join(root, 'profile_information', 'profile.json'), '{}');
 
-    const report = await inspectArchiveDirectory(root);
+    const discovered: string[] = [];
+    const report = await inspectArchiveDirectory(root, {
+      snapshotId: 'snapshot-test',
+      accountId: 'account-test',
+      onFilesFound: (files) => discovered.push(...files.map((file) => file.relativePath))
+    });
 
+    expect(report.snapshotId).toBe('snapshot-test');
+    expect(report.accountId).toBe('account-test');
     expect(report.totalFiles).toBe(4);
     expect(report.totalDirectories).toBe(3);
     expect(report.filesByFormat).toEqual({ html: 2, json: 1, media: 1, other: 0 });
@@ -33,6 +40,8 @@ describe('inspectArchiveDirectory', () => {
     expect(report.sectionFileCounts.photos_and_videos).toBe(1);
     expect(report.sectionFileCounts.profile_information).toBe(1);
     expect(report.sectionFileCounts.root).toBe(1);
+    expect(discovered).toHaveLength(4);
+    expect(discovered).toContain('index.html');
     expect(report.truncated).toBe(false);
   });
 
@@ -42,10 +51,16 @@ describe('inspectArchiveDirectory', () => {
     await writeFile(join(root, 'location', 'no-data.txt'), '');
     await writeFile(join(root, 'your_places', 'no-data.txt'), '');
 
-    const report = await inspectArchiveDirectory(root);
+    const discoveredFormats: string[] = [];
+    const report = await inspectArchiveDirectory(root, {
+      snapshotId: 'snapshot-test',
+      accountId: 'account-test',
+      onFilesFound: (files) => discoveredFormats.push(...files.map((file) => file.detectedFormat))
+    });
 
     expect(report.totalFiles).toBe(2);
     expect(report.noDataSections).toEqual(['location', 'your_places']);
     expect(report.filesByFormat.other).toBe(2);
+    expect(discoveredFormats).toEqual(['text', 'text']);
   });
 });

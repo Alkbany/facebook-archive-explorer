@@ -1,5 +1,5 @@
 import { opendir, realpath } from 'node:fs/promises';
-import type { Dirent } from 'node:fs';
+import type { Dir } from 'node:fs';
 import { basename, extname, join, relative, sep } from 'node:path';
 import type { ArchiveInspectionReport } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
@@ -56,7 +56,7 @@ export async function inspectArchiveDirectory(
     const currentDirectory = stack.pop();
     if (!currentDirectory) continue;
 
-    let directory;
+    let directory: Dir;
     try {
       directory = await opendir(currentDirectory);
     } catch {

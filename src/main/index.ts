@@ -25,9 +25,20 @@ function createMainWindow(): BrowserWindow {
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
+  const developmentOrigin = rendererUrl ? new URL(rendererUrl).origin : null;
+
+  // Do not allow the renderer to navigate to arbitrary external or local files.
   window.webContents.on('will-navigate', (event, targetUrl) => {
-    if (rendererUrl && targetUrl.startsWith(rendererUrl)) return;
-    if (!rendererUrl && targetUrl.startsWith('file://')) return;
+    if (developmentOrigin) {
+      try {
+        if (new URL(targetUrl).origin === developmentOrigin) return;
+      } catch {
+        // Invalid navigation URLs are denied below.
+      }
+    } else if (targetUrl === window.webContents.getURL()) {
+      return;
+    }
+
     event.preventDefault();
   });
 

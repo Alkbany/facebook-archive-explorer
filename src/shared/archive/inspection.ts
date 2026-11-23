@@ -270,3 +270,37 @@ export interface FriendDirectoryView {
   page: number;
   pageSize: number;
 }
+
+
+export type ArchiveFileStatus = 'all' | 'discovered' | 'queued' | 'processing' | 'completed' | 'empty' | 'unsupported' | 'failed' | 'skipped';
+
+export interface ArchiveFileRecord {
+  id: number;
+  relativePath: string;
+  fileName: string;
+  sectionKey: string;
+  detectedFormat: DetectedArchiveFormat;
+  status: Exclude<ArchiveFileStatus, 'all'>;
+  fileSizeBytes: number | null;
+  recordCount: number;
+  safeErrorCode: string | null;
+  processedAt: string | null;
+}
+
+export interface ArchiveFileDirectoryView {
+  records: ArchiveFileRecord[];
+  counts: {
+    all: number;
+    discovered: number;
+    queued: number;
+    processing: number;
+    completed: number;
+    empty: number;
+    unsupported: number;
+    failed: number;
+    skipped: number;
+  };
+  total: number;
+  page: number;
+  pageSize: number;
+}

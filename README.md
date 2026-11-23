@@ -42,11 +42,17 @@ npm run package:win
 
 The development dependency installation requires an internet connection. The application is designed to process selected archives locally once installed.
 
-## Current milestone
+## Current capabilities
 
-The first milestone establishes the desktop shell, secure IPC boundary, starter screen, project documentation, section evidence catalogue, Arabic search normalization, and an initial database schema proposal.
+- Electron desktop shell with a secure, narrow preload API.
+- Native selection of a local export directory.
+- Bounded inventory of file and folder names and basic file extensions; archive contents are not opened during this first pass.
+- Symbolic links are skipped, unreadable directories are counted, and very large inventories are marked as truncated.
+- A safe relative-path resolver with traversal tests.
+- Section evidence catalogue and Arabic-aware search normalization.
+- Initial SQLite schema proposal (not connected to a runtime database yet).
 
-The actual import engine and runtime database integration are not complete yet. Follow [the roadmap](docs/ROADMAP.md) for implementation status.
+The actual HTML/JSON parsers, ZIP reader, SQLite runtime, media viewers, and search UI are not implemented yet. Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 
 ## Documentation
 

@@ -5,6 +5,8 @@ export interface DiscoveredArchiveFile {
   fileName: string;
   sectionKey: string;
   detectedFormat: DetectedArchiveFormat;
+  /** File byte length from filesystem metadata or the ZIP central directory. */
+  fileSizeBytes?: number | null;
 }
 
 export interface ArchiveInspectionReport {

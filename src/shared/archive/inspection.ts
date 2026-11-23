@@ -26,3 +26,12 @@ export interface ArchiveInspectionReport {
   unreadableDirectories: number;
   truncated: boolean;
 }
+
+export interface ArchiveSnapshotSummary {
+  id: string;
+  accountName: string;
+  backupName: string;
+  status: string;
+  createdAt: string;
+  filesDiscovered: number;
+}

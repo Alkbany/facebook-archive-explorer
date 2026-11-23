@@ -130,7 +130,6 @@ function App() {
       setMediaGallery(media);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
-      setImportCoverage(coverage);
       setSavedBackups(backups);
     } catch {
       setError('The selected folder could not be inspected. Check that it is accessible and try again.');
@@ -145,6 +144,7 @@ function App() {
     setError(null);
     setInspection(null);
     setImportIssueReport(null);
+    setImportCoverage(null);
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
@@ -192,6 +192,7 @@ function App() {
       setConversations(foundConversations);
       setMediaGallery(media);
       setImportIssueReport(issues);
+      setImportCoverage(coverage);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setInspection(null);

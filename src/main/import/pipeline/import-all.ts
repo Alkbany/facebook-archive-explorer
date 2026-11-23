@@ -101,7 +101,8 @@ export function recoverInterruptedImports(database: DatabaseSync, snapshotId: st
       UPDATE archive_snapshots SET status = 'partial', updated_at = ?
       WHERE id = ? AND status NOT IN ('failed', 'cancelled')
     `).run(timestamp, snapshotId);
-    database.exec('RELEASE startup_import_recovery');
+  }
+  database.exec('RELEASE startup_import_recovery');
   } catch (error) {
     database.exec('ROLLBACK TO startup_import_recovery');
     database.exec('RELEASE startup_import_recovery');

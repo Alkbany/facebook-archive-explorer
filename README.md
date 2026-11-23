@@ -90,6 +90,7 @@ Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 - [Import pipeline](docs/IMPORT-PIPELINE.md)
 - [Data model](docs/DATA-MODEL.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Windows code signing](docs/CODE-SIGNING.md)
 
 
 ## Current import support

@@ -121,20 +121,28 @@ export function parseMessageConversation(html: string, sourceFile: string): Mess
       media.push({ kind: mediaKind(relativePath, elementType), relativePath, element: elementType });
     };
 
-    bodyElement.find('img[src]').each((_index, image) => addMedia($(image).attr('src'), 'img'));
-    bodyElement.find('video[src]').each((_index, video) => addMedia($(video).attr('src'), 'video'));
-    bodyElement.find('audio[src]').each((_index, audio) => addMedia($(audio).attr('src'), 'audio'));
-    bodyElement.find('video source[src], audio source[src]').each((_index, source) => {
-      const parent = $(source).parent().get(0)?.tagName;
-      addMedia($(source).attr('src'), parent === 'video' ? 'video' : 'audio');
-    });
-
-    bodyElement.find('a[href]').each((_index, anchor) => {
-      const href = $(anchor).attr('href');
-      if (href && /\.(png|jpe?g|gif|webp|bmp|mp4|mov|webm|m4v|mp3|m4a|aac|wav|ogg|opus)(?:$|[?#])/iu.test(href)) {
-        addMedia(href, 'link');
-      }
-    });
+    bodyElement.find('img[src], video[src], audio[src], video source[src], audio source[src], a[href]')
+      .each((_index, node) => {
+        const element = $(node);
+        const tagName = node.tagName?.toLowerCase();
+        if (tagName === 'img') {
+          addMedia(element.attr('src'), 'img');
+          return;
+        }
+        if (tagName === 'video' || tagName === 'audio') {
+          addMedia(element.attr('src'), tagName);
+          return;
+        }
+        if (tagName === 'source') {
+          const parent = element.parent().get(0)?.tagName?.toLowerCase();
+          addMedia(element.attr('src'), parent === 'video' ? 'video' : 'audio');
+          return;
+        }
+        const href = element.attr('href');
+        if (href && /\\.(png|jpe?g|gif|webp|bmp|mp4|mov|webm|m4v|mp3|m4a|aac|wav|ogg|opus)(?:$|[?#])/iu.test(href)) {
+          addMedia(href, 'link');
+        }
+      });
 
     const hasContent = Boolean(bodyText || media.length || reactionsRaw.length);
     if (!hasContent) {

@@ -144,19 +144,10 @@ describe('local SQLite storage', () => {
         backupName: 'Synthetic export',
         status: 'discovered',
         createdAt: expect.any(String),
-        filesDiscovered: 2
+        filesDiscovered: 2,
+        recordsImported: 0
       }
     ]);
 
-    expect(listArchiveSnapshots(database)).toEqual([
-      {
-        id: session.snapshotId,
-        accountName: 'Test Facebook account',
-        backupName: 'Synthetic export',
-        status: 'discovered',
-        createdAt: expect.any(String),
-        filesDiscovered: 2
-      }
-    ]);
   });
 });

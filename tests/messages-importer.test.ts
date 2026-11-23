@@ -47,7 +47,6 @@ describe('Messages conversation import', () => {
     addSource.run(snapshotId, 'messages/inbox/thread-1/thread.html', 'thread.html', 'html', timestamp);
     addSource.run(snapshotId, 'messages/inbox/thread-1/photos/photo.jpg', 'photo.jpg', 'image', timestamp);
     addSource.run(snapshotId, 'messages/inbox/thread-1/audio/clip.mp4', 'clip.mp4', 'video', timestamp);
-    database.prepare("UPDATE source_files SET status = 'completed' WHERE relative_path = 'messages/inbox/thread-1/thread.html'").run();
   });
 
   afterEach(async () => {
@@ -117,6 +116,7 @@ describe('Messages conversation import', () => {
   });
 
   it('does not import arbitrary HTML outside conversation folders', async () => {
+    database.prepare("UPDATE source_files SET status = 'completed' WHERE relative_path = 'messages/inbox/thread-1/thread.html'").run();
     const timestamp = new Date().toISOString();
     database.prepare(`
       INSERT INTO source_files (

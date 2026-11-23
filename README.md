@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, and a tested Friends importer. Only the five known Friends HTML files are currently parsed. Other sections, JSON files, ZIP archives, messages, posts, and media are not yet imported.
+> **Status: active early implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory discovery, Friends and Messages importers, and an initial local conversation browser. Posts, JSON exports, ZIP archives, and full media browsing are still pending.
 
 ## Product decisions
 
@@ -52,13 +52,17 @@ The development dependency installation requires an internet connection. The app
 - DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
 - Explicit **Import Friends** action that stores records locally, preserves duplicate names and raw dates, and records unsupported structures as issues.
 - Contact information from the current friends page is stored separately in the local record payload and is not added to FTS5.
+- DOM parsing and explicit **Import Messages** action for discovered conversation HTML in inbox, archived, filtered, and request folders.
+- Initial conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and attachment-reference indicators.
+- Message records are marked sensitive and excluded from FTS5 by default.
+- Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
 - Arabic-aware search normalization and FTS5 schema are in place.
 
 ## Not implemented yet
 
-- Parsers and importers for messages, posts, comments, reactions, photos, videos, groups, and the other export sections.
+- Parsers and importers for posts, comments, reactions, photos, videos, groups, and other export sections.
 - JSON import, ZIP discovery/import, resumable large-scale import orchestration, and full integrity reporting.
-- Media gallery, conversation viewer, unified search UI, archive comparison, and selected-data export.
+- Media gallery and in-app playback/preview of original attachments, unified search UI, archive comparison, and selected-data export.
 - Optional local embeddings and local LLM integration.
 
 Follow [the roadmap](docs/ROADMAP.md) for implementation status.

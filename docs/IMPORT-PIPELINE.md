@@ -5,7 +5,7 @@
 1. **Selection** — the user selects one source directory. ZIP selection is planned but not implemented.
 2. **Discovery** — inventory directory and file names without opening file contents or changing the source. The current implementation has a safety cap and reports when an inventory is incomplete.
 3. **Classification** — identify likely section and basic file format. Runtime discovery remains authoritative.
-4. **Validation** — check readability, encoding, and expected structural markers.
+4. **Validation** — check path containment, symbolic links, readability, and file-size limits before opening supported text files.
 5. **Parsing** — use a DOM parser for HTML and a JSON parser for JSON.
 6. **Normalization** — preserve original values and generate separate normalized search values.
 7. **Persistence** — save records and source references transactionally.
@@ -19,32 +19,45 @@
 - The first pass reads directory entries and file extensions only. It does not open HTML, JSON, messages, photos, or other file contents.
 - A discovery session, account label, independent backup snapshot, and source-file rows are persisted in the local SQLite database.
 - The renderer can list saved backup inventories after the application restarts.
-- Symbolic links are skipped rather than followed.
+- Symbolic links are skipped during discovery.
 - Inaccessible folders are counted as warnings.
 - Inventory stops at a fixed entry limit and sets `truncated` when the limit is reached.
 - Explicit `no-data.txt` markers are reported by section.
 
+## First supported importer: Friends
+
+The overview screen exposes an explicit **Import Friends** action after a folder has been inspected. It currently processes only these five known filenames in the `friends` section:
+
+- `friends.html`
+- `received_friend_requests.html`
+- `sent_friend_requests.html`
+- `rejected_friend_requests.html`
+- `removed_friends.html`
+
+The importer reads each file only after validating every path component. It rejects symbolic links, paths outside the selected archive, non-regular files, and files above the configured size limit. HTML is parsed with Cheerio's DOM parser.
+
+Each imported record retains its record type, raw name, raw date, source file, and original card index. Repeated names remain separate records. No Facebook profile IDs or date meanings are invented. On the current friends page, optional contact details are stored separately in the record payload and are not copied into FTS5 title/body fields.
+
+A file with no recognized Friends cards is marked unsupported and gets a safe import issue instead of being reported as successfully imported with zero records. Cards without readable names generate warnings while valid cards are still imported.
+
+## Not implemented yet
+
+- Importers for messages, posts, photos, comments, reactions, groups, and remaining export sections.
+- JSON import and ZIP discovery/import.
+- Full resumable import orchestration across all sections and integrity comparison.
+- Automatic image/video/audio indexing and media gallery generation.
+
 ## Resume safety
 
-Every discovered file will receive a stable source-file row and status. Import runs will record their state and last safely committed unit of work. On restart, the importer must resume from committed work rather than repeating or partially overwriting it.
-
-A file must be marked complete only after its records and final status are committed successfully.
-
-## Failure policy
-
-Never silently ignore an unsupported file. Preserve the original source file. Distinguish empty, missing, unreadable, unsupported, and parser-failed files. Parsing must be deterministic and independent of AI.
+Full multi-section resume orchestration is not implemented yet. The schema tracks per-file state and import runs, but the application must not claim that a large import can currently resume end-to-end.
 
 ## Duplicate handling
 
-Do not delete or merge records because names, timestamps, or text look similar. Use file hashes and conservative fingerprints to flag possible duplicates.
-
-## HTML and media
-
-Use a maintained DOM parser. Keep raw text and normalize a separate copy. Resolve document-relative media paths while rejecting paths outside the selected export root. Store media metadata and relative paths; do not copy media bytes into the database. Generate thumbnails only in an app-owned cache.
+Do not delete or merge records because names, timestamps, or text look similar. The Friends importer uses source file plus card index for stable per-file upserts; this does not merge different cards with the same name.
 
 ## Evidence levels
 
-- `sampled`: a representative HTML structure was reviewed; no production parser is implied.
+- `sampled`: a representative HTML structure was reviewed; a parser may be implemented only for the explicitly listed file types.
 - `filename-only`: only file and folder names have been identified.
 - `no-data`: an explicit no-data marker was observed.
 

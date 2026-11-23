@@ -50,7 +50,7 @@ describe('parseMessageConversation', () => {
   });
 
   it('keeps sticker references distinct from ordinary images', () => {
-    const html = CARD('<img src="messages/stickers_used/sticker.png">');
+    const html = `<html><head><base href="../../../"></head><body>${CARD('<img src="messages/stickers_used/sticker.png">')}</body></html>`;
     const result = parseMessageConversation(html, 'messages/inbox/thread/thread.html');
 
     expect(result.messages[0].media[0]).toMatchObject({

@@ -106,6 +106,34 @@ describe('ZIP archive reader and inventory', () => {
     }
   });
 
+  it('batches ZIP inventory entries and respects a reduced entry cap', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'archive-zip-batches-'));
+    try {
+      const zipPath = join(root, 'bounded.zip');
+      await writeFile(zipPath, makeDeflatedZip(
+        Array.from({ length: 5 }, (_, index) => ({
+          name: 'posts/post-' + index + '.html',
+          content: Buffer.from('<html>synthetic</html>')
+        }))
+      ));
+
+      const batchSizes: number[] = [];
+      const report = await inspectArchiveZip(zipPath, {
+        snapshotId: 'snapshot-zip-batches',
+        accountId: 'account-zip-batches',
+        maxEntries: 3,
+        batchSize: 2,
+        onFilesFound: (files) => batchSizes.push(files.length)
+      });
+
+      expect(report.totalFiles).toBe(3);
+      expect(report.truncated).toBe(true);
+      expect(batchSizes).toEqual([2, 1]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('rejects traversal paths even when they are inside a ZIP central directory', async () => {
     const root = await mkdtemp(join(tmpdir(), 'archive-zip-path-'));
     try {

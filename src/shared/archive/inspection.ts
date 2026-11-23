@@ -79,6 +79,35 @@ export interface PhotoAlbumRecordSummary {
   albumPath: string;
   coverPath: string | null;
   dateRaw: string | null;
+  detailStatus: string;
+  importedPhotoCount: number;
+}
+
+export interface PhotoAlbumCommentSummary {
+  authorRaw: string | null;
+  bodyRaw: string | null;
+  dateRaw: string | null;
+}
+
+export interface PhotoAlbumPhotoSummary {
+  id: number;
+  sourcePath: string;
+  sourceCardIndex: number;
+  albumTitle: string;
+  imageAssetId: number | null;
+  imagePath: string;
+  originalPath: string | null;
+  captionRaw: string | null;
+  dateRaw: string | null;
+  comments: PhotoAlbumCommentSummary[];
+}
+
+export interface PhotoAlbumDetailView {
+  albumRecordId: number;
+  albumTitle: string;
+  albumPath: string;
+  detailFileStatus: string;
+  photos: PhotoAlbumPhotoSummary[];
 }
 
 export interface PostRecordSummary {

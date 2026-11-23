@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { ImportAllSupportedDataResult } from '../../../shared/archive/inspection';
 import { importFriendsSection } from './friends-importer';
@@ -16,13 +17,15 @@ export function recoverInterruptedImports(database: DatabaseSync, snapshotId: st
   const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
     .get(snapshotId) as { status: string } | undefined;
   const processingFiles = database.prepare(`
-    SELECT COUNT(*) AS count FROM source_files
+    SELECT id FROM source_files
     WHERE snapshot_id = ? AND status = 'processing'
-  `).get(snapshotId) as { count: number };
+    ORDER BY id
+  `).all(snapshotId) as Array<{ id: number }>;
   const runningImports = database.prepare(`
-    SELECT COUNT(*) AS count FROM import_runs
+    SELECT id FROM import_runs
     WHERE snapshot_id = ? AND run_type = 'import' AND status = 'running'
-  `).get(snapshotId) as { count: number };
+    ORDER BY started_at, id
+  `).all(snapshotId) as Array<{ id: string }>;
 
   database.prepare(`
     UPDATE source_files
@@ -30,13 +33,68 @@ export function recoverInterruptedImports(database: DatabaseSync, snapshotId: st
     WHERE snapshot_id = ? AND status = 'processing'
   `).run(timestamp, snapshotId);
 
-  database.prepare(`
-    UPDATE import_runs
-    SET status = 'failed', finished_at = ?, errors_count = errors_count + 1
-    WHERE snapshot_id = ? AND run_type = 'import' AND status = 'running'
-  `).run(timestamp, snapshotId);
+  // A processing file should normally have a running per-file import run.
+  // Create a failed recovery run only when the database contains an orphaned
+  // processing marker, so every recovered file still has a diagnostics link.
+  const diagnosticRunIds = [...runningImports];
+  if (processingFiles.length > 0 && diagnosticRunIds.length === 0) {
+    const recoveryRunId = randomUUID();
+    database.prepare(`
+      INSERT INTO import_runs (
+        id, snapshot_id, run_type, status, started_at, finished_at,
+        files_discovered, files_processed, records_imported, errors_count
+      ) VALUES (?, ?, 'import', 'failed', ?, ?, ?, ?, 0, ?)
+    `).run(
+      recoveryRunId,
+      snapshotId,
+      timestamp,
+      timestamp,
+      processingFiles.length,
+      processingFiles.length,
+      processingFiles.length
+    );
+    diagnosticRunIds.push({ id: recoveryRunId });
+  }
 
-  if (snapshot?.status === 'importing' || processingFiles.count > 0 || runningImports.count > 0) {
+  const issueCounts = new Map<string, number>();
+  const insertInterruptedIssue = database.prepare(`
+    INSERT INTO import_issues (
+      import_run_id, source_file_id, severity, issue_code, safe_message, context_json, created_at
+    ) VALUES (?, ?, 'error', 'IMPORT_INTERRUPTED', ?, '{"recoveredAtStartup":true}', ?)
+  `);
+
+  const safeFileMessage = 'The import process ended before this source file finished. Retry the section to import it again.';
+  const safeArchiveMessage = 'The import process ended before its active operation completed. Retry the section to continue.';
+
+  if (processingFiles.length > 0) {
+    processingFiles.forEach((file, index) => {
+      const run = diagnosticRunIds[Math.min(index, diagnosticRunIds.length - 1)];
+      if (!run) return;
+      insertInterruptedIssue.run(run.id, file.id, safeFileMessage, timestamp);
+      issueCounts.set(run.id, (issueCounts.get(run.id) ?? 0) + 1);
+    });
+  }
+
+  // A run can be left behind if the process stops between creating its run
+  // row and marking a source file as processing. Keep that visible as an
+  // archive-level diagnostic instead of silently failing the run.
+  const firstUnmatchedRun = processingFiles.length > 0 ? Math.min(processingFiles.length, diagnosticRunIds.length) : 0;
+  for (let index = firstUnmatchedRun; index < diagnosticRunIds.length; index += 1) {
+    const run = diagnosticRunIds[index];
+    insertInterruptedIssue.run(run.id, null, safeArchiveMessage, timestamp);
+    issueCounts.set(run.id, (issueCounts.get(run.id) ?? 0) + 1);
+  }
+
+  for (const run of runningImports) {
+    const addedErrors = issueCounts.get(run.id) ?? 1;
+    database.prepare(`
+      UPDATE import_runs
+      SET status = 'failed', finished_at = ?, errors_count = errors_count + ?
+      WHERE id = ? AND status = 'running'
+    `).run(timestamp, addedErrors, run.id);
+  }
+
+  if (snapshot?.status === 'importing' || processingFiles.length > 0 || runningImports.length > 0) {
     database.prepare(`
       UPDATE archive_snapshots SET status = 'partial', updated_at = ?
       WHERE id = ? AND status NOT IN ('failed', 'cancelled')

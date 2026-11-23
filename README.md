@@ -51,7 +51,7 @@ The development dependency installation requires an internet connection. The app
 - A symlink-aware archive text reader with path containment and file-size checks for directory and ZIP sources.
 - DOM parsing for the five known Friends exports: current friends, received requests, sent requests, rejected requests, and removed friends.
 - Explicit **Import Friends** action and one-click **Import All Supported Data** workflow, which sequentially runs the reviewed Friends, Messages, Posts, Comments, and Likes & Reactions importers.
-- The combined import reports file/record/media/error totals; completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
+- The combined import reports file/record/media/error totals and live per-file progress for Friends, Messages, Posts, Comments, and Likes & Reactions; progress events contain counts and section names only. Completed files are skipped on subsequent runs and failed or unsupported files remain eligible for retry.
 - Snapshot-scoped Import Diagnostics lists safe error/warning/notices with source-file and card-position references; the latest 250 issues are shown while severity totals cover the full report.
 - Per-section Import Coverage separates content files from media inventory and shows completed, unsupported, failed, not processed, empty, and skipped file states.
 - The combined import recovers source files and runs left in a `processing` state after an interrupted session and retries the files; full progress journaling, integrity reporting, and safe resume checkpoints remain planned.

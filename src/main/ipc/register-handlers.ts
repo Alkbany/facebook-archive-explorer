@@ -19,10 +19,9 @@ import { listPostRecords, listCommentActivities } from '../database/activity-rep
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
-import { getMessageConversation, listMessageConversations, listMessageMediaGallery } from '../database/messages-repository';
+import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredMediaAssets } from '../database/media-indexer';
-import { listArchiveMediaGallery } from '../database/messages-repository';
 import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots } from '../database/comparison-repository';
 
@@ -137,7 +136,8 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     if (typeof query !== 'string' || !(sectionKey === null || typeof sectionKey === 'string')) {
       throw new Error('Invalid export request.');
     }
-    const results = searchArchiveRecords(database, selectedSnapshotId, query, sectionKey);
+    const snapshotId = selectedSnapshotId;
+    const results = searchArchiveRecords(database, snapshotId, query, sectionKey);
     const save = await dialog.showSaveDialog({
       title: 'Export archive search results',
       defaultPath: 'facebook-archive-search-results.json',
@@ -146,7 +146,7 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     if (save.canceled || !save.filePath) return { status: 'cancelled' as const };
     const payload = {
       exportedAt: new Date().toISOString(),
-      snapshotId: selectedSnapshotId,
+      snapshotId,
       query: query.trim(),
       sectionKey,
       records: results

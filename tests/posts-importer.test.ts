@@ -56,9 +56,15 @@ describe('Posts import', () => {
     const record = database.prepare('SELECT title, body_text, event_time_raw FROM records WHERE snapshot_id = ?')
       .get(snapshotId) as { title: string; body_text: string; event_time_raw: string };
     expect(record).toMatchObject({ title: 'تم النشر بواسطة Ahmed في MagicalGhast.', body_text: 'نص منشور تجريبي', event_time_raw: 'Raw date' });
-    const media = database.prepare('SELECT relative_path, media_kind FROM media_assets WHERE snapshot_id = ?')
-      .get(snapshotId) as { relative_path: string; media_kind: string };
-    expect(media).toMatchObject({ relative_path: 'photos_and_videos/your_posts/photo.jpg', media_kind: 'image' });
+    const media = database.prepare('SELECT relative_path, media_kind, source_file_id FROM media_assets WHERE snapshot_id = ?')
+      .get(snapshotId) as { relative_path: string; media_kind: string; source_file_id: number };
+    const binarySource = database.prepare('SELECT id FROM source_files WHERE snapshot_id = ? AND relative_path = ?')
+      .get(snapshotId, 'photos_and_videos/your_posts/photo.jpg') as { id: number };
+    expect(media).toMatchObject({
+      relative_path: 'photos_and_videos/your_posts/photo.jpg',
+      media_kind: 'image',
+      source_file_id: binarySource.id
+    });
     expect(listPostRecords(database, snapshotId)).toMatchObject([{ bodyRaw: 'نص منشور تجريبي', mediaCount: 1 }]);
   });
 

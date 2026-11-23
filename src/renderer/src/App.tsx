@@ -30,6 +30,8 @@ function App() {
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchExportStatus, setSearchExportStatus] = useState('');
+  const [searchedQuery, setSearchedQuery] = useState<string | null>(null);
+  const [searchedSection, setSearchedSection] = useState('all');
   const [comparisonBaselineId, setComparisonBaselineId] = useState('');
   const [comparisonTargetId, setComparisonTargetId] = useState('');
   const [comparisonReport, setComparisonReport] = useState<ArchiveComparisonReport | null>(null);
@@ -78,6 +80,8 @@ function App() {
     setSearchResults([]);
     setSearchQuery('');
     setSearchExportStatus('');
+    setSearchedQuery(null);
+    setSearchedSection('all');
     setComparisonReport(null);
     setMediaGallery([]);
     setFriendsImport(null);
@@ -121,13 +125,17 @@ function App() {
   }
 
   async function runArchiveSearch() {
+    const query = searchQuery;
+    const section = searchSection === 'all' ? null : searchSection;
     setIsSearching(true);
     setSearchExportStatus('');
+    setSearchedQuery(null);
     setError(null);
     try {
-      setSearchResults(await window.desktopApi.searchRecordsForSelectedBackup(
-        searchQuery, searchSection === 'all' ? null : searchSection
-      ));
+      const results = await window.desktopApi.searchRecordsForSelectedBackup(query, section);
+      setSearchResults(results);
+      setSearchedQuery(query);
+      setSearchedSection(searchSection);
     } catch {
       setSearchResults([]);
       setError('Search could not be completed. Try a shorter search phrase.');
@@ -137,11 +145,12 @@ function App() {
   }
 
   async function exportArchiveSearch() {
+    if (searchedQuery === null) return;
     setSearchExportStatus('');
     setError(null);
     try {
       const result = await window.desktopApi.exportSearchResultsForSelectedBackup(
-        searchQuery, searchSection === 'all' ? null : searchSection
+        searchedQuery, searchedSection === 'all' ? null : searchedSection
       );
       setSearchExportStatus(result.status === 'saved'
         ? `Saved ${result.recordsExported} records to ${result.fileName}.`
@@ -418,12 +427,22 @@ function App() {
                 <span>{searchResults.length.toLocaleString()} results</span>
               </div>
               <div className="unified-search-controls">
-                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)}
+                <input value={searchQuery} onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setSearchResults([]);
+                  setSearchedQuery(null);
+                  setSearchExportStatus('');
+                }}
                   onKeyDown={(event) => { if (event.key === 'Enter') void runArchiveSearch(); }}
                   maxLength={180} placeholder="Search names, posts, comments, or reactions…" aria-label="Search archive text" />
-                <select value={searchSection} onChange={(event) => setSearchSection(event.target.value)} aria-label="Filter search by section">
+                <select value={searchSection} onChange={(event) => {
+                  setSearchSection(event.target.value);
+                  setSearchResults([]);
+                  setSearchedQuery(null);
+                  setSearchExportStatus('');
+                }} aria-label="Filter search by section">
                   <option value="all">All searchable sections</option>
-                  {ARCHIVE_SECTIONS.filter((section) => section.key !== 'messages' && section.evidence !== 'no-data').map((section) => (
+                  {ARCHIVE_SECTIONS.filter((section) => ['friends', 'posts', 'comments', 'likes_and_reactions'].includes(section.key)).map((section) => (
                     <option key={section.key} value={section.key}>{section.title}</option>
                   ))}
                 </select>
@@ -449,7 +468,7 @@ function App() {
               </div>
               <div className="search-export-row">
                 <span>{searchExportStatus || (searchResults.length === 250 ? 'The result list is capped at 250 records.' : '')}</span>
-                <button className="secondary-button" onClick={() => void exportArchiveSearch()} disabled={!searchResults.length || isSearching}>
+                <button className="secondary-button" onClick={() => void exportArchiveSearch()} disabled={!searchResults.length || searchedQuery === null || isSearching}>
                   Export results as JSON
                 </button>
               </div>

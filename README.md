@@ -84,8 +84,11 @@ Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 ## Current import support
 
 - Friends: five recognized HTML exports.
-- Messages: observed conversation HTML, local attachments, and a browsable media library.
-- Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified, with a searchable local activity panel.
-- Audio/video attachments stream locally from the selected backup with byte-range seeking.
+- Messages: observed conversation HTML, local attachments, and a browsable conversation explorer.
+- Posts: sampled post-card HTML with source-provenanced records and verified local media links.
+- Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
+- Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
+- Media: all discovered image/video/audio paths are indexed, with associated record context where a supported parser has linked them.
+- Audio/video: supported local files stream from the selected backup with byte-range seeking.
 
-Posts and Comments have sampled HTML importers. Their production compatibility still needs validation against a complete real backup.
+The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.

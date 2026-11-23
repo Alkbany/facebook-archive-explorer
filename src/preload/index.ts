@@ -24,6 +24,8 @@ const desktopApi: DesktopApi = {
   importFriendsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importFriendsForSelectedBackup),
   listFriendsDirectoryForSelectedBackup: (filter, query, page) =>
     ipcRenderer.invoke(IPC_CHANNELS.listFriendsDirectoryForSelectedBackup, filter, query, page),
+  listArchiveFilesForSelectedBackup: (status, sectionKey, query, page) =>
+    ipcRenderer.invoke(IPC_CHANNELS.listArchiveFilesForSelectedBackup, status, sectionKey, query, page),
   importAllSupportedDataForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importAllSupportedDataForSelectedBackup),
   importPhotosAndVideosForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importPhotosAndVideosForSelectedBackup),
   importPostsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importPostsForSelectedBackup),

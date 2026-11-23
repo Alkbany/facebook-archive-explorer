@@ -4,7 +4,7 @@
 
 The NSIS artifacts produced by pushes to `main` are development/test builds. They may be unsigned when no signing certificate is configured. Smart App Control can block an unknown unsigned app, so these artifacts must not be presented as consumer-ready installers.
 
-A version tag (`v*`) is treated as a release. The Windows workflow requires valid Authenticode signatures on every packaged `.exe`, `.dll`, and `.node` binary before it uploads the release artifact. The GitHub Release job only runs after this verification succeeds.
+A version tag (`v*`) is treated as a release. The Windows workflow configures electron-builder to sign `.dll`, `.node`, `.sys`, and `.ocx` files in addition to its default executable signing. Before it uploads a version release, a PowerShell verification step checks every packaged `.exe`, `.dll`, `.node`, `.sys`, and `.ocx` binary for a valid Authenticode signature with the Code Signing EKU. The GitHub Release job only runs after this verification succeeds.
 
 ## Configure a trusted certificate
 

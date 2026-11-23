@@ -56,7 +56,7 @@ describe('message media previews', () => {
     await expect(getMessageMediaPreview(database, snapshotId, imageId)).rejects.toThrow('not supported');
   });
   it('rejects a media type and extension mismatch', async () => {
-    database.prepare("UPDATE media_assets SET relative_path = 'messages/inbox/thread-1/photos/clip.mp4' WHERE id = ?").run(imageId);
+    database.prepare("UPDATE media_assets SET relative_path = 'messages/inbox/thread-1/photos/mismatch.mp4' WHERE id = ?").run(imageId);
     await expect(getMessageMediaPreview(database, snapshotId, imageId)).rejects.toThrow('extension does not match');
   });
   it('rejects media files above the bounded preview size', async () => {

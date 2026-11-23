@@ -82,7 +82,7 @@ Follow [the roadmap](docs/ROADMAP.md) for implementation status.
 
 - Friends: five recognized HTML exports.
 - Messages: observed conversation HTML, local attachments, and a browsable media library.
-- Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
+- Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified, with a searchable local activity panel.
 - Audio/video attachments stream locally from the selected backup with byte-range seeking.
 
 Posts and Comments import support remains planned; their exact card structures must be validated before implementation.

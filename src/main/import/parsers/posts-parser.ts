@@ -32,7 +32,7 @@ function cleanText(value: string): string {
 
 function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>): PostMediaReference[] {
   const found: PostMediaReference[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
   content.find('img[src], video[src], audio[src], video source[src], audio source[src], a[href]').each((_index, element) => {
     const node = $(element);
     const tag = element.tagName.toLowerCase();
@@ -43,9 +43,16 @@ function collectMedia($: cheerio.CheerioAPI, content: cheerio.Cheerio<Element>):
     if (/^(?:https?:|data:|file:|javascript:)/iu.test(normalized) ||
         normalized.startsWith('/') || normalized.split('/').includes('..') ||
         !MEDIA_PATH_PREFIXES.some((prefix) => normalized.startsWith(prefix))) return;
-    const key = `${tag}:${normalized}`;
-    if (seen.has(key)) return;
-    seen.add(key);
+    const key = normalized;
+    const previousIndex = seen.get(key);
+    if (previousIndex !== undefined) {
+      if (tag === 'img' || tag === 'video' || tag === 'audio') {
+        found[previousIndex].tagName = tag;
+        found[previousIndex].sourceAttribute = 'src';
+      }
+      return;
+    }
+    seen.set(key, found.length);
     found.push({
       relativePath: normalized,
       tagName: tag === 'source' ? 'video' : tag as PostMediaReference['tagName'],

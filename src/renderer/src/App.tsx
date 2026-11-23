@@ -86,10 +86,13 @@ function App() {
     setIsLoadingConversation(true);
     try {
       const messages = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId);
+      let previewsLoaded = 0;
       const withPreviews = await Promise.all(messages.map(async (message) => ({
         ...message,
         media: await Promise.all(message.media.map(async (media) => {
           if (media.mediaKind !== 'image' && media.mediaKind !== 'sticker') return media;
+          if (previewsLoaded >= 8) return media;
+          previewsLoaded += 1;
           try {
             return { ...media, previewDataUrl: await window.desktopApi.getMessageImagePreview(media.id) };
           } catch {

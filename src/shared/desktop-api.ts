@@ -31,6 +31,7 @@ export const IPC_CHANNELS = {
   selectBackupDirectory: 'archive:select-directory',
   inspectSelectedBackup: 'archive:inspect-selected',
   listArchiveSnapshots: 'archive:list-snapshots',
+  openSavedSnapshot: 'archive:open-saved-snapshot',
   importFriendsForSelectedBackup: 'archive:import-friends',
   importAllSupportedDataForSelectedBackup: 'archive:import-all-supported-data',
   importPostsForSelectedBackup: 'archive:import-posts',
@@ -55,6 +56,7 @@ export interface DesktopApi {
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;
   inspectSelectedBackup(): Promise<ArchiveInspectionReport>;
   listArchiveSnapshots(): Promise<ArchiveSnapshotSummary[]>;
+  openSavedSnapshot(snapshotId: string): Promise<ArchiveInspectionReport>;
   importFriendsForSelectedBackup(): Promise<FriendsImportSectionResult>;
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;

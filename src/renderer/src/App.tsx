@@ -120,6 +120,63 @@ function App() {
   }
 
 
+  async function openSavedBackup(snapshotId: string) {
+    setIsChoosingFolder(true);
+    setError(null);
+    setInspection(null);
+    setSearchResults([]);
+    setSearchQuery('');
+    setSearchExportStatus('');
+    setSearchedQuery(null);
+    setSearchedSection('all');
+    setComparisonReport(null);
+    setMediaGallery([]);
+    setImportAllSummary(null);
+    setFriendsImport(null);
+    setPostsImport(null);
+    setPostRecords([]);
+    setPostFilter('');
+    setCommentsImport(null);
+    setCommentRecords([]);
+    setCommentFilter('');
+    setMessagesImport(null);
+    setReactionsImport(null);
+    setReactionRecords([]);
+    setReactionFilter('');
+    setConversations([]);
+    setConversationMessages([]);
+    setSelectedConversationId(null);
+    setConversationFilter('');
+    setActiveMedia(null);
+    setMediaFilter('all');
+
+    try {
+      const report = await window.desktopApi.openSavedSnapshot(snapshotId);
+      const saved = savedBackups.find((backup) => backup.id === snapshotId);
+      setSelectedFolder(report.archiveName);
+      if (saved) setAccountName(saved.accountName);
+      setInspection(report);
+      const [posts, comments, reactions, foundConversations, media] = await Promise.all([
+        window.desktopApi.listPostsForSelectedBackup(),
+        window.desktopApi.listCommentsForSelectedBackup(),
+        window.desktopApi.listReactionsForSelectedBackup(),
+        window.desktopApi.listMessagesForSelectedBackup(),
+        window.desktopApi.listMediaForSelectedBackup()
+      ]);
+      setPostRecords(posts);
+      setCommentRecords(comments);
+      setReactionRecords(reactions);
+      setConversations(foundConversations);
+      setMediaGallery(media);
+      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
+    } catch {
+      setInspection(null);
+      setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the folder again to reconnect it.');
+    } finally {
+      setIsChoosingFolder(false);
+    }
+  }
+
   async function refreshMediaGallery() {
     try {
       setMediaGallery(await window.desktopApi.listMediaForSelectedBackup());
@@ -453,7 +510,7 @@ function App() {
 
             <div className="inventory-stats">
               <div><strong>{inspection.totalFiles.toLocaleString()}</strong><span>Files found</span></div>
-              <div><strong>{inspection.totalDirectories.toLocaleString()}</strong><span>Folders</span></div>
+              <div><strong>{inspection.totalDirectories === null ? '—' : inspection.totalDirectories.toLocaleString()}</strong><span>Folders</span></div>
               <div><strong>{inspection.filesByFormat.html.toLocaleString()}</strong><span>HTML</span></div>
               <div><strong>{inspection.filesByFormat.json.toLocaleString()}</strong><span>JSON</span></div>
               <div><strong>{inspection.filesByFormat.media.toLocaleString()}</strong><span>Media files</span></div>
@@ -587,7 +644,7 @@ function App() {
                 {postsImport.mediaReferences} media references · {postsImport.unsupportedFiles} unsupported · {postsImport.failedFiles} failed
               </p>
             )}
-            {postsImport && (
+            {(postsImport || postRecords.length > 0) && (
               <section className="conversation-workspace">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -627,7 +684,7 @@ function App() {
                 {commentsImport.unsupportedFiles} unsupported · {commentsImport.failedFiles} failed
               </p>
             )}
-            {commentsImport && (
+            {(commentsImport || commentRecords.length > 0) && (
               <section className="conversation-workspace">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -669,7 +726,7 @@ function App() {
                 {reactionsImport.unsupportedFiles} unsupported · {reactionsImport.failedFiles} failed
               </p>
             )}
-            {reactionsImport && (
+            {(reactionsImport || reactionRecords.length > 0) && (
               <section className="conversation-workspace">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -701,7 +758,7 @@ function App() {
                 {messagesImport.failedFiles} failed
               </p>
             )}
-            {messagesImport && (
+            {(messagesImport || conversations.length > 0) && (
               <section className="conversation-workspace" id="conversation-explorer">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -850,10 +907,15 @@ function App() {
                 Explicit no-data markers: {inspection.noDataSections.join(', ')}
               </p>
             )}
-            {(inspection.skippedSymlinks > 0 || inspection.unreadableDirectories > 0 || inspection.truncated) && (
+            {(inspection.skippedSymlinks !== null || inspection.unreadableDirectories !== null || inspection.truncated !== null) && (
               <p className="inventory-warning">
-                {inspection.skippedSymlinks} symbolic links skipped · {inspection.unreadableDirectories} unreadable folders
+                {inspection.skippedSymlinks ?? 0} symbolic links skipped · {inspection.unreadableDirectories ?? 0} unreadable folders
                 {inspection.truncated ? ' · Inventory reached the safety limit and is incomplete' : ''}
+              </p>
+            )}
+            {inspection.totalDirectories === null && (
+              <p className="inventory-note">
+                Folder-count and scan-warning details were not stored for this older inventory. File and section counts were rebuilt from its saved local metadata.
               </p>
             )}
           </section>
@@ -884,6 +946,13 @@ function App() {
                     <span>{backup.status === 'discovered' ? 'Inventory saved' : backup.status}</span>
                     <small>{new Date(backup.createdAt).toLocaleString()}</small>
                   </div>
+                  <button
+                    className="saved-backup-open"
+                    onClick={() => void openSavedBackup(backup.id)}
+                    disabled={isChoosingFolder}
+                  >
+                    {isChoosingFolder ? 'Opening…' : inspection?.snapshotId === backup.id ? 'Opened' : 'Open'}
+                  </button>
                 </article>
               ))}
             </div>

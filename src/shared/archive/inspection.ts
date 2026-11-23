@@ -13,7 +13,7 @@ export interface ArchiveInspectionReport {
   snapshotId: string;
   accountId: string;
   totalFiles: number;
-  totalDirectories: number;
+  totalDirectories: number | null;
   filesByFormat: {
     html: number;
     json: number;
@@ -22,9 +22,9 @@ export interface ArchiveInspectionReport {
   };
   sectionFileCounts: Record<string, number>;
   noDataSections: string[];
-  skippedSymlinks: number;
-  unreadableDirectories: number;
-  truncated: boolean;
+  skippedSymlinks: number | null;
+  unreadableDirectories: number | null;
+  truncated: boolean | null;
 }
 
 export interface ArchiveSnapshotSummary {

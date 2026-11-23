@@ -8,6 +8,7 @@ import {
   completeDiscoverySession,
   getOrCreateAccount,
   insertDiscoveredFiles,
+  getArchiveSnapshotOpenDetails,
   listArchiveSnapshots
 } from '../src/main/database/archive-repository';
 
@@ -150,4 +151,31 @@ describe('local SQLite storage', () => {
     ]);
 
   });
+  
+  it('reconstructs saved snapshot metadata so an existing backup can be reopened', () => {
+    const accountId = getOrCreateAccount(database, 'Reopenable account');
+    const session = beginDiscoverySession(database, accountId, 'Reopenable export', '/tmp/reopenable-export');
+    insertDiscoveredFiles(database, session.snapshotId, [
+      { relativePath: 'friends/friends.html', fileName: 'friends.html', sectionKey: 'friends', detectedFormat: 'html' },
+      { relativePath: 'posts/your_posts.json', fileName: 'your_posts.json', sectionKey: 'posts', detectedFormat: 'json' },
+      { relativePath: 'photos_and_videos/photo.jpg', fileName: 'photo.jpg', sectionKey: 'photos_and_videos', detectedFormat: 'image' },
+      { relativePath: 'location/no-data.txt', fileName: 'no-data.txt', sectionKey: 'location', detectedFormat: 'text' }
+    ]);
+    completeDiscoverySession(database, session, 4);
+
+    expect(getArchiveSnapshotOpenDetails(database, session.snapshotId)).toEqual({
+      id: session.snapshotId,
+      accountId,
+      accountName: 'Reopenable account',
+      backupName: 'Reopenable export',
+      sourcePath: '/tmp/reopenable-export',
+      createdAt: expect.any(String),
+      totalFiles: 4,
+      filesByFormat: { html: 1, json: 1, media: 1, other: 1 },
+      sectionFileCounts: { friends: 1, location: 1, photos_and_videos: 1, posts: 1 },
+      noDataSections: ['location']
+    });
+    expect(getArchiveSnapshotOpenDetails(database, 'missing-snapshot')).toBeNull();
+  });
+
 });

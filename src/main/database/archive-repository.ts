@@ -167,6 +167,60 @@ export function failDiscoverySession(database: DatabaseSync, session: DiscoveryS
   }
 }
 
+export interface ArchiveSnapshotOpenDetails {
+  id: string;
+  accountId: string;
+  accountName: string;
+  backupName: string;
+  sourcePath: string;
+  createdAt: string;
+  totalFiles: number;
+  filesByFormat: { html: number; json: number; media: number; other: number };
+  sectionFileCounts: Record<string, number>;
+  noDataSections: string[];
+}
+
+export function getArchiveSnapshotOpenDetails(database: DatabaseSync, snapshotId: string): ArchiveSnapshotOpenDetails | null {
+  const snapshot = database.prepare(`
+    SELECT snapshots.id AS id, snapshots.account_id AS accountId,
+      accounts.display_name AS accountName, snapshots.display_name AS backupName,
+      snapshots.source_path AS sourcePath, snapshots.created_at AS createdAt
+    FROM archive_snapshots AS snapshots
+    INNER JOIN accounts ON accounts.id = snapshots.account_id
+    WHERE snapshots.id = ?
+  `).get(snapshotId) as Omit<ArchiveSnapshotOpenDetails, 'totalFiles' | 'filesByFormat' | 'sectionFileCounts' | 'noDataSections'> | undefined;
+  if (!snapshot) return null;
+
+  const filesByFormat = { html: 0, json: 0, media: 0, other: 0 };
+  const formats = database.prepare(`
+    SELECT detected_format AS format, COUNT(*) AS count
+    FROM source_files WHERE snapshot_id = ? GROUP BY detected_format
+  `).all(snapshotId) as Array<{ format: string; count: number }>;
+  for (const row of formats) {
+    if (row.format === 'html') filesByFormat.html += row.count;
+    else if (row.format === 'json') filesByFormat.json += row.count;
+    else if (['image', 'video', 'audio'].includes(row.format)) filesByFormat.media += row.count;
+    else filesByFormat.other += row.count;
+  }
+
+  const sectionRows = database.prepare(`
+    SELECT section_key AS sectionKey, COUNT(*) AS count
+    FROM source_files WHERE snapshot_id = ? GROUP BY section_key ORDER BY section_key
+  `).all(snapshotId) as Array<{ sectionKey: string; count: number }>;
+  const emptyRows = database.prepare(`
+    SELECT DISTINCT section_key AS sectionKey FROM source_files
+    WHERE snapshot_id = ? AND status = 'empty' ORDER BY section_key
+  `).all(snapshotId) as Array<{ sectionKey: string }>;
+
+  return {
+    ...snapshot,
+    totalFiles: Object.values(filesByFormat).reduce((total, count) => total + count, 0),
+    filesByFormat,
+    sectionFileCounts: Object.fromEntries(sectionRows.map((row) => [row.sectionKey, row.count])),
+    noDataSections: emptyRows.map((row) => row.sectionKey)
+  };
+}
+
 export function listArchiveSnapshots(database: DatabaseSync): ArchiveSnapshotSummary[] {
   return database.prepare(`
     SELECT

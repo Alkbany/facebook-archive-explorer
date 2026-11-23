@@ -1,12 +1,14 @@
 import { app, dialog, ipcMain } from 'electron';
 import { basename } from 'node:path';
-import { writeFile } from 'node:fs/promises';
+import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
+import type { ArchiveInspectionReport } from '../../shared/archive/inspection';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
   failDiscoverySession,
+  getArchiveSnapshotOpenDetails,
   getOrCreateAccount,
   insertDiscoveredFiles,
   listArchiveSnapshots
@@ -80,6 +82,41 @@ export function registerIpcHandlers(database: DatabaseSync): void {
     IPC_CHANNELS.listArchiveSnapshots,
     () => listArchiveSnapshots(database)
   );
+
+  ipcMain.handle(IPC_CHANNELS.openSavedSnapshot, async (_event, requestedSnapshotId: unknown): Promise<ArchiveInspectionReport> => {
+    if (typeof requestedSnapshotId !== 'string' || !requestedSnapshotId.trim()) {
+      throw new Error('Choose a saved backup to open.');
+    }
+    const snapshot = getArchiveSnapshotOpenDetails(database, requestedSnapshotId);
+    if (!snapshot) throw new Error('The selected backup inventory no longer exists in the local database.');
+
+    let verifiedRoot: string;
+    try {
+      verifiedRoot = await realpath(snapshot.sourcePath);
+      const rootStats = await stat(verifiedRoot);
+      if (!rootStats.isDirectory()) throw new Error('Not a directory.');
+    } catch {
+      throw new Error('The original backup folder is unavailable. It may have been moved, renamed, or disconnected.');
+    }
+
+    selectedBackupDirectory = verifiedRoot;
+    selectedAccountId = snapshot.accountId;
+    selectedSnapshotId = snapshot.id;
+    return {
+      archiveName: snapshot.backupName,
+      inspectedAt: snapshot.createdAt,
+      snapshotId: snapshot.id,
+      accountId: snapshot.accountId,
+      totalFiles: snapshot.totalFiles,
+      totalDirectories: null,
+      filesByFormat: snapshot.filesByFormat,
+      sectionFileCounts: snapshot.sectionFileCounts,
+      noDataSections: snapshot.noDataSections,
+      skippedSymlinks: null,
+      unreadableDirectories: null,
+      truncated: null
+    };
+  });
 
   ipcMain.handle(IPC_CHANNELS.inspectSelectedBackup, async () => {
     if (!selectedBackupDirectory || !selectedAccountId) {

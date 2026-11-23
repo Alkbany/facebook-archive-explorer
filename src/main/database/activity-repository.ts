@@ -34,3 +34,20 @@ export function listPostRecords(database: DatabaseSync, snapshotId: string): imp
     LIMIT 1000
   `).all(snapshotId) as unknown as import('../../shared/archive/inspection').PostRecordSummary[];
 }
+
+ 
+export function listCommentActivities(database: DatabaseSync, snapshotId: string): import('../../shared/archive/inspection').CommentActivitySummary[] {
+  return database.prepare(`
+    SELECT records.id AS id, source.relative_path AS sourcePath,
+      records.source_record_index AS sourceCardIndex,
+      records.title AS activityRaw, records.body_text AS bodyRaw,
+      json_extract(records.payload_json, '$.group_raw') AS groupRaw,
+      records.event_time_raw AS dateRaw
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ? AND records.section_key = 'comments'
+    ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
+    LIMIT 2000
+  `).all(snapshotId) as unknown as import('../../shared/archive/inspection').CommentActivitySummary[];
+}

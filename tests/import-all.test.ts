@@ -229,7 +229,7 @@ describe('Import all supported data', () => {
     `).run(snapshotId, now);
 
     const result = await importAllSupportedData(database, snapshotId, root);
-    expect(result.totals.filesAttempted).toBe(5);
+    expect(result.totals.filesAttempted).toBe(6);
     const recoveredFiles = database.prepare("SELECT status, safe_error_code FROM source_files WHERE snapshot_id = ? ORDER BY relative_path")
       .all(snapshotId) as Array<{ status: string; safe_error_code: string | null }>;
     expect(recoveredFiles.every((file) => file.status === 'unsupported')).toBe(true);
@@ -238,14 +238,15 @@ describe('Import all supported data', () => {
       'FRIENDS_CARDS_NOT_FOUND',
       'REACTION_CARDS_NOT_FOUND',
       'MESSAGE_CARDS_NOT_FOUND',
+      'PHOTO_ALBUM_INDEX_NOT_RECOGNIZED',
       'POST_CARDS_NOT_FOUND'
     ]);
     const interruptedRun = database.prepare("SELECT status, errors_count FROM import_runs WHERE id = 'interrupted-run'")
       .get() as { status: string; errors_count: number };
-    expect(interruptedRun).toEqual({ status: 'failed', errors_count: 5 });
+    expect(interruptedRun).toEqual({ status: 'failed', errors_count: 6 });
     const interruptionIssues = database.prepare("SELECT COUNT(*) AS count FROM import_issues WHERE import_run_id = 'interrupted-run'")
       .get() as { count: number };
-    expect(interruptionIssues.count).toBe(5);
+    expect(interruptionIssues.count).toBe(6);
     const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
       .get(snapshotId) as { status: string };
     expect(snapshot.status).toBe('partial');

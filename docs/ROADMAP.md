@@ -67,7 +67,7 @@
 - [x] Per-section Import Coverage separating content processing states from media inventory.
 - [x] Show parser capability separately from file processing status.
 - [x] JSON export of current search results through the native save dialog.
-- [ ] Detailed diff browsing and export formats beyond JSON.
+- [x] Detailed diff browsing with before/after values, filters, pagination, and CSV/JSON export.
 
 ## Milestone 5 — Optional local AI
 

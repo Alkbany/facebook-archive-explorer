@@ -28,7 +28,8 @@
 - [x] Report missing-name cards and unrecognized Friends page structures.
 - [x] Implement and test the observed message HTML structure and local media references.
 - [x] Add synthetic fixtures for message cards, reactions, call-event text, and attachments.
-- [ ] Implement parsers for posts, comments, and other activity-card sections.
+- [x] Implement the sampled Posts card parser/importer with local media references and searchable activity browsing.
+- [ ] Implement Comments and other activity-card sections.
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
 - [ ] Add parser fixtures for all remaining supported sections.
 

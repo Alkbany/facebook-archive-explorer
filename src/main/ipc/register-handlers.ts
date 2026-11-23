@@ -12,6 +12,8 @@ import {
 } from '../database/archive-repository';
 import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
+import { importPostsSection } from '../import/pipeline/posts-importer';
+import { listPostRecords } from '../database/activity-repository';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
@@ -123,6 +125,16 @@ export function registerIpcHandlers(database: DatabaseSync): void {
       throw new Error('Invalid attachment selection.');
     }
     return getMessageMediaPreview(database, selectedSnapshotId, mediaAssetId as number);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listPostsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing posts.');
+    return listPostRecords(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importPostsForSelectedBackup, async () => {
+    if (!selectedBackupDirectory || !selectedSnapshotId) throw new Error('Inspect an archive folder before importing Posts data.');
+    return importPostsSection(database, selectedSnapshotId, selectedBackupDirectory);
   });
 
   ipcMain.handle(IPC_CHANNELS.listReactionsForSelectedBackup, () => {

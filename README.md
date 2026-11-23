@@ -109,7 +109,7 @@ ZIP backups can be selected, inventoried, reopened, and read on demand without e
 - Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
 - Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
 - Media: all discovered image/video/audio paths are indexed, with associated record context where a supported parser has linked them.
-- Photos & Videos: the root album index is parsed into searchable album summaries. Referenced album pages are parsed into photo cards with local image links, captions, raw photo dates, and comment author/text/raw-date entries. Photos are browsable in-app; image bytes remain in the original backup.
+- Photos & Videos: the root album index is parsed into searchable album summaries. Referenced album pages are parsed into photo cards with local image links, captions, raw photo dates, and comment author/text/raw-date entries. Photos are browsable in-app; image bytes remain in the original backup. Album cards show bounded local cover previews (up to eight visible covers at a time); no image is fetched from the network.
 - Audio/video: supported local files stream from directory or ZIP backups with byte-range seeking; deflated ZIP entries are decompressed as a stream when seeking.
 
 The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.

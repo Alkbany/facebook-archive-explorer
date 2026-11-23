@@ -57,6 +57,7 @@
 - [ ] Timeline and album browsing.
 - [x] Aggregate archive comparison for imported records from two snapshots of the same account.
 - [x] Snapshot-scoped Import Diagnostics with severity counts, safe messages, and source-file/card references.
+- [x] Per-section Import Coverage separating content processing states from media inventory.
 - [x] JSON export of current search results through the native save dialog.
 - [ ] Detailed diff browsing and export formats beyond JSON.
 

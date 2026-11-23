@@ -8,7 +8,10 @@ const desktopApi: DesktopApi = {
   inspectSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.inspectSelectedBackup),
   listArchiveSnapshots: () => ipcRenderer.invoke(IPC_CHANNELS.listArchiveSnapshots),
   importFriendsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importFriendsForSelectedBackup),
-  importMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importMessagesForSelectedBackup)
+  importMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.importMessagesForSelectedBackup),
+  listMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessagesForSelectedBackup),
+  getMessagesForSelectedConversation: (sourceFileId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId)
 };
 
 contextBridge.exposeInMainWorld('desktopApi', desktopApi);

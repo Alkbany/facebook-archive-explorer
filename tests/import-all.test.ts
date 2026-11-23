@@ -94,6 +94,64 @@ describe('Import all supported data', () => {
     expect(snapshot.status).toBe('partial');
   });
 
+  it('imports referenced album detail pages, photo records, and local image links during Import All', async () => {
+    const albumPath = 'photos_and_videos/album/0.html';
+    const imagePath = 'photos_and_videos/sample_album/photo.jpg';
+    await mkdir(join(root, 'photos_and_videos', 'album'), { recursive: true });
+    await mkdir(join(root, 'photos_and_videos', 'sample_album'), { recursive: true });
+    await writeFile(join(root, 'photos_and_videos', 'your_photos.html'), `
+      <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+        <div class="_3-96 _2pio _2lek _2lel">My album - 1 photo</div>
+        <div class="_3-96 _2let"><a href="${albumPath}"><img src="${imagePath}"></a></div>
+        <div class="_3-94 _2lem">Raw album date</div>
+      </div>`, 'utf8');
+    await writeFile(join(root, albumPath), `
+      <div class="_3b0d">My album</div>
+      <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+        <div class="_3-96 _2let">
+          <a href="${imagePath}"><img src="${imagePath}"></a>
+          <div class="_3-95">A photo caption</div>
+          <div class="pas _3-94 uiBoxGray noborder"><div><div><span class="_3-8_ _2oao">Photo commenter</span>Photo comment</div><div class="_67gx">Raw comment date</div></div></div>
+        </div>
+        <div class="_3-94 _2lem">Raw photo date</div>
+      </div>`, 'utf8');
+    await writeFile(join(root, imagePath), 'synthetic photo bytes', 'utf8');
+
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+      VALUES (?, ?, '0.html', 'photos_and_videos', 'html', 'discovered', ?)
+    `).run(snapshotId, albumPath, now);
+    database.prepare(`
+      INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+      VALUES (?, ?, 'photo.jpg', 'photos_and_videos', 'image', 'discovered', ?)
+    `).run(snapshotId, imagePath, now);
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+
+    expect(result.sections.photosAndVideos).toMatchObject({
+      filesAttempted: 2,
+      recordsImported: 2,
+      mediaReferences: 2,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+    const album = database.prepare(`
+      SELECT id FROM records WHERE snapshot_id = ? AND section_key = 'photos_and_videos'
+        AND record_type = 'photo_album'
+    `).get(snapshotId) as { id: number };
+    const photo = database.prepare(`
+      SELECT body_text AS caption FROM records WHERE snapshot_id = ? AND section_key = 'photos_and_videos'
+        AND record_type = 'photo'
+    `).get(snapshotId) as { caption: string };
+    expect(photo.caption).toBe('A photo caption');
+    const linkedAssets = database.prepare('SELECT COUNT(*) AS count FROM record_media').get() as { count: number };
+    expect(linkedAssets.count).toBe(2);
+    expect(Number.isSafeInteger(album.id)).toBe(true);
+    expect(database.prepare('SELECT status FROM source_files WHERE snapshot_id = ? AND relative_path = ?')
+      .get(snapshotId, albumPath)).toMatchObject({ status: 'completed' });
+  });
+
   it('continues importing if a progress listener throws', async () => {
     await expect(importAllSupportedData(database, snapshotId, root, () => {
       throw new Error('Renderer progress listener is unavailable');

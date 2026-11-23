@@ -419,6 +419,18 @@ export function registerIpcHandlers(
       changes.push(...nextPage.changes);
     }
 
+    const confirmation = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Export private archive comparison?',
+      message: 'The comparison file contains imported archive text and is not encrypted.',
+      detail: 'Depending on the selected sections and filters, it may include private message text and other personal activity. Save it in a private location and do not share it unless you intend to share this information.',
+      buttons: ['Continue to save', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true
+    });
+    if (confirmation.response !== 0) return { status: 'cancelled' as const };
+
     const save = await dialog.showSaveDialog({
       title: 'Export detailed backup comparison',
       defaultPath: 'facebook-archive-comparison.' + exportFormat,

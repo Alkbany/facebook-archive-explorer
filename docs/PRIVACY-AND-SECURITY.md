@@ -39,5 +39,5 @@ AI features must be local-only, optional, configurable, and disabled by default.
 - Database export uses the SQLite online backup API instead of copying the live database file and its WAL/SHM sidecars.
 - Before restore, the selected file is checked for SQLite integrity, foreign-key violations, required archive tables, and a schema version supported by this app.
 - A validated copy of the current database is preserved as a local pre-restore recovery file. The app restarts to reopen the restored database, and startup can recover the old file if the swap was interrupted.
-- The exported database is a normal, unencrypted SQLite file. It may contain personal archive metadata and imported records; store it somewhere private.
+- The exported database is a normal, unencrypted SQLite file. The app displays a warning and asks for confirmation before exporting; it may contain personal archive metadata and imported records, so store it somewhere private and do not share it unintentionally.
 - Database backups do not include Facebook export folders, ZIP files, or original media bytes. The saved archive references still depend on those original files remaining at their recorded paths.

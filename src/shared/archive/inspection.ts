@@ -34,4 +34,12 @@ export interface ArchiveSnapshotSummary {
   status: string;
   createdAt: string;
   filesDiscovered: number;
+  recordsImported: number;
+}
+
+export interface FriendsImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
 }

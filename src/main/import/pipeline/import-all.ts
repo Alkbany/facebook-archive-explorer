@@ -11,11 +11,29 @@ import { importReactionsSection } from './reactions-importer';
  * its own per-file transaction and status; completed files are skipped on
  * subsequent runs while failed/unsupported files remain eligible for retry.
  */
+function recoverInterruptedImports(database: DatabaseSync, snapshotId: string): void {
+  const timestamp = new Date().toISOString();
+  // A process crash can leave a conversation marked as processing. Make it
+  // retryable before collecting the next batch of eligible source files.
+  database.prepare(`
+    UPDATE source_files
+    SET status = 'failed', safe_error_code = 'IMPORT_INTERRUPTED', processed_at = ?
+    WHERE snapshot_id = ? AND status = 'processing'
+  `).run(timestamp, snapshotId);
+
+  database.prepare(`
+    UPDATE import_runs
+    SET status = 'failed', finished_at = ?, errors_count = errors_count + 1
+    WHERE snapshot_id = ? AND run_type = 'import' AND status = 'running'
+  `).run(timestamp, snapshotId);
+}
+
 export async function importAllSupportedData(
   database: DatabaseSync,
   snapshotId: string,
   archiveRoot: string
 ): Promise<ImportAllSupportedDataResult> {
+  recoverInterruptedImports(database, snapshotId);
   const friends = await importFriendsSection(database, snapshotId, archiveRoot);
   const messages = await importMessagesSection(database, snapshotId, archiveRoot);
   const posts = await importPostsSection(database, snapshotId, archiveRoot);

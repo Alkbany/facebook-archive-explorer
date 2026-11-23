@@ -1,8 +1,14 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'node:path';
+import { openAppDatabase } from './database/connection';
+import { DATABASE_MIGRATIONS } from './database/migrations';
 import { registerIpcHandlers } from './ipc/register-handlers';
 
 let mainWindow: BrowserWindow | null = null;
+const database = openAppDatabase(
+  join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite'),
+  DATABASE_MIGRATIONS
+);
 
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -27,7 +33,6 @@ function createMainWindow(): BrowserWindow {
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
   const developmentOrigin = rendererUrl ? new URL(rendererUrl).origin : null;
 
-  // Do not allow the renderer to navigate to arbitrary external or local files.
   window.webContents.on('will-navigate', (event, targetUrl) => {
     if (developmentOrigin) {
       try {
@@ -42,11 +47,8 @@ function createMainWindow(): BrowserWindow {
     event.preventDefault();
   });
 
-  if (rendererUrl) {
-    void window.loadURL(rendererUrl);
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'));
-  }
+  if (rendererUrl) void window.loadURL(rendererUrl);
+  else void window.loadFile(join(__dirname, '../renderer/index.html'));
 
   window.on('closed', () => {
     if (mainWindow === window) mainWindow = null;
@@ -58,7 +60,7 @@ function createMainWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   app.setAppUserModelId('com.alkbany.facebookarchiveexplorer');
-  registerIpcHandlers();
+  registerIpcHandlers(database);
   createMainWindow();
 
   app.on('activate', () => {
@@ -67,6 +69,10 @@ app.whenReady().then(() => {
 }).catch((error: unknown) => {
   console.error('Application startup failed.', error);
   app.quit();
+});
+
+app.on('before-quit', () => {
+  if (database.isOpen) database.close();
 });
 
 app.on('window-all-closed', () => {

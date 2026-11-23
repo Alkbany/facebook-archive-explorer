@@ -39,7 +39,7 @@ export function recoverInterruptedImports(database: DatabaseSync, snapshotId: st
   if (snapshot?.status === 'importing' || processingFiles.count > 0 || runningImports.count > 0) {
     database.prepare(`
       UPDATE archive_snapshots SET status = 'partial', updated_at = ?
-      WHERE id = ? AND status = 'importing'
+      WHERE id = ? AND status NOT IN ('failed', 'cancelled')
     `).run(timestamp, snapshotId);
   }
 }

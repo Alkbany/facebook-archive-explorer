@@ -25,10 +25,10 @@ describe('generic HTML fallback importer', () => {
     const accountId = getOrCreateAccount(database, 'Synthetic HTML account');
     snapshotId = 'html-fallback-snapshot';
     const now = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO archive_snapshots (id, account_id, display_name, source_kind, source_path, status, created_at, updated_at)
       VALUES (?, ?, 'Synthetic export', 'directory', ?, 'discovered', ?, ?)
-    \`).run(snapshotId, accountId, root, now, now);
+    `).run(snapshotId, accountId, root, now, now);
   });
 
   afterEach(async () => {
@@ -57,12 +57,12 @@ describe('generic HTML fallback importer', () => {
     const now = new Date().toISOString();
     for (const sample of samples) {
       await writeFile(join(root, sample.path), sample.html, 'utf8');
-      database.prepare(\`
+      database.prepare(`
         INSERT INTO source_files (
           snapshot_id, relative_path, file_name, section_key, detected_format,
           file_size_bytes, status, discovered_at
         ) VALUES (?, ?, ?, ?, 'html', ?, 'discovered', ?)
-      \`).run(snapshotId, sample.path, sample.path.split('/').at(-1), sample.section,
+      `).run(snapshotId, sample.path, sample.path.split('/').at(-1), sample.section,
         Buffer.byteLength(sample.html), now);
     }
 
@@ -74,11 +74,11 @@ describe('generic HTML fallback importer', () => {
       failedFiles: 0
     });
 
-    const records = database.prepare(\`
+    const records = database.prepare(`
       SELECT section_key AS sectionKey, record_type AS recordType, title, body_text AS body,
         event_time_raw AS dateRaw, sensitivity, search_enabled AS searchEnabled
       FROM records WHERE snapshot_id = ? ORDER BY section_key, source_record_index
-    \`).all(snapshotId) as Array<{
+    `).all(snapshotId) as Array<{
       sectionKey: string; recordType: string; title: string; body: string;
       dateRaw: string | null; sensitivity: string; searchEnabled: number;
     }>;
@@ -100,10 +100,10 @@ describe('generic HTML fallback importer', () => {
     const unknown = records.find((record) => record.sectionKey === 'future_section');
     expect(unknown).toMatchObject({ sensitivity: 'sensitive', searchEnabled: 0 });
 
-    const statuses = database.prepare(\`
+    const statuses = database.prepare(`
       SELECT relative_path AS path, status, parser_key AS parserKey
       FROM source_files WHERE snapshot_id = ? ORDER BY relative_path
-    \`).all(snapshotId) as Array<{ path: string; status: string; parserKey: string }>;
+    `).all(snapshotId) as Array<{ path: string; status: string; parserKey: string }>;
     expect(statuses.every((row) => row.status === 'completed' && row.parserKey === 'html_fallback')).toBe(true);
   });
 
@@ -111,11 +111,11 @@ describe('generic HTML fallback importer', () => {
     const path = 'posts/your_posts.html';
     await writeFile(join(root, path), '<html><body><p>Reviewed section</p></body></html>', 'utf8');
     const now = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO source_files (
         snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
       ) VALUES (?, ?, 'your_posts.html', 'posts', 'html', 'unsupported', ?)
-    \`).run(snapshotId, path, now);
+    `).run(snapshotId, path, now);
 
     const result = await importHtmlFallbackFilesSection(database, snapshotId, root);
     expect(result.filesAttempted).toBe(0);

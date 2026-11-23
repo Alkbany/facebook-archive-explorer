@@ -45,6 +45,7 @@
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).
 - [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
 - [ ] Unified search with section and date filters.
+- [x] Searchable Likes & Reactions activity panel with snapshot-scoped results.
 - [ ] Timeline and album browsing.
 - [ ] Archive comparison and selected-data export.
 

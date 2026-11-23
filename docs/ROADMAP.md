@@ -4,22 +4,24 @@
 
 - [x] Confirm Electron + React + TypeScript architecture.
 - [x] Define local-first privacy and repository safety rules.
-- [ ] Build and verify the desktop shell.
-- [ ] Add the section evidence catalogue and Arabic search normalization.
-- [ ] Add the initial SQLite schema and migration runner.
+- [x] Build the desktop shell and verify its production build in CI.
+- [x] Add the section evidence catalogue and Arabic search normalization.
+- [x] Add the initial SQLite schema proposal.
+- [x] Add a safe archive-relative path resolver and unit tests.
 
 ## Milestone 1 — Storage and discovery
 
-- [ ] Select a directory or ZIP.
-- [ ] Inventory every file without modifying the source.
-- [ ] Implement safe path resolution and ZIP entry validation.
-- [ ] Add SQLite driver, migrations, and repositories.
+- [x] Select a local export directory through the native folder picker.
+- [x] Inventory filenames and basic file formats without opening file contents.
+- [ ] Add ZIP selection and streaming ZIP entry discovery.
+- [ ] Add symlink-aware canonical path validation at file-open time.
+- [ ] Add SQLite driver, migration runner, and repositories.
 - [ ] Add resumable import state and integrity reporting.
 
 ## Milestone 2 — First reliable parsers
 
-- [ ] Implement and test observed message HTML structure.
-- [ ] Implement observed friends and activity-card structures.
+- [ ] Implement and test the observed message HTML structure.
+- [ ] Implement the observed friends and activity-card structures.
 - [ ] Add fixture tests using synthetic, redacted HTML only.
 - [ ] Report unsupported and changed structures without silent data loss.
 

@@ -59,7 +59,7 @@ export async function importReactionsSection(
           normalizeSearchText([record.reactionType, record.descriptionRaw].filter(Boolean).join(' ')),
           record.dateRaw, JSON.stringify({ reaction_image_raw: record.reactionImageRaw }), timestamp);
       }
-      const unsupported = parsed.issues.some((issue) => issue.code === 'no_cards_found');
+      const unsupported = parsed.records.length === 0;
       for (const issue of parsed.issues) {
         database.prepare(`
           INSERT INTO import_issues (import_run_id, source_file_id, severity, issue_code, safe_message, context_json, created_at)

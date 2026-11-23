@@ -210,7 +210,7 @@ export async function importMessagesSection(
       AND lower(relative_path) NOT LIKE 'messages/stickers_used/%'
       AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path
-  `).all(snapshotId) as MessageSourceFileRow[];
+  `).all(snapshotId) as unknown as MessageSourceFileRow[];
 
   const summary: MessagesImportSectionResult = {
     filesAttempted: 0, recordsImported: 0, unsupportedFiles: 0, failedFiles: 0, mediaReferences: 0

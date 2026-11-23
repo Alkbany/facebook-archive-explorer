@@ -42,6 +42,12 @@ npm run package:win
 
 The development dependency installation requires an internet connection. The application is designed to process selected archives locally once installed.
 
+## Windows test installer
+
+The **Windows installer** workflow builds an NSIS installer on `main` and uploads it as the `facebook-archive-explorer-windows` GitHub Actions artifact. Open the latest successful Windows installer run in the repository's Actions tab, download the artifact ZIP, extract it, and run the included `Facebook Archive Explorer Setup` installer.
+
+Artifacts are retained for 14 days. The installer is currently **unsigned** because no code-signing certificate is configured; Windows may display an unknown-publisher or SmartScreen warning. This is a test build, not a public GitHub Release. Public Releases are created only for version tags beginning with `v`.
+
 ## Current capabilities
 
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.

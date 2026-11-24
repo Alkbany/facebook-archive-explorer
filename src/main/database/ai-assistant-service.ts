@@ -143,7 +143,7 @@ function validateCitations(
 ): { answer: string; citations: ArchiveAssistantCitation[] } {
   const allowed = new Map(sourceCitations.map((source) => [source.sourceId, source]));
   const used = new Set<string>();
-  const cleaned = answer.replace(/\\[S(\\d+)\\]/gu, (marker, number: string) => {
+  const cleaned = answer.replace(/\[S(\d+)\]/gu, (marker, number: string) => {
     const sourceId = 'S' + number;
     if (!allowed.has(sourceId)) return '';
     used.add(sourceId);
@@ -294,7 +294,7 @@ export async function askLocalArchiveAssistant(
     retrievalScope: {
       snapshotId,
       sectionKey,
-      year: /(?:19|20)\\d{2}/u.test(question) ? Number(question.match(/(?:19|20)\\d{2}/u)?.[0]) : null
+      year: /(?:19|20)\d{2}/u.test(question) ? Number(question.match(/(?:19|20)\d{2}/u)?.[0]) : null
     }
   };
 }

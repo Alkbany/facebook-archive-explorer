@@ -85,7 +85,8 @@ describe('Comments import', () => {
     expect(listCommentActivities(database, snapshotId)).toMatchObject([{
       activityRaw: 'Synthetic account commented on a synthetic post.',
       bodyRaw: 'Synthetic comment body',
-      dateRaw: '1540000000'
+      dateRaw: '1540000000',
+      eventTimeUtc: '2018-10-20T01:46:40.000Z'
     }]);
     const normalizedTime = database.prepare(
       'SELECT event_time_utc AS value FROM records WHERE snapshot_id = ?'

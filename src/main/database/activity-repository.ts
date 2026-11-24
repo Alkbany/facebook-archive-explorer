@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { ReactionRecordSummary } from '../../shared/archive/inspection';
+import { facebookDateToUtc } from '../../shared/time/facebook-date';
 
 export function listReactionRecords(database: DatabaseSync, snapshotId: string): ReactionRecordSummary[] {
   return database.prepare(`
@@ -277,6 +278,7 @@ export function listEventRecords(
       startDateRaw: row.startDateRaw,
       startDateUtc: row.startDateUtc,
       endDateRaw: typeof payload.end_timestamp === 'string' ? payload.end_timestamp : null,
+      endDateUtc: typeof payload.end_timestamp === 'string' ? facebookDateToUtc(payload.end_timestamp) : null,
       responseTimeRaw: typeof payload.response_time === 'string' ? payload.response_time : null,
       rsvp,
       locationName: typeof place.name === 'string' ? place.name : null,
@@ -302,6 +304,7 @@ export function listEventRecords(
     previous.startDateRaw ||= next.startDateRaw;
     previous.startDateUtc ||= next.startDateUtc;
     previous.endDateRaw ||= next.endDateRaw;
+    previous.endDateUtc ||= next.endDateUtc;
     previous.responseTimeRaw ||= next.responseTimeRaw;
     previous.locationName ||= next.locationName;
     previous.address ||= next.address;

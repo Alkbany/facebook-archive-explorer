@@ -137,7 +137,7 @@ function extractGeneratedText(output: TextGenerationOutput | undefined): string 
   return '';
 }
 
-function validateCitations(
+export function validateArchiveAssistantCitations(
   answer: string,
   sourceCitations: ArchiveAssistantCitation[]
 ): { answer: string; citations: ArchiveAssistantCitation[] } {
@@ -276,7 +276,7 @@ export async function askLocalArchiveAssistant(
     throw new Error('The local assistant did not return an answer.');
   }
 
-  const validated = validateCitations(rawAnswer, citations);
+  const validated = validateArchiveAssistantCitations(rawAnswer, citations);
   if (validated.citations.length === 0) {
     return {
       answer: 'The local model did not provide a verifiable source citation, so its generated answer was withheld. Try a narrower question or a different search level.',

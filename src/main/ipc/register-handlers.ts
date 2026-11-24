@@ -446,7 +446,7 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC_CHANNELS.askArchiveAssistant, async (
     _event, question: unknown, sectionKey: unknown, history: unknown, comparison: unknown
   ) => {
-    let comparisonSelection: AiAssistantComparisonSelection | null = null;
+    let comparisonSelection: ArchiveAssistantComparisonSelection | null = null;
     if (comparison !== undefined && comparison !== null) {
       if (
         typeof comparison !== 'object' || Array.isArray(comparison) ||

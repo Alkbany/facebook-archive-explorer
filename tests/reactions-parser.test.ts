@@ -42,6 +42,18 @@ describe('Likes & Reactions parser', () => {
 });
 
 
+describe('Facebook reactions export timezone metadata', () => {
+  it('reads an explicit footer offset while preserving the raw reaction date', () => {
+    const rawDate = '٢٥/٠٧/٢٠١٧ ٨:٣٨ م';
+    const html = `${card('Synthetic user liked a post', 'like.png', rawDate)}
+      <div class="_4t5o">Export created at 10:00 PM UTC+02</div>`;
+    const result = parseReactionsExport(html, 'likes_and_reactions/sample.html');
+
+    expect(result.timezoneOffsetMinutes).toBe(120);
+    expect(result.records[0].dateRaw).toBe(rawDate);
+  });
+});
+
 describe('Accounts Center Likes & Reactions JSON parser', () => {
   it('parses the data[].reaction representation', () => {
     const result = parseReactionsJsonExport(JSON.stringify([{

@@ -95,6 +95,26 @@ describe('Likes & Reactions import', () => {
     expect(normalizedTimes).toEqual([{ value: '2018-10-20T01:46:40.000Z' }, { value: '2018-10-20T01:46:40.000Z' }]);
   });
 
+  it('stores a UTC-normalized Arabic reaction date only when the export footer supplies its offset', async () => {
+    const html = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic account liked a post.</div>
+      <div class="_3-96 _2let"><div class="_2pin"><img src="reaction/like.png"></div></div>
+      <div class="_3-94 _2lem">٢٥/٠٧/٢٠١٧ ٨:٣٨ م</div>
+    </div><div class="_4t5o">Export created at 10:00 PM UTC+02</div>`;
+    await writeFile(join(root, 'likes_and_reactions', 'sample.html'), html, 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(`INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) VALUES (?, ?, ?, 'likes_and_reactions', 'html', 'discovered', ?)`)
+      .run(snapshotId, 'likes_and_reactions/sample.html', 'sample.html', now);
+
+    await importReactionsSection(database, snapshotId, root);
+    const record = database.prepare('SELECT event_time_raw, event_time_utc FROM records WHERE snapshot_id = ?')
+      .get(snapshotId) as { event_time_raw: string; event_time_utc: string | null };
+    expect(record).toEqual({
+      event_time_raw: '٢٥/٠٧/٢٠١٧ ٨:٣٨ م',
+      event_time_utc: '2017-07-25T18:38:00.000Z'
+    });
+  });
+
   it('marks unrecognized reaction pages as unsupported', async () => {
     await writeFile(join(root, 'likes_and_reactions', 'unknown.html'), '<html><body>Unknown layout</body></html>', 'utf8');
     const now = new Date().toISOString();

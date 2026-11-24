@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { basename, dirname, posix } from 'node:path';
+import { facebookExportUtcOffsetMinutes } from '../../../shared/time/facebook-date';
 
 export type MessageMediaKind = 'image' | 'video' | 'audio' | 'sticker' | 'other';
 
@@ -28,6 +29,7 @@ export interface MessageParseIssue {
 export interface MessageParseResult {
   messages: ParsedMessage[];
   issues: MessageParseIssue[];
+  timezoneOffsetMinutes?: number;
 }
 
 const CARD_SELECTOR = 'div.pam._3-95._2pi0._2lej.uiBoxWhite.noborder';
@@ -84,9 +86,14 @@ export function parseMessageConversation(html: string, sourceFile: string): Mess
   }
 
   const $ = cheerio.load(html);
+  const timezoneOffsetMinutes = facebookExportUtcOffsetMinutes($('div._4t5o').last().text() || null);
   const baseHref = $('base[href]').first().attr('href') ?? '.';
   const cards = $(CARD_SELECTOR);
-  const result: MessageParseResult = { messages: [], issues: [] };
+  const result: MessageParseResult = {
+    messages: [],
+    issues: [],
+    ...(timezoneOffsetMinutes !== null ? { timezoneOffsetMinutes } : {})
+  };
 
   if (cards.length === 0) {
     result.issues.push({ code: 'no_message_cards_found', sourceCardIndex: null });

@@ -94,6 +94,26 @@ describe('Comments import', () => {
     expect(normalizedTime.value).toBe('2018-10-20T01:46:40.000Z');
   });
 
+  it('stores a UTC-normalized Arabic comment date only when the export footer supplies its offset', async () => {
+    const html = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic account commented on a post.</div>
+      <div class="_3-96 _2let"><div><div class="_2pin">A synthetic comment body.</div></div></div>
+      <div class="_3-94 _2lem">١٩/٠٢/٢٠١٩ ٧:٣٩ ص</div>
+    </div><div class="_4t5o">Export created at 10:00 PM UTC+02</div>`;
+    await writeFile(join(root, 'comments', 'comments.html'), html, 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(`INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) VALUES (?, ?, ?, 'comments', 'html', 'discovered', ?)`)
+      .run(snapshotId, 'comments/comments.html', 'comments.html', now);
+
+    await importCommentsSection(database, snapshotId, root);
+    const record = database.prepare('SELECT event_time_raw, event_time_utc FROM records WHERE snapshot_id = ?')
+      .get(snapshotId) as { event_time_raw: string; event_time_utc: string | null };
+    expect(record).toEqual({
+      event_time_raw: '١٩/٠٢/٢٠١٩ ٧:٣٩ ص',
+      event_time_utc: '2019-02-19T05:39:00.000Z'
+    });
+  });
+
   it('marks an unknown comments HTML layout as unsupported', async () => {
     await writeFile(join(root, 'comments', 'unknown.html'), '<html><body>Unknown</body></html>', 'utf8');
     const now = new Date().toISOString();

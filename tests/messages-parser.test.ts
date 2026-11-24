@@ -101,6 +101,27 @@ describe('parseMessageConversation', () => {
 });
 
 
+describe('Facebook conversation timezone metadata', () => {
+  it('reads an explicit footer offset without rewriting the raw message date', () => {
+    const rawDate = '١٥/٠٧/٢٠١٧ ٢:٢٥ ص';
+    const html = `<html><body>${CARD('Synthetic message', 'Synthetic Sender', rawDate)}
+      <div class="_4t5o">Created by Synthetic User at 10:00 PM UTC+02</div>
+    </body></html>`;
+    const result = parseMessageConversation(html, 'messages/inbox/thread/thread.html');
+
+    expect(result.timezoneOffsetMinutes).toBe(120);
+    expect(result.messages[0].timestampRaw).toBe(rawDate);
+  });
+
+  it('does not invent timezone metadata when the export footer omits its offset', () => {
+    const result = parseMessageConversation(
+      `<html><body>${CARD('Synthetic message', 'Synthetic Sender', '١٥/٠٧/٢٠١٧ ٢:٢٥ ص')}</body></html>`,
+      'messages/inbox/thread/thread.html'
+    );
+    expect(result.timezoneOffsetMinutes).toBeUndefined();
+  });
+});
+
 describe('Accounts Center Messenger JSON parser', () => {
   it('parses text, share text, reactions, photos and stickers while rejecting remote media', () => {
     const result = parseMessageConversationJson(JSON.stringify({

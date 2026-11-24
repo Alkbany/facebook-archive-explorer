@@ -42,6 +42,18 @@ describe('Facebook comments activity parser', () => {
 });
 
 
+describe('Facebook comments export timezone metadata', () => {
+  it('reads an explicit footer offset and preserves the raw comment date', () => {
+    const rawDate = '١٩/٠٢/٢٠١٩ ٧:٣٩ ص';
+    const html = `${card('Synthetic user commented on a post.', 'Synthetic comment.', rawDate)}
+      <div class="_4t5o">Export created at 10:00 PM UTC+02</div>`;
+    const result = parseCommentsExport(html, 'comments/comments.html');
+
+    expect(result.timezoneOffsetMinutes).toBe(120);
+    expect(result.records[0].dateRaw).toBe(rawDate);
+  });
+});
+
 describe('Accounts Center comments_v2 JSON parser', () => {
   it('extracts activity, comment body, group label, and raw timestamp from comments_v2', () => {
     const result = parseCommentsJsonExport(JSON.stringify({

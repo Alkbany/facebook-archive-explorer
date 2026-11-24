@@ -82,15 +82,16 @@ describe('Messages conversation import', () => {
     });
 
     const record = database.prepare(`
-      SELECT title, body_text, event_time_raw, sensitivity, search_enabled, payload_json
+      SELECT title, body_text, event_time_raw, event_time_utc, sensitivity, search_enabled, payload_json
       FROM records WHERE snapshot_id = ?
     `).get(snapshotId) as {
-      title: string; body_text: string; event_time_raw: string;
+      title: string; body_text: string; event_time_raw: string; event_time_utc: string | null;
       sensitivity: string; search_enabled: number; payload_json: string;
     };
     expect(record).toMatchObject({
       title: 'Synthetic Sender',
       event_time_raw: 'Raw message date',
+      event_time_utc: null,
       sensitivity: 'sensitive',
       search_enabled: 0
     });
@@ -141,6 +142,30 @@ describe('Messages conversation import', () => {
     ).all();
     expect(indexed).toHaveLength(0);
     await expect(readFile(htmlPath, 'utf8')).resolves.toBe(html);
+  });
+
+  it('normalizes an Arabic message date only when the same export footer gives UTC offset', async () => {
+    const html = `<!doctype html><html><body>
+      <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+        <div class="_3-96 _2pio _2lek _2lel">Synthetic Sender</div>
+        <div class="_3-96 _2let">A synthetic message.</div>
+        <div class="_3-94 _2lem">١٥/٠٧/٢٠١٧ ٢:٢٥ ص</div>
+      </div>
+      <div class="_4t5o">Export created at 10:00 PM UTC+02</div>
+    </body></html>`;
+    await writeFile(join(root, 'messages/inbox/thread-1/thread.html'), html, 'utf8');
+
+    const result = await importMessagesSection(database, snapshotId, root);
+    expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, failedFiles: 0 });
+
+    const record = database.prepare(
+      'SELECT event_time_raw, event_time_utc FROM records WHERE snapshot_id = ?'
+    ).get(snapshotId) as { event_time_raw: string; event_time_utc: string | null };
+
+    expect(record).toEqual({
+      event_time_raw: '١٥/٠٧/٢٠١٧ ٢:٢٥ ص',
+      event_time_utc: '2017-07-15T00:25:00.000Z'
+    });
   });
 
   it('does not import arbitrary HTML outside conversation folders', async () => {

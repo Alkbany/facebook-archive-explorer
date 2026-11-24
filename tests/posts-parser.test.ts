@@ -45,6 +45,19 @@ describe('Facebook posts parser', () => {
 });
 
 
+describe('Facebook posts export timezone metadata', () => {
+  it('reads an explicit footer offset while preserving the original card date', () => {
+    const rawDate = '٢٥/٠٧/٢٠١٧ ٨:٣٨ م';
+    const html = `<html><body>${card('A synthetic post.', rawDate)}
+      <div class="_4t5o">Export created at 10:00 PM UTC+02</div>
+    </body></html>`;
+    const result = parsePostsExport(html, 'posts/your_posts.html');
+
+    expect(result.timezoneOffsetMinutes).toBe(120);
+    expect(result.records[0].dateRaw).toBe(rawDate);
+  });
+});
+
 describe('Accounts Center TNG Posts JSON parser', () => {
   it('extracts the Facebook activity heading, post text, raw time and only local media URIs', () => {
     const result = parsePostsJsonExport(JSON.stringify([{

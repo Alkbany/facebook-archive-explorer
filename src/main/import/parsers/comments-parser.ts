@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { basename } from 'node:path';
 import type { Element } from 'domhandler';
+import { facebookExportUtcOffsetMinutes } from '../../../shared/time/facebook-date';
 
 export interface CommentActivityRecord {
   activityRaw: string | null;
@@ -18,6 +19,7 @@ export interface CommentsParseIssue {
 export interface CommentsParseResult {
   records: CommentActivityRecord[];
   issues: CommentsParseIssue[];
+  timezoneOffsetMinutes?: number;
 }
 
 const CARD_SELECTOR = 'div.pam._3-95._2pi0._2lej.uiBoxWhite.noborder';
@@ -65,8 +67,13 @@ export function parseCommentsExport(html: string, sourceFile: string): CommentsP
     throw new Error(`Unsupported comments source: ${basename(sourceFile)}`);
   }
   const $ = cheerio.load(html);
+  const timezoneOffsetMinutes = facebookExportUtcOffsetMinutes($('div._4t5o').last().text() || null);
   const cards = $(CARD_SELECTOR);
-  const result: CommentsParseResult = { records: [], issues: [] };
+  const result: CommentsParseResult = {
+    records: [],
+    issues: [],
+    ...(timezoneOffsetMinutes !== null ? { timezoneOffsetMinutes } : {})
+  };
   if (cards.length === 0) {
     result.issues.push({ code: 'no_cards_found', sourceCardIndex: null });
     return result;

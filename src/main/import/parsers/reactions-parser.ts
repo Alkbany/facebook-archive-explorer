@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { basename } from 'node:path';
+import { facebookExportUtcOffsetMinutes } from '../../../shared/time/facebook-date';
 
 export interface ReactionRecord {
   descriptionRaw: string | null;
@@ -10,7 +11,7 @@ export interface ReactionRecord {
   sourceCardIndex: number;
 }
 export interface ReactionParseIssue { code: 'no_cards_found' | 'card_without_description_or_reaction'; sourceCardIndex: number | null; }
-export interface ReactionParseResult { records: ReactionRecord[]; issues: ReactionParseIssue[]; }
+export interface ReactionParseResult { records: ReactionRecord[]; issues: ReactionParseIssue[]; timezoneOffsetMinutes?: number; }
 
 const CARD_SELECTOR = 'div.pam._3-95._2pi0._2lej.uiBoxWhite.noborder';
 const DESCRIPTION_SELECTOR = 'div._3-96._2pio._2lek._2lel';
@@ -31,8 +32,13 @@ export function parseReactionsExport(html: string, sourceFile: string): Reaction
     throw new Error(`Unsupported reactions source: ${basename(sourceFile)}`);
   }
   const $ = cheerio.load(html);
+  const timezoneOffsetMinutes = facebookExportUtcOffsetMinutes($('div._4t5o').last().text() || null);
   const cards = $(CARD_SELECTOR);
-  const result: ReactionParseResult = { records: [], issues: [] };
+  const result: ReactionParseResult = {
+    records: [],
+    issues: [],
+    ...(timezoneOffsetMinutes !== null ? { timezoneOffsetMinutes } : {})
+  };
   if (cards.length === 0) {
     result.issues.push({ code: 'no_cards_found', sourceCardIndex: null });
     return result;

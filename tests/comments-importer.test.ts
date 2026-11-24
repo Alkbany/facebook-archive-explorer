@@ -85,7 +85,7 @@ describe('Comments import', () => {
     expect(listCommentActivities(database, snapshotId)).toMatchObject([{
       activityRaw: 'Synthetic account commented on a synthetic post.',
       bodyRaw: 'Synthetic comment body',
-      dateRaw: '12597674400'
+      dateRaw: '1540000000'
     }]);
   });
 

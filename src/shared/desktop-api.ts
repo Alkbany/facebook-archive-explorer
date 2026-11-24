@@ -1,6 +1,6 @@
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
-import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult } from './archive/search';
+import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult, SemanticSearchStatus } from './archive/search';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -87,6 +87,9 @@ export const IPC_CHANNELS = {
   listMediaForSelectedBackup: 'archive:list-media',
   getArchiveSearchSettings: 'archive:get-search-settings',
   setIncludeMessagesInGlobalSearch: 'archive:set-message-search-setting',
+  getSemanticSearchStatus: 'archive:get-semantic-search-status',
+  setSemanticSearchEnabled: 'archive:set-semantic-search-enabled',
+  retrySemanticIndexing: 'archive:retry-semantic-indexing',
   searchRecordsForSelectedBackup: 'archive:search-records',
   exportSearchResultsForSelectedBackup: 'archive:export-search-results',
   compareArchiveSnapshots: 'archive:compare-snapshots',
@@ -130,6 +133,9 @@ export interface DesktopApi {
   listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number, query: string, pageSize?: number): Promise<ArchiveMediaGalleryPage>;
   getArchiveSearchSettings(): Promise<ArchiveSearchSettings>;
   setIncludeMessagesInGlobalSearch(enabled: boolean): Promise<ArchiveSearchSettings>;
+  getSemanticSearchStatus(): Promise<SemanticSearchStatus>;
+  setSemanticSearchEnabled(enabled: boolean): Promise<SemanticSearchStatus>;
+  retrySemanticIndexing(): Promise<SemanticSearchStatus>;
   searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<ArchiveSearchResult[]>;
   exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;

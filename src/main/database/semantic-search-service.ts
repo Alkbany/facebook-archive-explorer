@@ -178,6 +178,7 @@ function saveBatch(
     UPDATE semantic_index_jobs
     SET status = 'completed', safe_error_code = NULL, updated_at = ?
     WHERE record_id = ? AND model_id = ? AND model_version = ?
+      AND (SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled') = 'true'
       AND EXISTS (SELECT 1 FROM semantic_embeddings
         WHERE record_id = ? AND model_id = ? AND model_version = ?)
   `);

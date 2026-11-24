@@ -74,7 +74,6 @@ describe('paged archive media gallery', () => {
   it('returns distinct files in stable pages and reports the full total', () => {
     const firstPage = listArchiveMediaGallery(database, snapshotId, 'all', 1);
     const secondPage = listArchiveMediaGallery(database, snapshotId, 'all', 2);
-    const thirdPage = listArchiveMediaGallery(database, snapshotId, 'all', 3);
 
     expect(firstPage).toMatchObject({ page: 1, pageSize: 100, total: 110 });
     expect(secondPage).toMatchObject({ page: 2, pageSize: 100, total: 110 });

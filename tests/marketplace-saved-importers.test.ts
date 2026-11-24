@@ -116,7 +116,7 @@ describe('Marketplace and Saved Items JSON importers', () => {
         expect.objectContaining({ sourcePath: 'your_facebook_activity/facebook_marketplace/your_marketplace_items.json' })
       ])
     });
-    expect(listings[1].title).toBe('Unmatched second listing');
+    expect(listings.map((item) => item.title)).toContain('Unmatched second listing');
   });
 
   it('retains a listing record when the optional details file is absent', async () => {

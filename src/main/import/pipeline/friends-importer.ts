@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
@@ -116,6 +117,7 @@ export async function importFriendsSourceFile(
     } else {
       throw new Error('FRIENDS_FORMAT_UNSUPPORTED');
     }
+    clearSourceFileRecords(database, sourceFileId);
     const timestamp = new Date().toISOString();
 
     const insertRecord = database.prepare(`

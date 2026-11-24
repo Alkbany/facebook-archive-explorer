@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
@@ -84,6 +85,7 @@ async function importOneConversation(
       : source.detected_format === 'html'
         ? parseMessageConversation(sourceText, source.relative_path)
         : (() => { throw new Error('MESSAGES_FORMAT_UNSUPPORTED'); })();
+    clearSourceFileRecords(database, source.id);
     const timestamp = new Date().toISOString();
     const insertRecord = database.prepare(`
       INSERT INTO records (

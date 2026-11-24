@@ -25,6 +25,7 @@ import type {
   FallbackArchiveRecordsPage
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
+import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import type { ArchiveSearchResult } from '../../shared/archive/search';
@@ -959,6 +960,8 @@ function App() {
   const sectionCounts = inspection
     ? Object.entries(inspection.sectionFileCounts).sort((a, b) => b[1] - a[1]).slice(0, 8)
     : [];
+  const groupsFallbackSection = fallbackSections.find((section) => section.sectionKey === 'groups') ?? null;
+  const isGroupsWorkspace = activeNavigation === 'groups';
 
   return (
     <div className="app-shell">
@@ -979,6 +982,17 @@ function App() {
         <button type="button" className={activeNavigation === 'photos' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('photos', 'photo-albums-workspace')}><span>▧</span> Photos &amp; videos</button>
         <button type="button" className={activeNavigation === 'activity' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('activity', 'activity-tools')}><span>◷</span> Activity</button>
         <button type="button" className={activeNavigation === 'search' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('search', 'unified-search-panel')}><span>⌕</span> Search</button>
+        {groupsFallbackSection && (
+          <button
+            type="button"
+            className={activeNavigation === 'groups' ? 'nav-item nav-item-active' : 'nav-item'}
+            onClick={() => {
+              setFallbackQuery('');
+              void loadFallbackArchiveRecords('groups', 1, '');
+              navigateToSection('groups', 'fallback-records-workspace');
+            }}
+          ><span>♧</span> Groups</button>
+        )}
         {fallbackSections.length > 0 && (
           <button type="button" className={activeNavigation === 'other' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('other', 'fallback-records-workspace')}><span>▤</span> Other data</button>
         )}
@@ -2252,11 +2266,15 @@ function App() {
           <section className="fallback-records-panel" id="fallback-records-workspace">
             <div className="media-gallery-heading">
               <div>
-                <p className="eyebrow">PRESERVED ARCHIVE CONTENT</p>
-                <h3>Other data</h3>
-                <p>Browse text preserved from HTML, JSON, and TXT files that do not yet have a dedicated section parser. Search is scoped to the selected section; original source files remain unchanged.</p>
+                <p className="eyebrow">{isGroupsWorkspace ? 'GROUP ACTIVITY' : 'PRESERVED ARCHIVE CONTENT'}</p>
+                <h3>{isGroupsWorkspace ? 'Groups' : 'Other data'}</h3>
+                <p>{isGroupsWorkspace
+                  ? 'Browse posts, comments, and group membership activity from the three reviewed Accounts Center JSON exports. Other Groups export formats remain preserved separately until their structures are verified.'
+                  : 'Browse text preserved from HTML, JSON, and TXT files that do not yet have a dedicated section parser. Search is scoped to the selected section; original source files remain unchanged.'}</p>
               </div>
-              <span>{fallbackSections.reduce((total, section) => total + section.recordCount, 0).toLocaleString()} records</span>
+              <span>{(isGroupsWorkspace
+                ? groupsFallbackSection?.recordCount ?? 0
+                : fallbackSections.reduce((total, section) => total + section.recordCount, 0)).toLocaleString()} records</span>
             </div>
             <div className="fallback-record-controls">
               <label>
@@ -2294,35 +2312,48 @@ function App() {
                 <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, 1, fallbackQuery)} disabled={isLoadingFallbackRecords || !fallbackSectionKey}>Search</button>
                 <button className="secondary-button" onClick={() => { setFallbackQuery(''); void loadFallbackArchiveRecords(fallbackSectionKey, 1, ''); }} disabled={isLoadingFallbackRecords || (!fallbackQuery && !fallbackAppliedQuery)}>Clear</button>
               </div>
-              {fallbackSections.find((section) => section.sectionKey === fallbackSectionKey)?.sensitivity === 'sensitive'
-                ? <span className="fallback-sensitivity sensitive">Sensitive section · excluded from global search; filter within this section only</span>
-                : <span className="fallback-sensitivity">Preserved fallback text · not a verified structured parser</span>}
+              {isGroupsWorkspace
+                ? <span className="fallback-sensitivity">Reviewed Groups JSON subset · original fields remain available below</span>
+                : fallbackSections.find((section) => section.sectionKey === fallbackSectionKey)?.sensitivity === 'sensitive'
+                  ? <span className="fallback-sensitivity sensitive">Sensitive section · excluded from global search; filter within this section only</span>
+                  : <span className="fallback-sensitivity">Preserved fallback text · not a verified structured parser</span>}
             </div>
             {isLoadingFallbackRecords ? (
               <p className="fallback-records-empty">Loading preserved records…</p>
             ) : fallbackRecords && fallbackRecords.records.length > 0 ? (
               <div className="fallback-record-list">
-                {fallbackRecords.records.map((record) => (
-                  <article className="fallback-record-card" key={record.id}>
-                    <div className="fallback-record-heading">
-                      <strong>{record.title || 'Archive entry'}</strong>
-                      <span>{record.recordType === 'json_item' ? 'JSON' : record.recordType === 'text_item' ? 'TXT' : 'HTML'} · {record.sensitivity}</span>
-                    </div>
-                    {record.body && <p>{record.body}</p>}
-                    <details className="fallback-record-payload">
-                      <summary>
-                        {record.recordType === 'json_item'
-                          ? 'View original JSON fields'
-                          : record.recordType === 'text_item'
-                            ? 'View preserved text'
-                            : 'View extracted HTML item data'}
-                      </summary>
-                      <pre>{formatFallbackPayload(record.payloadPreview, record.recordType)}</pre>
-                      {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete stored record remains in the local database.</small>}
-                    </details>
-                    <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
-                  </article>
-                ))}
+                {fallbackRecords.records.map((record) => {
+                  const groupMetadata = record.sectionKey === 'groups'
+                    ? getGroupActivityMetadata(record.sourcePath, record.payloadPreview)
+                    : null;
+                  return (
+                    <article className="fallback-record-card" key={record.id}>
+                      <div className="fallback-record-heading">
+                        <strong>{record.title || 'Archive entry'}</strong>
+                        <span>{groupMetadata?.label ?? (record.recordType === 'json_item' ? 'JSON' : record.recordType === 'text_item' ? 'TXT' : 'HTML')} · {record.sensitivity}</span>
+                      </div>
+                      {groupMetadata && (groupMetadata.groupName || groupMetadata.authorName) && (
+                        <div className="group-record-metadata">
+                          {groupMetadata.groupName && <span>Group: {groupMetadata.groupName}</span>}
+                          {groupMetadata.authorName && <span>Author: {groupMetadata.authorName}</span>}
+                        </div>
+                      )}
+                      {record.body && <p>{record.body}</p>}
+                      <details className="fallback-record-payload">
+                        <summary>
+                          {record.recordType === 'json_item'
+                            ? 'View original JSON fields'
+                            : record.recordType === 'text_item'
+                              ? 'View preserved text'
+                              : 'View extracted HTML item data'}
+                        </summary>
+                        <pre>{formatFallbackPayload(record.payloadPreview, record.recordType)}</pre>
+                        {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete stored record remains in the local database.</small>}
+                      </details>
+                      <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <p className="fallback-records-empty">
@@ -2346,7 +2377,9 @@ function App() {
                 </div>
               </div>
             )}
-            <p className="fallback-record-note">Fallback records are preserved for local reference. Their field meanings, dates, and relationships have not been verified by a section-specific importer.</p>
+            <p className="fallback-record-note">{isGroupsWorkspace
+              ? 'This view covers only the three reviewed Groups JSON exports. Fields that were not present in the observed structures are not inferred; open original JSON fields to inspect preserved source data.'
+              : 'Fallback records are preserved for local reference. Their field meanings, dates, and relationships have not been verified by a section-specific importer.'}</p>
           </section>
         )}
 

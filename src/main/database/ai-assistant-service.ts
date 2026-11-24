@@ -204,21 +204,21 @@ export function validateArchiveAssistantCitations(
   const allowed = new Map(sourceCitations.map((source) => [source.sourceId, source]));
   const used = new Set<string>();
   // A citation placed just after sentence punctuation still belongs to that sentence.
-  const normalizedAnswer = answer.replace(/([.!?؟])\\s+(\\[S[A-Za-z0-9]+\\])/gu, '$2$1');
-  const cleaned = normalizedAnswer.replace(/\\[S([A-Za-z0-9]+)\\]/gu, (marker, token: string) => {
+  const normalizedAnswer = answer.replace(/([.!?؟])\s+(\[S[A-Za-z0-9]+\])/gu, '$2$1');
+  const cleaned = normalizedAnswer.replace(/\[S([A-Za-z0-9]+)\]/gu, (marker, token: string) => {
     const sourceId = 'S' + token;
     if (!allowed.has(sourceId)) return '';
     used.add(sourceId);
     return marker;
-  }).replace(/[ \\t]{2,}/gu, ' ').trim();
+  }).replace(/[ \t]{2,}/gu, ' ').trim();
 
   const claimSegments = cleaned
-    .split(/\\r?\\n/gu)
-    .flatMap((line) => line.split(/(?<=[.!?؟])\\s+/u))
-    .map((segment) => segment.replace(/^\\s*(?:[-*•]\\s+|\\d+[.)]\\s+)/u, '').trim())
-    .filter((segment) => segment.length > 0 && !/^#{1,6}\\s/u.test(segment));
+    .split(/\r?\n/gu)
+    .flatMap((line) => line.split(/(?<=[.!?؟])\s+/u))
+    .map((segment) => segment.replace(/^\s*(?:[-*•]\s+|\d+[.)]\s+)/u, '').trim())
+    .filter((segment) => segment.length > 0 && !/^#{1,6}\s/u.test(segment));
   const hasCompleteCoverage = claimSegments.every((segment) =>
-    [...segment.matchAll(/\\[S([A-Za-z0-9]+)\\]/gu)]
+    [...segment.matchAll(/\[S([A-Za-z0-9]+)\]/gu)]
       .some((match) => allowed.has('S' + match[1]))
   );
 

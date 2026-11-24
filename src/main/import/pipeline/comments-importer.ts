@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
-import { facebookDateToUtc } from '../../../shared/time/facebook-date';
+import { facebookDateToUtc, facebookLocalizedHtmlDateToUtc } from '../../../shared/time/facebook-date';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -85,7 +85,8 @@ export async function importCommentsSection(
         const normalized = normalizeSearchText([record.activityRaw, record.groupRaw, record.bodyRaw].filter(Boolean).join(' '));
         insertRecord.run(
           snapshotId, file.id, record.sourceCardIndex, record.activityRaw, record.bodyRaw,
-          normalized, record.dateRaw, facebookDateToUtc(record.dateRaw),
+          normalized, record.dateRaw,
+          facebookLocalizedHtmlDateToUtc(record.dateRaw, parsed.timezoneOffsetMinutes ?? null) ?? facebookDateToUtc(record.dateRaw),
           JSON.stringify({ group_raw: record.groupRaw, permalink_raw: record.permalinkRaw }), now
         );
       }

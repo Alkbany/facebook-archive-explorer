@@ -67,7 +67,7 @@ describe('archive-wide media, search, and comparison', () => {
       WHERE snapshot_id = ? AND relative_path = 'photos_and_videos/your_posts/photo.jpg'
     `).run(savedRecord.id, baselineId);
 
-    const gallery = listArchiveMediaGallery(database, baselineId);
+    const gallery = listArchiveMediaGallery(database, baselineId).items;
     expect(gallery).toHaveLength(2);
     expect(gallery).toEqual(expect.arrayContaining([
       expect.objectContaining({ relativePath: 'photos_and_videos/your_posts/photo.jpg', mediaKind: 'image', sectionKey: 'posts', title: 'Synthetic author', body: 'Gallery context' }),

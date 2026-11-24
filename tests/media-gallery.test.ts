@@ -100,6 +100,28 @@ describe('paged archive media gallery', () => {
     expect(audio.items.every((item) => item.mediaKind === 'audio')).toBe(true);
   });
 
+  it('searches file names and paths literally before paginating', () => {
+    const firstImagePage = listArchiveMediaGallery(database, snapshotId, 'image', 1, 'IMAGE-0');
+    const secondImagePage = listArchiveMediaGallery(database, snapshotId, 'image', 2, 'IMAGE-0');
+    const exactVideo = listArchiveMediaGallery(database, snapshotId, 'video', 1, 'clip-007');
+    const wildcardText = listArchiveMediaGallery(database, snapshotId, 'video', 1, '%');
+
+    expect(firstImagePage).toMatchObject({ page: 1, pageSize: 50, total: 75 });
+    expect(secondImagePage).toMatchObject({ page: 2, pageSize: 50, total: 75 });
+    expect(secondImagePage.items).toHaveLength(25);
+    expect(firstImagePage.items.every((item) => item.relativePath.includes('image-0'))).toBe(true);
+    expect(exactVideo).toMatchObject({ total: 1, items: [expect.objectContaining({ relativePath: 'videos/clip-007.mp4' })] });
+    expect(wildcardText).toMatchObject({ total: 0, items: [] });
+  });
+
+  it('trims and bounds long gallery search terms', () => {
+    const padded = listArchiveMediaGallery(database, snapshotId, 'image', 1, '  image-004.jpg  ');
+    const tooLong = listArchiveMediaGallery(database, snapshotId, 'image', 1, 'x'.repeat(500));
+
+    expect(padded).toMatchObject({ total: 1, items: [expect.objectContaining({ relativePath: 'photos/image-004.jpg' })] });
+    expect(tooLong).toMatchObject({ total: 0, items: [] });
+  });
+
   it('shows one stable context record when an asset is linked more than once', () => {
     const page = listArchiveMediaGallery(database, snapshotId, 'image', 1);
     const linked = page.items.find((item) => item.relativePath === 'photos/image-000.jpg');

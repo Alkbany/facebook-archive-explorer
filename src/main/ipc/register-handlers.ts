@@ -52,25 +52,24 @@ function getSemanticModelCacheDirectory(): string {
   return join(app.getPath('userData'), 'models');
 }
 
-async function runExclusiveImport<T>(importName: string, operation: () => Promise<T>): Promise<T> {
-  return runExclusiveImportLock(importName, async () => {
-    const result = await operation();
-    if (getSemanticSearchStatus(database).enabled) {
-      try {
-        await processSemanticIndexQueue(database, getSemanticModelCacheDirectory());
-      } catch {
-        // Semantic indexing is recoverable and must not turn a successful archive import into a failure.
-      }
-    }
-    return result;
-  });
-}
-
 export function registerIpcHandlers(
   database: DatabaseSync,
   databasePath: string,
   supportedSchemaVersion: number
 ): void {
+  async function runExclusiveImport<T>(importName: string, operation: () => Promise<T>): Promise<T> {
+    return runExclusiveImportLock(importName, async () => {
+      const result = await operation();
+      if (getSemanticSearchStatus(database).enabled) {
+        try {
+          await processSemanticIndexQueue(database, getSemanticModelCacheDirectory());
+        } catch {
+          // Semantic indexing is recoverable and must not turn a successful archive import into a failure.
+        }
+      }
+      return result;
+    });
+  }
   ipcMain.handle(IPC_CHANNELS.exportLocalDatabaseBackup, async () => {
     assertNoImportInProgress('export the application database');
     const selection = await dialog.showSaveDialog({

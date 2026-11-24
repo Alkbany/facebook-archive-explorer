@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Mark an empty local AI response as an assistant error instead of leaving the UI in a misleading ready state; add regression coverage for status and continued archive search.
 - Allow the local `archive-media:` protocol in the renderer Content Security Policy for audio/video playback without widening script, image, or connection sources.
 - Isolate optional AI Assistant model loading and inference failures from archive browsing and Exact/Fuzzy Search; expose distinct load/inference error states and cover both with fault-injection regression tests.
 - Ignore stale asynchronous message-page responses after a different conversation or backup is selected, preventing an older request from replacing the current timeline.

@@ -470,6 +470,7 @@ export async function askLocalArchiveAssistant(
   }
   const rawAnswer = extractGeneratedText(generated[0]);
   if (!rawAnswer) {
+    runtimeState.phase = 'error';
     runtimeState.lastErrorCode = 'AI_ASSISTANT_EMPTY_RESPONSE';
     throw new Error('The local assistant did not return an answer.');
   }

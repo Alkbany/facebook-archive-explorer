@@ -287,6 +287,32 @@ describe('archive assistant evidence retrieval', () => {
     expect(evidence[0].excerpt).toContain(instructionLikeText);
   });
 
+  it('marks empty model output as an assistant error while keeping archive search available', async () => {
+    const recordId = addPost(0, 'Software interview', 'We discussed backend engineering', 2022);
+    setAiAssistantEnabled(database, true);
+
+    await expect(askLocalArchiveAssistant(
+      database,
+      snapshotId,
+      'What did the software interview cover?',
+      '/unused-model-cache',
+      'posts',
+      [],
+      null,
+      async () => async () => [{ generated_text: '   ' }]
+    )).rejects.toThrow('did not return an answer');
+
+    expect(getAiAssistantStatus(database)).toMatchObject({
+      enabled: true,
+      phase: 'error',
+      lastErrorCode: 'AI_ASSISTANT_EMPTY_RESPONSE'
+    });
+    expect(searchArchiveRecords(database, snapshotId, 'software', 'posts', 'exact')
+      .map((item) => item.id)).toContain(recordId);
+    expect(searchArchiveRecords(database, snapshotId, 'softwar', 'posts', 'fuzzy', 0.65)
+      .map((item) => item.id)).toContain(recordId);
+  });
+
   it('retrieves lexical evidence with the exact source path, card number, and record id', () => {
     const id = addPost(2, 'Software interview', 'We discussed a backend engineering role', 2022);
     const results = retrieveArchiveAssistantEvidence(

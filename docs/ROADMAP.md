@@ -74,7 +74,8 @@
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).
 - [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
 - [x] Unified local full-text search with section filtering across eligible records.
-- [ ] Evidence-backed normalization of raw Facebook date formats, followed by date-range filters in the relevant browsing workspaces.
+- [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.
+- [ ] Add evidence-backed timezone handling for localized Facebook HTML dates where the export supplies enough context, then add date-range filters in the relevant browsing workspaces.
 - [x] Searchable Likes & Reactions activity panel with snapshot-scoped results.
 - [x] Sampled Photos & Videos root album index import, searchable album summaries, and cover-image association.
 - [x] Sampled album-detail parsing, photo captions/dates, comment records, and local photo browsing.

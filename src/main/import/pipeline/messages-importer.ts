@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { facebookDateToUtc, facebookLocalizedHtmlDateToUtc } from '../../../shared/time/facebook-date';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -92,14 +93,14 @@ async function importOneConversation(
         snapshot_id, source_file_id, source_record_index, section_key, record_type,
         title, body_text, normalized_text, event_time_raw, event_time_utc,
         sensitivity, search_enabled, payload_json, created_at
-      ) VALUES (?, ?, ?, 'messages', ?, ?, ?, ?, ?, NULL, 'sensitive', 0, ?, ?)
+       ) VALUES (?, ?, ?, 'messages', ?, ?, ?, ?, ?, ?, 'sensitive', 0, ?, ?)
       ON CONFLICT(source_file_id, source_record_index) DO UPDATE SET
         record_type = excluded.record_type,
         title = excluded.title,
         body_text = excluded.body_text,
         normalized_text = excluded.normalized_text,
         event_time_raw = excluded.event_time_raw,
-        event_time_utc = NULL,
+        event_time_utc = excluded.event_time_utc,
         sensitivity = excluded.sensitivity,
         search_enabled = excluded.search_enabled,
         payload_json = excluded.payload_json,
@@ -136,6 +137,7 @@ async function importOneConversation(
         message.bodyRaw,
         message.bodyRaw ? normalizeSearchText(message.bodyRaw) : null,
         message.timestampRaw,
+        facebookLocalizedHtmlDateToUtc(message.timestampRaw, parsed.timezoneOffsetMinutes ?? null) ?? facebookDateToUtc(message.timestampRaw),
         JSON.stringify({
           sender_raw: message.senderRaw,
           reactions_raw: message.reactionsRaw,

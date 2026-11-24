@@ -134,8 +134,8 @@ function safeTngMediaPath(value: unknown): string | null {
 export function parsePostsJsonExport(jsonText: string, sourceFile: string): PostsParseResult {
   const lowerPath = sourceFile.toLocaleLowerCase().replace(/\\/gu, '/');
   const fileName = basename(lowerPath);
-  if (!lowerPath.includes('/your_facebook_activity/posts/') ||
-      !/^your_posts__check_ins__photos_and_videos(?:_\\d+)?\\.json$/u.test(fileName)) {
+  if (!lowerPath.startsWith('your_facebook_activity/posts/') ||
+      !/^your_posts__check_ins__photos_and_videos(?:_\d+)?\.json$/u.test(fileName)) {
     throw new Error('Unsupported TNG posts JSON source.');
   }
 

@@ -63,7 +63,7 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
     try {
       const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path);
       const parsed = file.detected_format === 'json'
-        ? parsePostsJsonExport(sourceText.replace(/^\\uFEFF/u, ''), file.relative_path)
+        ? parsePostsJsonExport(sourceText.replace(/^\uFEFF/u, ''), file.relative_path)
         : parsePostsExport(sourceText, file.relative_path);
       const now = new Date().toISOString();
       const insertRecord = database.prepare(`

@@ -44,9 +44,9 @@ The development dependency installation requires an internet connection. The app
 
 ## Windows test installer
 
-The **Windows installer** workflow builds an NSIS installer on `main` and uploads it as the `facebook-archive-explorer-windows` GitHub Actions artifact. Open the latest successful Windows installer run in the repository's Actions tab, download the artifact ZIP, extract it, and run the included `Facebook Archive Explorer Setup` installer.
+The **Windows installer** workflow builds an NSIS installer on `main`. It uploads a test artifact only when every packaged Windows executable has a valid trusted Authenticode signature. When no trusted certificate is configured, CI still validates and builds the installer, but deliberately skips artifact upload instead of handing out an installer that Smart App Control may block.
 
-Artifacts are retained for 14 days. Builds from `main` are test artifacts and may be unsigned if no signing certificate is configured; Smart App Control can block these builds. They are named `facebook-archive-explorer-windows-test` and are not intended as consumer-ready installers. Version-tag releases require valid Authenticode signatures for all packaged Windows executable binaries before upload. See [Windows code signing](docs/CODE-SIGNING.md) for the certificate setup.
+The previous unsigned test artifact is not a usable release candidate on a device enforcing Smart App Control. There is no per-app allow-list exception for Smart App Control. A trusted signing identity must be configured in GitHub Actions before a runnable installer can be published. Version-tag releases fail closed unless signatures are valid. See [Windows code signing](docs/CODE-SIGNING.md) for the requirements and current options.
 
 ## Current capabilities
 

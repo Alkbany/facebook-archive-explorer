@@ -211,6 +211,8 @@ function App() {
   const [mediaTotal, setMediaTotal] = useState(0);
   const [mediaPage, setMediaPage] = useState(1);
   const [mediaPageSize, setMediaPageSize] = useState(50);
+  const [mediaQuery, setMediaQuery] = useState('');
+  const [mediaQueryInput, setMediaQueryInput] = useState('');
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [photoAlbums, setPhotoAlbums] = useState<PhotoAlbumRecordSummary[]>([]);
   const [albumFilter, setAlbumFilter] = useState('');
@@ -323,6 +325,8 @@ function App() {
     setMediaGallery([]);
     setMediaTotal(0);
     setMediaFilter('all');
+    setMediaQuery('');
+    setMediaQueryInput('');
     setMediaPage(1);
     setPhotoAlbums([]);
     setPhotoAlbumCovers({});
@@ -350,6 +354,8 @@ function App() {
     setMediaGallery([]);
     setMediaTotal(0);
     setMediaFilter('all');
+    setMediaQuery('');
+    setMediaQueryInput('');
     setMediaPage(1);
     setSelectedConversationId(null);
     setConversationFilter('');
@@ -363,7 +369,7 @@ function App() {
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
       const [media, issues, coverage, backups, files] = await Promise.all([
-        window.desktopApi.listMediaForSelectedBackup('all', 1),
+        window.desktopApi.listMediaForSelectedBackup('all', 1, ''),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listArchiveSnapshots(),
@@ -408,6 +414,8 @@ function App() {
     setMediaGallery([]);
     setMediaTotal(0);
     setMediaFilter('all');
+    setMediaQuery('');
+    setMediaQueryInput('');
     setMediaPage(1);
     setPhotoAlbums([]);
     setPhotoAlbumCovers({});
@@ -451,7 +459,7 @@ function App() {
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
-        window.desktopApi.listMediaForSelectedBackup('all', 1),
+        window.desktopApi.listMediaForSelectedBackup('all', 1, ''),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
@@ -526,16 +534,20 @@ function App() {
 
   async function loadMediaGallery(
     filter: ArchiveMediaGalleryFilter = mediaFilter,
-    page: number = mediaPage
+    page: number = mediaPage,
+    query: string = mediaQuery
   ) {
     setIsLoadingMedia(true);
     try {
-      const result = await window.desktopApi.listMediaForSelectedBackup(filter, page);
+      const boundedQuery = query.trim().slice(0, 180);
+      const result = await window.desktopApi.listMediaForSelectedBackup(filter, page, boundedQuery);
       setMediaGallery(result.items);
       setMediaTotal(result.total);
       setMediaPage(result.page);
       setMediaPageSize(result.pageSize);
       setMediaFilter(filter);
+      setMediaQuery(boundedQuery);
+      setMediaQueryInput(boundedQuery);
     } catch {
       setError('The local media index could not be refreshed.');
     } finally {
@@ -544,7 +556,7 @@ function App() {
   }
 
   async function refreshMediaGallery() {
-    await loadMediaGallery(mediaFilter, mediaPage);
+    await loadMediaGallery(mediaFilter, mediaPage, mediaQuery);
   }
 
   async function refreshImportIssues() {
@@ -1969,12 +1981,44 @@ function App() {
                 </div>
                 <span>{mediaTotal.toLocaleString()} files in this backup</span>
               </div>
+              <form
+                className="media-gallery-search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void loadMediaGallery(mediaFilter, 1, mediaQueryInput);
+                }}
+              >
+                <input
+                  value={mediaQueryInput}
+                  onChange={(event) => setMediaQueryInput(event.target.value.slice(0, 180))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      setMediaQueryInput('');
+                      void loadMediaGallery(mediaFilter, 1, '');
+                    }
+                  }}
+                  maxLength={180}
+                  placeholder="Find a file by name or archive path…"
+                  aria-label="Search media file names and paths"
+                />
+                <button className="secondary-button" type="submit" disabled={isLoadingMedia}>Search</button>
+                {mediaQuery && (
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => void loadMediaGallery(mediaFilter, 1, '')}
+                    disabled={isLoadingMedia}
+                  >
+                    Clear
+                  </button>
+                )}
+              </form>
               <div className="media-gallery-filters">
                 {(['all', 'image', 'sticker', 'video', 'audio'] as ArchiveMediaGalleryFilter[]).map((kind) => (
                   <button
                     key={kind}
                     className={mediaFilter === kind ? 'active' : ''}
-                    onClick={() => void loadMediaGallery(kind, 1)}
+                    onClick={() => void loadMediaGallery(kind, 1, mediaQuery)}
                     disabled={isLoadingMedia}
                   >
                     {kind === 'all' ? 'All media' : kind}
@@ -2013,7 +2057,7 @@ function App() {
                   <div>
                     <button
                       className="secondary-button"
-                      onClick={() => void loadMediaGallery(mediaFilter, mediaPage - 1)}
+                      onClick={() => void loadMediaGallery(mediaFilter, mediaPage - 1, mediaQuery)}
                       disabled={isLoadingMedia || mediaPage <= 1}
                     >
                       Previous
@@ -2021,7 +2065,7 @@ function App() {
                     <span>Page {mediaPage} / {Math.max(1, Math.ceil(mediaTotal / mediaPageSize))}</span>
                     <button
                       className="secondary-button"
-                      onClick={() => void loadMediaGallery(mediaFilter, mediaPage + 1)}
+                      onClick={() => void loadMediaGallery(mediaFilter, mediaPage + 1, mediaQuery)}
                       disabled={isLoadingMedia || mediaPage >= Math.max(1, Math.ceil(mediaTotal / mediaPageSize))}
                     >
                       Next

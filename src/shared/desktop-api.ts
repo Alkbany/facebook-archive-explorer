@@ -1,4 +1,4 @@
-import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
+import type { MessageConversationPage, MessageConversationSummary, MessageMediaGalleryItem } from './archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
 import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult, SemanticSearchStatus } from './archive/search';
 import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from './archive/assistant';
@@ -150,7 +150,7 @@ export interface DesktopApi {
   getPhotoAlbumDetailForSelectedBackup(albumRecordId: number): Promise<PhotoAlbumDetailView>;
   listMessagesForSelectedBackup(): Promise<MessageConversationSummary[]>;
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
-  getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
+  getMessagesForSelectedConversation(sourceFileId: number, page?: number): Promise<MessageConversationPage>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
   listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number, query: string, pageSize?: number): Promise<ArchiveMediaGalleryPage>;
   getArchiveSearchSettings(): Promise<ArchiveSearchSettings>;

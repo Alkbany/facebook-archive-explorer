@@ -1,3 +1,12 @@
+export const MESSAGE_CONVERSATION_PAGE_SIZE = 50;
+
+export interface MessageConversationPage {
+  records: MessageRecordSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 export interface MessageConversationSummary {
   sourceFileId: number;
   relativePath: string;

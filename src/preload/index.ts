@@ -51,8 +51,8 @@ const desktopApi: DesktopApi = {
     ipcRenderer.invoke(IPC_CHANNELS.getPhotoAlbumDetailForSelectedBackup, albumRecordId),
   listMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessagesForSelectedBackup),
   listMessageMediaForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessageMediaForSelectedBackup),
-  getMessagesForSelectedConversation: (sourceFileId) =>
-    ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId),
+  getMessagesForSelectedConversation: (sourceFileId, page) =>
+    ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId, page),
   getMessageMediaPreview: (mediaAssetId) =>
     ipcRenderer.invoke(IPC_CHANNELS.getMessageMediaPreview, mediaAssetId),
   listMediaForSelectedBackup: (filter, page, query, pageSize) => ipcRenderer.invoke(IPC_CHANNELS.listMediaForSelectedBackup, filter, page, query, pageSize),

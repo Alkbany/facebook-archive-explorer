@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount, listArchiveSnapshots } from '../src/main/database/archive-repository';
 import { indexDiscoveredMediaAssets } from '../src/main/database/media-indexer';
-import { listArchiveMediaGallery } from '../src/main/database/messages-repository';
+import { getMessageConversation, listArchiveMediaGallery } from '../src/main/database/messages-repository';
 import { searchArchiveRecords } from '../src/main/database/search-repository';
 import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch } from '../src/main/database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../src/main/database/comparison-repository';
@@ -77,6 +77,43 @@ describe('archive-wide media, search, and comparison', () => {
       expect.objectContaining({ relativePath: 'videos/video.mp4', mediaKind: 'video', sectionKey: 'videos', recordId: null })
     ]));
     expect(indexDiscoveredMediaAssets(database, baselineId)).toBe(2);
+  });
+
+  it('loads long message conversations in ordered 50-message pages without overlap', () => {
+    const sourceId = addSource(baselineId, 'messages/inbox/thread/thread.html', 'html', 'messages');
+    const now = new Date().toISOString();
+    const insertMessage = database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, ?, 'messages', 'message', ?, ?, 'sensitive', 0, ?, ?)
+    `);
+    for (let index = 0; index < 123; index += 1) {
+      insertMessage.run(
+        baselineId, sourceId, index, 'Sender ' + index, 'Message body ' + index,
+        JSON.stringify({ reactions_raw: index === 0 ? ['Like'] : [] }), now
+      );
+    }
+
+    const first = getMessageConversation(database, baselineId, sourceId, 1);
+    const second = getMessageConversation(database, baselineId, sourceId, 2);
+    const last = getMessageConversation(database, baselineId, sourceId, 3);
+
+    expect(first).toMatchObject({ page: 1, pageSize: 50, total: 123 });
+    expect(first.records.map((message) => message.sourceCardIndex)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index)
+    );
+    expect(first.records[0].reactions).toEqual(['Like']);
+    expect(second.records.map((message) => message.sourceCardIndex)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index + 50)
+    );
+    expect(last).toMatchObject({ page: 3, pageSize: 50, total: 123 });
+    expect(last.records.map((message) => message.sourceCardIndex)).toEqual(
+      Array.from({ length: 23 }, (_, index) => index + 100)
+    );
+    expect(getMessageConversation(database, baselineId, sourceId, 999).page).toBe(3);
+    expect(new Set([...first.records, ...second.records, ...last.records].map((message) => message.id)).size).toBe(123);
+    expect(() => getMessageConversation(database, baselineId, sourceId, 0)).toThrow(/page/i);
   });
 
   it('searches indexed records by text and section while private messages remain excluded', () => {

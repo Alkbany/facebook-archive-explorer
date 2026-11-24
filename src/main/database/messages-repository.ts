@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from '../../shared/archive/media';
+import { MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationPage } from '../../shared/archive/messages';
 
 export interface MessageConversationSummary {
   sourceFileId: number;
@@ -10,6 +11,7 @@ export interface MessageConversationSummary {
 }
 
 export interface MessageMediaSummary {
+  id: number;
   relativePath: string;
   mediaKind: string;
   role: string | null;
@@ -108,44 +110,76 @@ export function listMessageConversations(
 export function getMessageConversation(
   database: DatabaseSync,
   snapshotId: string,
-  sourceFileId: number
-): MessageRecordSummary[] {
+  sourceFileId: number,
+  requestedPage = 1
+): MessageConversationPage {
   const source = database.prepare(`
     SELECT id FROM source_files
     WHERE id = ? AND snapshot_id = ? AND section_key = 'messages'
   `).get(sourceFileId, snapshotId) as { id: number } | undefined;
   if (!source) throw new Error('The selected conversation does not belong to this backup.');
+  if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) {
+    throw new Error('The requested conversation page is invalid.');
+  }
 
+  const totalRow = database.prepare(`
+    SELECT COUNT(*) AS total
+    FROM records
+    WHERE source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
+  `).get(sourceFileId, snapshotId) as { total: number };
+  const total = Number(totalRow.total);
+  const maxPage = Math.max(1, Math.ceil(total / MESSAGE_CONVERSATION_PAGE_SIZE));
+  const page = Math.min(requestedPage, maxPage);
   const rows = database.prepare(`
     SELECT id, source_record_index AS sourceCardIndex, title AS sender,
       body_text AS body, event_time_raw AS timestampRaw, payload_json AS payloadJson,
       record_type AS recordType
     FROM records
     WHERE source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
-    ORDER BY source_record_index ASC
-  `).all(sourceFileId, snapshotId) as unknown as MessageRow[];
+    ORDER BY source_record_index ASC, id ASC
+    LIMIT ? OFFSET ?
+  `).all(
+    sourceFileId, snapshotId, MESSAGE_CONVERSATION_PAGE_SIZE,
+    (page - 1) * MESSAGE_CONVERSATION_PAGE_SIZE
+  ) as unknown as MessageRow[];
 
-  const mediaQuery = database.prepare(`
-    SELECT assets.id AS id, assets.relative_path AS relativePath, assets.media_kind AS mediaKind,
-      links.role AS role
-    FROM record_media AS links
-    INNER JOIN media_assets AS assets ON assets.id = links.media_asset_id
-    WHERE links.record_id = ?
-    ORDER BY links.display_order ASC
-  `);
+  const mediaByRecord = new Map<number, MessageMediaSummary[]>();
+  if (rows.length > 0) {
+    const placeholders = rows.map(() => '?').join(', ');
+    const mediaRows = database.prepare(`
+      SELECT links.record_id AS recordId, assets.id AS id,
+        assets.relative_path AS relativePath, assets.media_kind AS mediaKind,
+        links.role AS role
+      FROM record_media AS links
+      INNER JOIN media_assets AS assets ON assets.id = links.media_asset_id
+      WHERE links.record_id IN (${placeholders})
+      ORDER BY links.record_id ASC, links.display_order ASC
+    `).all(...rows.map((row) => row.id)) as unknown as Array<
+      MessageMediaSummary & { recordId: number }
+    >;
+    for (const media of mediaRows) {
+      const current = mediaByRecord.get(media.recordId) ?? [];
+      current.push({ id: media.id, relativePath: media.relativePath, mediaKind: media.mediaKind, role: media.role });
+      mediaByRecord.set(media.recordId, current);
+    }
+  }
 
-  return rows.map((row) => ({
-    id: row.id,
-    sourceCardIndex: row.sourceCardIndex,
-    sender: row.sender,
-    body: row.body,
-    timestampRaw: row.timestampRaw,
-    reactions: parseReactions(row.payloadJson),
-    recordType: row.recordType,
-    media: mediaQuery.all(row.id) as unknown as MessageMediaSummary[]
-  }));
+  return {
+    records: rows.map((row) => ({
+      id: row.id,
+      sourceCardIndex: row.sourceCardIndex,
+      sender: row.sender,
+      body: row.body,
+      timestampRaw: row.timestampRaw,
+      reactions: parseReactions(row.payloadJson),
+      recordType: row.recordType,
+      media: mediaByRecord.get(row.id) ?? []
+    })),
+    page,
+    pageSize: MESSAGE_CONVERSATION_PAGE_SIZE,
+    total
+  };
 }
-
 
 export function listMessageMediaGallery(
   database: DatabaseSync,

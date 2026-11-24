@@ -305,6 +305,8 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 .conversation-detail-heading span { color: #969aab; font-size: 8px; }
 .conversation-type-pill { padding: 5px 8px; border-radius: 20px; background: #f2f1fc; color: #6d62c5 !important; white-space: nowrap; text-transform: capitalize; }
 .message-timeline { display: flex; flex: 1; flex-direction: column; gap: 9px; overflow: auto; padding: 15px 17px; background: linear-gradient(#fafbfe, #fff); }
+.conversation-pagination { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px 14px; border-top:1px solid #eef0f5; }
+.conversation-pagination > span { color:#7f8498; font-size:9px; font-weight:700; min-width:70px; text-align:center; }
 .message-card { max-width: 90%; padding: 10px 12px; border: 1px solid #eceef4; border-radius: 10px 10px 10px 3px; background: #fff; box-shadow: 0 2px 7px #33344b08; }
 .message-card.call-event { border-color: #f0e7d5; background: #fffaf1; }
 .message-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }

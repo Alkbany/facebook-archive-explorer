@@ -707,12 +707,15 @@ export function registerIpcHandlers(
     };
   });
 
-  ipcMain.handle(IPC_CHANNELS.getMessagesForSelectedConversation, (_event, sourceFileId: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.getMessagesForSelectedConversation, (_event, sourceFileId: unknown, requestedPage: unknown) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing conversations.');
     if (!Number.isSafeInteger(sourceFileId) || (sourceFileId as number) < 1) {
       throw new Error('Invalid conversation selection.');
     }
-    return getMessageConversation(database, selectedSnapshotId, sourceFileId as number);
+    if (requestedPage !== undefined && (!Number.isSafeInteger(requestedPage) || (requestedPage as number) < 1)) {
+      throw new Error('Invalid conversation page.');
+    }
+    return getMessageConversation(database, selectedSnapshotId, sourceFileId as number, (requestedPage ?? 1) as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.getMessageMediaPreview, async (_event, mediaAssetId: unknown) => {

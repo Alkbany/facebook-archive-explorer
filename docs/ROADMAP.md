@@ -81,7 +81,7 @@
 
 ## Milestone 4 — Browsing and search
 
-- [x] Initial conversation list, local filter, and source-order message timeline.
+- [x] Conversation list, local filter, and source-order message timeline with 50-message database pagination and bounded per-page attachment previews.
 - [x] Paginated Friends directory with category filters, name/date/path search, and functional workspace navigation.
 - [x] Read-only Archive Files browser with status/section filters, path and error-code search, and pagination.
 - [x] Standalone Photos & Videos import action reusing the album-index and referenced album-detail import pipeline.

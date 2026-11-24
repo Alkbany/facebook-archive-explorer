@@ -29,7 +29,7 @@ import type {
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
-import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
+import { MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationSummary, type MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import { ARCHIVE_SEARCH_PAGE_SIZE, MAX_ARCHIVE_SEARCH_OFFSET, type ArchiveSearchMode, type ArchiveSearchResult, type SemanticSearchStatus } from '../../shared/archive/search';
 import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
@@ -243,6 +243,9 @@ function App() {
   const [isImportingMessages, setIsImportingMessages] = useState(false);
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
+  const [conversationPage, setConversationPage] = useState(1);
+  const [conversationPageSize, setConversationPageSize] = useState(MESSAGE_CONVERSATION_PAGE_SIZE);
+  const [conversationTotal, setConversationTotal] = useState(0);
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
   const [mediaTotal, setMediaTotal] = useState(0);
   const [mediaPage, setMediaPage] = useState(1);
@@ -1189,13 +1192,13 @@ function App() {
     }
   }
 
-  async function loadConversation(sourceFileId: number) {
+  async function loadConversation(sourceFileId: number, page = 1) {
     setSelectedConversationId(sourceFileId);
     setIsLoadingConversation(true);
     try {
-      const messages = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId);
+      const result = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId, page);
       let previewsLoaded = 0;
-      const withPreviews = await Promise.all(messages.map(async (message) => ({
+      const withPreviews = await Promise.all(result.records.map(async (message) => ({
         ...message,
         media: await Promise.all(message.media.map(async (media) => {
           if (media.mediaKind !== 'image' && media.mediaKind !== 'sticker') return media;
@@ -1209,6 +1212,9 @@ function App() {
         }))
       })));
       setConversationMessages(withPreviews);
+      setConversationPage(result.page);
+      setConversationPageSize(result.pageSize);
+      setConversationTotal(result.total);
     } catch {
       setError('This conversation could not be opened from the selected backup.');
       setConversationMessages([]);
@@ -2480,7 +2486,7 @@ function App() {
                           <div className="conversation-detail-heading">
                             <div>
                               <strong>{selectedConversation.participants.join(' · ') || 'Conversation'}</strong>
-                              <span>{selectedConversation.messageCount.toLocaleString()} imported records · Original order preserved</span>
+                              <span>{conversationTotal.toLocaleString()} imported records · Showing {conversationTotal === 0 ? 0 : ((conversationPage - 1) * conversationPageSize + 1).toLocaleString()}–{Math.min(conversationPage * conversationPageSize, conversationTotal).toLocaleString()} · Original order preserved</span>
                             </div>
                             <span className="conversation-type-pill">{selectedConversation.conversationType.replaceAll('_', ' ')}</span>
                           </div>
@@ -2518,6 +2524,17 @@ function App() {
                                 </article>
                               ))}
                               {conversationMessages.length === 0 && <div className="conversation-empty">No messages to display.</div>}
+                            </div>
+                          )}
+                          {!isLoadingConversation && conversationTotal > conversationPageSize && (
+                            <div className="conversation-pagination">
+                              <button className="secondary-button" onClick={() => void loadConversation(selectedConversation.sourceFileId, conversationPage - 1)} disabled={conversationPage <= 1}>
+                                Previous
+                              </button>
+                              <span>Page {conversationPage} of {Math.ceil(conversationTotal / conversationPageSize)}</span>
+                              <button className="secondary-button" onClick={() => void loadConversation(selectedConversation.sourceFileId, conversationPage + 1)} disabled={conversationPage * conversationPageSize >= conversationTotal}>
+                                Next
+                              </button>
                             </div>
                           )}
                         </>

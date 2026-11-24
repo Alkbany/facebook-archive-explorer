@@ -11,5 +11,6 @@ export function clearSourceFileRecords(database: DatabaseSync, sourceFileId: num
     throw new RangeError('A valid source file ID is required.');
   }
   const result = database.prepare('DELETE FROM records WHERE source_file_id = ?').run(sourceFileId);
+  database.prepare('UPDATE source_files SET record_count = 0 WHERE id = ?').run(sourceFileId);
   return Number(result.changes);
 }

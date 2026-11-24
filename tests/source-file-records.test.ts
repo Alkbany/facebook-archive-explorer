@@ -40,7 +40,10 @@ describe('clearSourceFileRecords', () => {
       'INSERT INTO record_media (record_id, media_asset_id, display_order, role) VALUES (?, ?, 0, ?)'
     ).run(recordId, assetId, 'post_attachment');
 
+    database.prepare('UPDATE source_files SET record_count = 1 WHERE id = ?').run(sourceFileId);
     expect(clearSourceFileRecords(database, sourceFileId)).toBe(1);
+    expect(database.prepare('SELECT record_count AS count FROM source_files WHERE id = ?').get(sourceFileId))
+      .toMatchObject({ count: 0 });
     expect(database.prepare('SELECT COUNT(*) AS count FROM records').get()).toMatchObject({ count: 0 });
     expect(database.prepare('SELECT COUNT(*) AS count FROM record_search').get()).toMatchObject({ count: 0 });
     expect(database.prepare('SELECT COUNT(*) AS count FROM record_media').get()).toMatchObject({ count: 0 });

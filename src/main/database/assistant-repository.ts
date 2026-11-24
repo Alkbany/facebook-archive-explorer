@@ -34,7 +34,9 @@ export interface ArchiveAssistantEvidence {
 function extractYear(question: string): number | null {
   const years = question.match(/(?:19|20)\d{2}/gu);
   if (!years || years.length === 0) return null;
-  const candidate = Number(years[0]);
+  // Retrieval questions append the newest user turn last; prefer its date
+  // over years mentioned in earlier conversation context.
+  const candidate = Number(years[years.length - 1]);
   return candidate >= 1900 && candidate <= 2099 ? candidate : null;
 }
 

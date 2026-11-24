@@ -4,8 +4,8 @@ import type {
   DetectedArchiveFormat,
   DiscoveredArchiveFile
 } from '../../../shared/archive/inspection';
-import { getArchiveSection } from '../../../shared/archive/section-registry';
 import type { ArchiveInventoryOptions } from './inventory';
+import { getSectionKeyForArchivePath } from './section-path';
 import {
   forEachZipEntry,
   getSafeZipEntryPath,
@@ -18,11 +18,6 @@ const BATCH_SIZE = 500;
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic', '.tif', '.tiff', '.jfif']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm', '.avi', '.mkv', '.3gp', '.3gpp']);
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.m4a', '.aac', '.wav', '.ogg', '.opus', '.flac']);
-
-function sectionForPath(relativePath: string): string {
-  const firstSegment = relativePath.split('/')[0];
-  return getArchiveSection(firstSegment)?.key ?? firstSegment;
-}
 
 function detectFormat(fileName: string): DetectedArchiveFormat {
   const extension = extname(fileName).toLocaleLowerCase();
@@ -80,7 +75,7 @@ export async function inspectArchiveZip(
 
     const relativePath = getSafeZipEntryPath(entry);
     const fileName = basename(relativePath);
-    const sectionKey = sectionForPath(relativePath);
+    const sectionKey = getSectionKeyForArchivePath(relativePath);
     const detectedFormat = detectFormat(fileName);
     report.totalFiles += 1;
     report.sectionFileCounts[sectionKey] = (report.sectionFileCounts[sectionKey] ?? 0) + 1;

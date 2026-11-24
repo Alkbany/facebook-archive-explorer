@@ -214,4 +214,45 @@ describe('ZIP archive reader and inventory', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it('classifies the nested Accounts Center export paths inside ZIP archives', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'archive-zip-nested-sections-'));
+    try {
+      const zipPath = join(root, 'nested-facebook-export.zip');
+      const paths = [
+        'your_facebook_activity/posts/your_posts__check_ins__photos_and_videos_1.json',
+        'your_facebook_activity/posts/album/0.json',
+        'your_facebook_activity/comments_and_reactions/comments.json',
+        'your_facebook_activity/comments_and_reactions/likes_and_reactions_1.json',
+        'your_facebook_activity/groups/group_posts_and_comments.json',
+        'connections/friends/your_friends.json',
+        'connections/following_and_followers/followers.json',
+        'index.html'
+      ];
+      await writeFile(zipPath, makeDeflatedZip(paths.map((name) => ({
+        name,
+        content: Buffer.from('{}')
+      }))));
+
+      const report = await inspectArchiveZip(zipPath, {
+        snapshotId: 'snapshot-nested-zip',
+        accountId: 'account-nested-zip'
+      });
+
+      expect(report.totalFiles).toBe(paths.length);
+      expect(report.sectionFileCounts).toEqual({
+        comments: 1,
+        following_and_followers: 1,
+        friends: 1,
+        groups: 1,
+        likes_and_reactions: 1,
+        photos_and_videos: 1,
+        posts: 1,
+        root: 1
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
 });

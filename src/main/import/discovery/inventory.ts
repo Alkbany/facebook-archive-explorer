@@ -6,7 +6,6 @@ import type {
   DetectedArchiveFormat,
   DiscoveredArchiveFile
 } from '../../../shared/archive/inspection';
-import { getArchiveSection } from '../../../shared/archive/section-registry';
 
 const MAX_ENTRIES = 100_000;
 const BATCH_SIZE = 500;
@@ -32,77 +31,6 @@ export interface ArchiveInventoryOptions {
 
 function boundedOption(value: number | undefined, fallback: number, maximum: number): number {
   return Number.isSafeInteger(value) ? Math.max(1, Math.min(maximum, value as number)) : fallback;
-}
-
-function sectionForPath(relativePath: string): string {
-  const segments = relativePath.split(/[\\/]/u).filter(Boolean);
-  if (segments.length === 0) return 'root';
-  if (segments.length === 1) return 'root';
-
-  const normalized = segments.map((segment) => segment.toLocaleLowerCase());
-  const [root, category, subcategory] = normalized;
-  const fileName = normalized[normalized.length - 1];
-
-  const commentsOrReactions = (): string => {
-    if (fileName.startsWith('likes_and_reactions')) return 'likes_and_reactions';
-    if (fileName.startsWith('comments') || fileName.startsWith('your_comment_edits')) return 'comments';
-    return 'other_activity';
-  };
-
-  if (root === 'your_facebook_activity') {
-    switch (category) {
-      case 'posts':
-        if (
-          subcategory === 'album' ||
-          subcategory === 'media' ||
-          fileName.startsWith('your_videos') ||
-          fileName.startsWith('your_uncategorized_photos')
-        ) return 'photos_and_videos';
-        return 'posts';
-      case 'comments_and_reactions':
-        return commentsOrReactions();
-      case 'messages':
-        return 'messages';
-      case 'groups':
-        return 'groups';
-      case 'events':
-        return 'events';
-      case 'marketplace':
-        return 'marketplace';
-      case 'saved_items':
-      case 'saved_items_and_collections':
-        return 'saved_items_and_collections';
-      default:
-        return 'your_facebook_activity';
-    }
-  }
-
-  if (root === 'comments_and_reactions') return commentsOrReactions();
-
-  if (root === 'connections') {
-    if (category === 'friends') return 'friends';
-    if (category === 'following_and_followers' || category === 'followers' || category === 'following') {
-      return 'following_and_followers';
-    }
-    return 'connections';
-  }
-
-  if (root === 'logged_information') {
-    if (category === 'search') return 'search_history';
-    if (category === 'location' || category === 'locations') return 'location';
-    return 'logged_information';
-  }
-
-  if (root === 'personal_information') {
-    if (category === 'profile_information') return 'profile_information';
-    if (category === 'about_you') return 'about_you';
-    return 'personal_information';
-  }
-
-  if (root === 'ads_information') return 'ads';
-  if (root === 'apps_and_websites_off_of_facebook') return 'apps_and_websites';
-
-  return getArchiveSection(root)?.key ?? root;
 }
 
 function detectFormat(fileName: string): DetectedArchiveFormat {
@@ -197,7 +125,7 @@ export async function inspectArchiveDirectory(
 
         if (!entry.isFile()) continue;
 
-        const sectionKey = sectionForPath(relativePath);
+        const sectionKey = getSectionKeyForArchivePath(relativePath);
         const detectedFormat = detectFormat(entry.name);
         report.totalFiles += 1;
         report.sectionFileCounts[sectionKey] = (report.sectionFileCounts[sectionKey] ?? 0) + 1;

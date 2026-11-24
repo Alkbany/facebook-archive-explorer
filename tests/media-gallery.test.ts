@@ -84,7 +84,7 @@ describe('paged archive media gallery', () => {
   });
 
   it('filters by media kind before pagination', () => {
-    const images = listArchiveMediaGallery(database, snapshotId, 'image', 2);
+    const images = listArchiveMediaGallery(database, snapshotId, 'image', 2, '', 50);
     const videos = listArchiveMediaGallery(database, snapshotId, 'video', 1);
     const audio = listArchiveMediaGallery(database, snapshotId, 'audio', 1);
 

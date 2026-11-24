@@ -46,12 +46,12 @@ The development dependency installation requires an internet connection. The app
 
 The project uses Semantic Versioning with separate beta and stable channels:
 
-- **Beta:** [`v0.1.0-beta.1`](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.1) is the first early-access GitHub pre-release; later builds will be `v0.1.0-beta.2`, then `v0.1.0-beta.n`. These are for testing, not the stable product release.
+- **Beta:** [`v0.1.0-beta.1`](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.1) is the first early-access release. [`v0.1.0-beta.2`](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.2) adds the Electron 45 security update and the dedicated Groups workspace. Later builds follow the `v0.1.0-beta.n` sequence. Beta builds are for testing, not the stable product release.
 - **Stable:** `v1.0.0` will be the first stable release. It will be published only after the real-export, large-archive, clean-Windows, and privacy/security release checklist is complete. Later versions follow Semantic Versioning: patch for compatible fixes, minor for compatible features, and major for breaking changes.
 
 The Windows workflow supports optional Authenticode signing. Without a trusted signing certificate, the main-branch test installer and beta releases are unsigned; the release page clearly identifies that status. **Smart App Control may block unsigned files that Microsoft does not already recognize.** It has no per-app allow-list. For personal testing on the owner's device, Smart App Control can be turned off in Windows Security while keeping Microsoft Defender Antivirus enabled. This is a local device choice, not a workaround for public distribution.
 
-The latest main-branch test installer is available in the repository's Actions tab as the `facebook-archive-explorer-windows-test` artifact ZIP (14-day retention). Beta and stable installers are attached to their GitHub Releases instead of relying only on short-lived Actions artifacts. See [Windows code signing](docs/CODE-SIGNING.md) and the [release roadmap](docs/ROADMAP.md) for details.
+The latest main-branch test installer is available in the repository's Actions tab as the `facebook-archive-explorer-windows-test` artifact ZIP (14-day retention). It includes `build-verification.txt` with the installer SHA-256 digest. Beta and stable installers are attached to their GitHub Releases instead of relying only on short-lived Actions artifacts. See [Windows code signing](docs/CODE-SIGNING.md) and the [release roadmap](docs/ROADMAP.md) for details.
 
 ## Current capabilities
 

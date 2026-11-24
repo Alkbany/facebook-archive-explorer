@@ -76,13 +76,11 @@ describe('paged archive media gallery', () => {
     const secondPage = listArchiveMediaGallery(database, snapshotId, 'all', 2);
     const thirdPage = listArchiveMediaGallery(database, snapshotId, 'all', 3);
 
-    expect(firstPage).toMatchObject({ page: 1, pageSize: 50, total: 110 });
-    expect(secondPage).toMatchObject({ page: 2, pageSize: 50, total: 110 });
-    expect(thirdPage).toMatchObject({ page: 3, pageSize: 50, total: 110 });
-    expect(firstPage.items).toHaveLength(50);
-    expect(secondPage.items).toHaveLength(50);
-    expect(thirdPage.items).toHaveLength(10);
-    const allIds = [...firstPage.items, ...secondPage.items, ...thirdPage.items].map((item) => item.id);
+    expect(firstPage).toMatchObject({ page: 1, pageSize: 100, total: 110 });
+    expect(secondPage).toMatchObject({ page: 2, pageSize: 100, total: 110 });
+    expect(firstPage.items).toHaveLength(100);
+    expect(secondPage.items).toHaveLength(10);
+    const allIds = [...firstPage.items, ...secondPage.items].map((item) => item.id);
     expect(new Set(allIds).size).toBe(110);
   });
 
@@ -102,11 +100,11 @@ describe('paged archive media gallery', () => {
 
   it('searches file names and paths literally before paginating', () => {
     const firstImagePage = listArchiveMediaGallery(database, snapshotId, 'image', 1, 'IMAGE-0');
-    const secondImagePage = listArchiveMediaGallery(database, snapshotId, 'image', 2, 'IMAGE-0');
+    const secondImagePage = listArchiveMediaGallery(database, snapshotId, 'image', 2, 'IMAGE-0', 50);
     const exactVideo = listArchiveMediaGallery(database, snapshotId, 'video', 1, 'clip-007');
     const wildcardText = listArchiveMediaGallery(database, snapshotId, 'video', 1, '%');
 
-    expect(firstImagePage).toMatchObject({ page: 1, pageSize: 50, total: 75 });
+    expect(firstImagePage).toMatchObject({ page: 1, pageSize: 100, total: 75 });
     expect(secondImagePage).toMatchObject({ page: 2, pageSize: 50, total: 75 });
     expect(secondImagePage.items).toHaveLength(25);
     expect(firstImagePage.items.every((item) => item.relativePath.includes('image-0'))).toBe(true);

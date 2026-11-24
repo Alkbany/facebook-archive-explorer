@@ -44,6 +44,8 @@ The project uses Semantic Versioning. The `.beta.n` suffix counts repeated candi
 - Migrate existing generic fallback records to stable parser keys and allow reviewed importers to promote them on a parser update; preserve the attempted parser in the fallback key so unsupported files are not repeatedly reparsed on every Import All run.
 - Read MP4/MOV duration metadata from bounded prefixes and suffixes, including files whose movie metadata is stored after the media payload.
 - Persist bounded image/video metadata scan state so unsupported media is not repeatedly rechecked and later batches continue across application restarts.
+- Replace the fixed 1,000-reference media list with database-side filtering and 50-file pagination; each asset appears once with a stable associated record.
+- Read bounded MP4/MOV/M4V suffixes to recover duration metadata when the `moov` atom is stored after the media payload.
 
 ## [1.0.0] - Planned stable release
 

@@ -117,7 +117,7 @@ export interface PostRecordSummary {
   id: number;
   sourcePath: string;
   sourceCardIndex: number;
-  authorRaw: string | null;
+  activityRaw: string | null;
   bodyRaw: string | null;
   dateRaw: string | null;
   mediaCount: number;
@@ -186,7 +186,7 @@ export interface ImportIssueReport {
 
 
 
-export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos';
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'groups' | 'html_fallback' | 'text_fallback' | 'json';
 
 export interface ImportProgressEvent {
   sectionKey: ImportProgressSectionKey;
@@ -214,7 +214,19 @@ export interface ImportCoverageSectionSummary {
   skippedFiles: number;
 }
 
+export interface ImportIntegritySummary {
+  sourceRecordCountMismatches: number;
+  recordsFromAnotherSnapshot: number;
+  mediaAssetsWithoutSourceFile: number;
+  mediaAssetsFromAnotherSnapshot: number;
+  mediaLinksAcrossSnapshots: number;
+  invalidMediaMetadata: number;
+  runningImportRuns: number;
+  processingSourceFiles: number;
+}
+
 export interface ImportCoverageReport {
+  integrity: ImportIntegritySummary;
   totals: {
     totalFiles: number;
     contentFiles: number;
@@ -229,6 +241,13 @@ export interface ImportCoverageReport {
   sections: ImportCoverageSectionSummary[];
 }
 
+export interface JsonImportSectionResult {
+  filesAttempted: number;
+  recordsImported: number;
+  unsupportedFiles: number;
+  failedFiles: number;
+}
+
 export interface ImportAllSupportedDataResult {
   sections: {
     friends: FriendsImportSectionResult;
@@ -237,6 +256,10 @@ export interface ImportAllSupportedDataResult {
     comments: CommentsImportSectionResult;
     reactions: ReactionsImportSectionResult;
     photosAndVideos: PhotoAlbumsImportSectionResult;
+    groups: JsonImportSectionResult;
+    htmlFallback: JsonImportSectionResult;
+    textFallback: JsonImportSectionResult;
+    json: JsonImportSectionResult;
   };
   totals: {
     filesAttempted: number;
@@ -303,6 +326,36 @@ export interface ArchiveFileDirectoryView {
     failed: number;
     skipped: number;
   };
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+
+export type ArchiveRecordSensitivity = 'standard' | 'personal' | 'sensitive';
+
+export interface FallbackArchiveSectionSummary {
+  sectionKey: string;
+  recordCount: number;
+  sensitivity: ArchiveRecordSensitivity;
+}
+
+export interface FallbackArchiveRecord {
+  id: number;
+  sectionKey: string;
+  recordType: 'html_item' | 'json_item' | 'text_item';
+  title: string | null;
+  body: string | null;
+  dateRaw: string | null;
+  sourcePath: string;
+  sourceRecordIndex: number;
+  sensitivity: ArchiveRecordSensitivity;
+  payloadPreview: string;
+  payloadTruncated: boolean;
+}
+
+export interface FallbackArchiveRecordsPage {
+  records: FallbackArchiveRecord[];
   total: number;
   page: number;
   pageSize: number;

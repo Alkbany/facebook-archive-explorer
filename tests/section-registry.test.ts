@@ -17,11 +17,14 @@ describe('archive section catalogue', () => {
   });
 
   it('describes parser availability separately from sampled section evidence', () => {
-    expect(getArchiveImportCapability('friends')).toBe('known-html');
-    expect(getArchiveImportCapability('messages')).toBe('sampled-html');
-    expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html');
-    expect(getArchiveImportCapability('groups')).toBe('not-implemented');
-    expect(getArchiveImportCapability('unknown-section')).toBe('not-implemented');
+    expect(getArchiveImportCapability('friends')).toBe('known-html-json');
+    expect(getArchiveImportCapability('messages')).toBe('sampled-html-json');
+    expect(getArchiveImportCapability('posts')).toBe('sampled-html-json');
+    expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html-json');
+    expect(getArchiveImportCapability('groups')).toBe('sampled-json');
+    expect(getArchiveSection('groups')?.evidence).toBe('sampled');
+    expect(getArchiveImportCapability('events')).toBe('generic-fallback');
+    expect(getArchiveImportCapability('unknown-section')).toBe('generic-fallback');
   });
 
   it('classifies account security and payment data as sensitive', () => {

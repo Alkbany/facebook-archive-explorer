@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCommentsExport } from '../src/main/import/parsers/comments-parser';
+import { parseCommentsExport, parseCommentsJsonExport } from '../src/main/import/parsers/comments-parser';
 
 const card = (activity: string, body: string, date = '١٩/٠٢/٢٠١٩ ٧:٣٩ ص') => `
 <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
@@ -38,5 +38,49 @@ describe('Facebook comments activity parser', () => {
   it('reports unknown layouts and rejects paths outside Comments', () => {
     expect(parseCommentsExport('<html/>', 'comments/your_comments.html').issues[0].code).toBe('no_cards_found');
     expect(() => parseCommentsExport('<html/>', 'posts/your_posts.html')).toThrow('Unsupported comments source');
+  });
+});
+
+
+describe('Accounts Center comments_v2 JSON parser', () => {
+  it('extracts activity, comment body, group label, and raw timestamp from comments_v2', () => {
+    const result = parseCommentsJsonExport(JSON.stringify({
+      comments_v2: [
+        {
+          timestamp: 12597674400,
+          title: 'Jean-Luc Picard commented on his own photo.',
+          data: [{ comment: { timestamp: 12597674400, comment: 'The bridge at dawn.', author: 'Jean-Luc Picard' } }]
+        },
+        {
+          timestamp: 12597865200,
+          title: 'Jean-Luc Picard commented in Starfleet Academy Alumni.',
+          data: [{ comment: { timestamp: 12597865200, comment: 'Proud of you.', group: 'Starfleet Academy Alumni' } }]
+        }
+      ]
+    }), 'your_facebook_activity/comments_and_reactions/comments.json');
+
+    expect(result.issues).toEqual([]);
+    expect(result.records).toHaveLength(2);
+    expect(result.records[0]).toMatchObject({
+      activityRaw: 'Jean-Luc Picard commented on his own photo.',
+      bodyRaw: 'The bridge at dawn.',
+      groupRaw: null,
+      dateRaw: '12597674400'
+    });
+    expect(result.records[1]).toMatchObject({
+      bodyRaw: 'Proud of you.',
+      groupRaw: 'Starfleet Academy Alumni',
+      dateRaw: '12597865200'
+    });
+  });
+
+  it('marks an empty comments_v2 collection as having no cards', () => {
+    expect(parseCommentsJsonExport('{"comments_v2":[]}', 'comments.json').issues)
+      .toEqual([{ code: 'no_cards_found', sourceCardIndex: null }]);
+  });
+
+  it('rejects unknown JSON shapes for the generic fallback', () => {
+    expect(parseCommentsJsonExport('[]', 'comments.json').issues)
+      .toEqual([{ code: 'no_cards_found', sourceCardIndex: null }]);
   });
 });

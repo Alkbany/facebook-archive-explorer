@@ -26,15 +26,16 @@ import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
 import { listFriendDirectory } from '../database/friends-repository';
 import { listArchiveFiles } from '../database/archive-files-repository';
+import { listFallbackArchiveRecords, listFallbackRecordSections } from '../database/fallback-records-repository';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery, listArchiveMediaGallery } from '../database/messages-repository';
 import { getMessageMediaPreview } from '../database/media-preview';
-import { indexDiscoveredMediaAssets } from '../database/media-indexer';
+import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscoveredVideoDurations } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
 import { getImportCoverage } from '../database/import-coverage-repository';
-import { assertNoImportInProgress, runExclusiveImport } from './import-operation-lock';
+import { assertNoImportInProgress, pauseActiveImport, resumeActiveImport, runExclusiveImport } from './import-operation-lock';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -116,6 +117,9 @@ export function registerIpcHandlers(
     app.exit(0);
     return { status: 'restarting' as const };
   });
+
+  ipcMain.handle(IPC_CHANNELS.pauseImport, () => pauseActiveImport());
+  ipcMain.handle(IPC_CHANNELS.resumeImport, () => resumeActiveImport());
 
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (): AppInfo => ({
     appName: app.getName(),
@@ -283,6 +287,25 @@ export function registerIpcHandlers(
     return listArchiveFiles(database, selectedSnapshotId, status as ArchiveFileStatus, sectionKey, query, page as number);
   });
 
+  ipcMain.handle(IPC_CHANNELS.listFallbackRecordSectionsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing preserved fallback records.');
+    return listFallbackRecordSections(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listFallbackArchiveRecordsForSelectedBackup, (_event, sectionKey: unknown, page: unknown, query: unknown = '') => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing preserved fallback records.');
+    if (typeof sectionKey !== 'string' || !/^[a-z0-9_]{1,80}$/u.test(sectionKey)) {
+      throw new Error('Invalid fallback archive section.');
+    }
+    if (!Number.isSafeInteger(page) || (page as number) < 1) {
+      throw new Error('Invalid fallback archive page.');
+    }
+    if (typeof query !== 'string' || query.length > 120) {
+      throw new Error('Invalid fallback archive search.');
+    }
+    return listFallbackArchiveRecords(database, selectedSnapshotId, sectionKey, page as number, query);
+  });
+
   ipcMain.handle(IPC_CHANNELS.listFriendsDirectoryForSelectedBackup, (_event, filter: unknown, query: unknown, page: unknown) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing Friends data.');
     const validFilters = ['all', 'friend', 'received', 'sent', 'rejected', 'removed'];
@@ -308,9 +331,13 @@ export function registerIpcHandlers(
     return listMessageMediaGallery(database, selectedSnapshotId);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async () => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing media.');
     indexDiscoveredMediaAssets(database, selectedSnapshotId);
+    if (selectedBackupDirectory) {
+      await indexDiscoveredImageDimensions(database, selectedSnapshotId, selectedBackupDirectory);
+      await indexDiscoveredVideoDurations(database, selectedSnapshotId, selectedBackupDirectory);
+    }
     return listArchiveMediaGallery(database, selectedSnapshotId);
   });
 

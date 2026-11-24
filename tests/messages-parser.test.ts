@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMessageConversation } from '../src/main/import/parsers/messages-parser';
+import { parseMessageConversation, parseMessageConversationJson } from '../src/main/import/parsers/messages-parser';
 
 const CARD = (body: string, sender = 'Synthetic Sender', timestamp = 'Raw timestamp') => `
   <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
@@ -80,5 +80,87 @@ describe('parseMessageConversation', () => {
   it('reports an explicit issue when no message cards are found', () => {
     expect(parseMessageConversation('<html><body>empty</body></html>', 'messages/inbox/thread/thread.html'))
       .toMatchObject({ messages: [], issues: [{ code: 'no_message_cards_found', sourceCardIndex: null }] });
+  });
+});
+
+
+describe('Accounts Center Messenger JSON parser', () => {
+  it('parses text, share text, reactions, photos and stickers while rejecting remote media', () => {
+    const result = parseMessageConversationJson(JSON.stringify({
+      participants: [{ name: 'William Riker' }, { name: 'Jean-Luc Picard' }],
+      title: 'William Riker',
+      messages: [
+        {
+          sender_name: 'Jean-Luc Picard',
+          timestamp_ms: 12600000180000,
+          content: 'Remember this one?',
+          share: { link: 'https://memory-alpha.example/private', share_text: 'The Picard Maneuver.' },
+          reactions: [{ reaction: '❤️', actor: 'William Riker', timestamp: 12600000181 }]
+        },
+        {
+          sender_name: 'William Riker',
+          timestamp_ms: 12600000120000,
+          photos: [
+            { uri: 'your_facebook_activity/messages/inbox/williamriker_1000000001/photos/photo.jpg' },
+            { uri: 'https://remote.example/remote.jpg' },
+            { uri: '../../outside.jpg' }
+          ]
+        },
+        {
+          sender_name: 'William Riker',
+          timestamp_ms: 12600000060000,
+          sticker: { uri: 'your_facebook_activity/messages/stickers_used/sticker.png' }
+        },
+        {
+          sender_name: 'Jean-Luc Picard',
+          timestamp_ms: 12600000000000,
+          call_duration: 125,
+          content: 'Video chat ended.'
+        },
+        {
+          sender_name: 'William Riker',
+          timestamp_ms: 12599999940000,
+          is_unsent: true
+        }
+      ]
+    }), 'your_facebook_activity/messages/inbox/williamriker_1000000001/message_1.json');
+
+    expect(result.issues).toEqual([]);
+    expect(result.messages).toHaveLength(5);
+    expect(result.messages[0]).toMatchObject({
+      senderRaw: 'Jean-Luc Picard',
+      bodyRaw: 'Remember this one?\nThe Picard Maneuver.',
+      timestampRaw: '12600000180000',
+      reactionsRaw: ['❤️'],
+      recordType: 'message'
+    });
+    expect(result.messages[0].bodyRaw).not.toContain('memory-alpha.example');
+    expect(result.messages[1].media).toEqual([{
+      kind: 'image',
+      relativePath: 'your_facebook_activity/messages/inbox/williamriker_1000000001/photos/photo.jpg',
+      element: 'img'
+    }]);
+    expect(result.messages[1].recordType).toBe('attachment');
+    expect(result.messages[2].media[0]).toMatchObject({
+      kind: 'sticker',
+      relativePath: 'your_facebook_activity/messages/stickers_used/sticker.png'
+    });
+    expect(result.messages[3].recordType).toBe('call_event');
+    expect(result.messages[4].bodyRaw).toBe('This message was unsent.');
+  });
+
+  it('leaves unknown message JSON structures for the generic fallback', () => {
+    expect(parseMessageConversationJson(
+      JSON.stringify({ conversation_items: [{ text: 'Unknown format' }] }),
+      'your_facebook_activity/messages/inbox/thread/message_1.json'
+    )).toMatchObject({
+      messages: [],
+      issues: [{ code: 'no_message_cards_found', sourceCardIndex: null }]
+    });
+  });
+
+  it('rejects JSON outside the current Messenger message path and filename', () => {
+    expect(() => parseMessageConversationJson('{"messages":[]}', 'your_facebook_activity/messages/inbox/thread/other.json'))
+      .toThrow('Unsupported Accounts Center message JSON source');
   });
 });

@@ -59,22 +59,131 @@ describe('Import all supported data', () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it('imports the three reviewed TNG Groups JSON collections through Import All', async () => {
+    const groupDirectory = join(root, 'your_facebook_activity', 'groups');
+    await mkdir(groupDirectory, { recursive: true });
+    const groupFiles = [
+      {
+        name: 'group_posts_and_comments.json',
+        value: {
+          group_posts_v2: [{
+            timestamp: 12598200000,
+            title: 'Jean-Luc Picard posted in Starfleet Academy Alumni.',
+            data: [{ post: 'Class of 2327 reunion.' }],
+            attachments: [{ data: [{ external_context: { url: 'https://private.example/menu' } }] }]
+          }]
+        }
+      },
+      {
+        name: 'your_comments_in_groups.json',
+        value: {
+          group_comments_v2: [{
+            timestamp: 12598250000,
+            title: "Jean-Luc Picard commented on Wesley Crusher's post in Starfleet Academy Alumni.",
+            data: [{ comment: { timestamp: 12598250000, comment: 'Proud of you, Ensign.', author: 'Jean-Luc Picard', group: 'Starfleet Academy Alumni' } }]
+          }]
+        }
+      },
+      {
+        name: 'your_group_membership_activity.json',
+        value: {
+          groups_joined_v2: [{
+            timestamp: 12590000000,
+            title: 'Jean-Luc Picard became a member of Starfleet Academy Alumni.',
+            data: [{ name: 'Starfleet Academy Alumni' }]
+          }]
+        }
+      }
+    ];
+    const now = new Date().toISOString();
+    for (const file of groupFiles) {
+      const relativePath = 'your_facebook_activity/groups/' + file.name;
+      await writeFile(join(groupDirectory, file.name), JSON.stringify(file.value), 'utf8');
+      database.prepare(
+        "INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) " +
+        "VALUES (?, ?, ?, 'groups', 'json', 'discovered', ?)"
+      ).run(snapshotId, relativePath, file.name, now);
+    }
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.sections.groups).toMatchObject({
+      filesAttempted: 3,
+      recordsImported: 3,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+    const rows = database.prepare(
+      "SELECT title, body_text AS body, event_time_raw AS dateRaw, record_type AS recordType " +
+      "FROM records WHERE snapshot_id = ? AND section_key = 'groups' ORDER BY source_file_id"
+    ).all(snapshotId) as Array<{ title: string; body: string | null; dateRaw: string; recordType: string }>;
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        title: 'Jean-Luc Picard posted in Starfleet Academy Alumni.',
+        body: 'Class of 2327 reunion.',
+        dateRaw: '12598200000',
+        recordType: 'json_item'
+      }),
+      expect.objectContaining({
+        title: "Jean-Luc Picard commented on Wesley Crusher's post in Starfleet Academy Alumni.",
+        body: 'Proud of you, Ensign.\nStarfleet Academy Alumni',
+        recordType: 'json_item'
+      }),
+      expect.objectContaining({
+        title: 'Jean-Luc Picard became a member of Starfleet Academy Alumni.',
+        body: 'Starfleet Academy Alumni',
+        recordType: 'json_item'
+      })
+    ]));
+    const indexedUrl = database.prepare(
+      "SELECT record_id FROM record_search WHERE record_search MATCH 'privateexample'"
+    ).all();
+    expect(indexedUrl).toHaveLength(0);
+    const sourceStates = database.prepare(
+      "SELECT status FROM source_files WHERE snapshot_id = ? AND section_key = 'groups'"
+    ).all() as Array<{ status: string }>;
+    expect(sourceStates.every((row) => row.status === 'completed')).toBe(true);
+  });
+
+  it('sends unfamiliar Groups JSON shapes to the generic JSON fallback', async () => {
+    const groupDirectory = join(root, 'your_facebook_activity', 'groups');
+    await mkdir(groupDirectory, { recursive: true });
+    const relativePath = 'your_facebook_activity/groups/group_posts_and_comments.json';
+    await writeFile(join(root, relativePath), JSON.stringify({
+      unknown_group_collection: [{ title: 'Preserved unfamiliar group record' }]
+    }), 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(
+      "INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) " +
+      "VALUES (?, ?, 'group_posts_and_comments.json', 'groups', 'json', 'discovered', ?)"
+    ).run(snapshotId, relativePath, now);
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.sections.groups.unsupportedFiles).toBe(1);
+    expect(result.sections.json.recordsImported).toBe(1);
+    expect(database.prepare(
+      "SELECT status FROM source_files WHERE snapshot_id = ? AND relative_path = ?"
+    ).get(snapshotId, relativePath)).toMatchObject({ status: 'completed' });
+    expect(database.prepare(
+      "SELECT title FROM records WHERE snapshot_id = ? AND section_key = 'groups'"
+    ).get(snapshotId)).toMatchObject({ title: 'Preserved unfamiliar group record' });
+  });
+
   it('runs every reviewed importer sequentially and reports unsupported structures', async () => {
     const progress: ImportProgressEvent[] = [];
     const result = await importAllSupportedData(database, snapshotId, root, (event) => progress.push(event));
     expect(progress.filter((event) => event.phase === 'started').map((event) => event.sectionKey)).toEqual([
-      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos', 'html_fallback'
     ]);
-    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(6);
+    expect(progress.filter((event) => event.phase === 'progress')).toHaveLength(12);
     expect(progress.filter((event) => event.phase === 'completed').map((event) => event.sectionKey)).toEqual([
-      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'
+      'friends', 'messages', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos', 'html_fallback'
     ]);
     expect(progress.find((event) => event.sectionKey === 'posts' && event.phase === 'progress')).toMatchObject({
       filesCompleted: 1, filesTotal: 1, recordsImported: 0, unsupportedFiles: 1, failedFiles: 0
     });
     expect(result.totals).toEqual({
-      filesAttempted: 6,
-      recordsImported: 0,
+      filesAttempted: 12,
+      recordsImported: 6,
       mediaReferences: 0,
       unsupportedFiles: 6,
       failedFiles: 0
@@ -85,13 +194,151 @@ describe('Import all supported data', () => {
     expect(result.sections.comments.filesAttempted).toBe(1);
     expect(result.sections.reactions.filesAttempted).toBe(1);
     expect(result.sections.photosAndVideos.filesAttempted).toBe(1);
+    expect(result.sections.groups.filesAttempted).toBe(0);
+    expect(result.sections.htmlFallback.filesAttempted).toBe(6);
 
-    const statuses = database.prepare('SELECT status FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
-      .all(snapshotId) as Array<{ status: string }>;
-    expect(statuses.every((row) => row.status === 'unsupported')).toBe(true);
+    const statuses = database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
+      .all(snapshotId) as Array<{ status: string; parserKey: string | null }>;
+    expect(statuses.every((row) => row.status === 'completed' && row.parserKey === 'html_fallback')).toBe(true);
     const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
       .get(snapshotId) as { status: string };
     expect(snapshot.status).toBe('partial');
+  });
+
+  it('runs the plain-text fallback as part of Import All', async () => {
+    await mkdir(join(root, 'events'), { recursive: true });
+    const path = 'events/no-data.txt';
+    const sourceText = 'No events were included in this export.';
+    await writeFile(join(root, path), sourceText, 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format,
+        file_size_bytes, status, discovered_at
+      ) VALUES (?, ?, 'no-data.txt', 'events', 'text', ?, 'discovered', ?)
+    `).run(snapshotId, path, Buffer.byteLength(sourceText), now);
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.sections.textFallback).toMatchObject({
+      filesAttempted: 1,
+      recordsImported: 1,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+    const record = database.prepare(`
+      SELECT record_type AS recordType, title, body_text AS body, sensitivity, search_enabled AS searchEnabled
+      FROM records WHERE snapshot_id = ? AND section_key = 'events'
+    `).get(snapshotId);
+    expect(record).toMatchObject({
+      recordType: 'text_item',
+      title: sourceText,
+      body: sourceText,
+      sensitivity: 'personal',
+      searchEnabled: 1
+    });
+  });
+
+  it('imports unknown JSON shapes as safe raw records and disables search for sensitive sections', async () => {
+    await mkdir(join(root, 'groups'), { recursive: true });
+    await mkdir(join(root, 'security_and_login_information'), { recursive: true });
+    await mkdir(join(root, 'future_section'), { recursive: true });
+    const groupsPath = 'groups/groups.json';
+    const securityPath = 'security_and_login_information/sessions.json';
+    const unknownPath = 'future_section/future.json';
+    const invalidPath = 'groups/malformed.json';
+    await writeFile(join(root, groupsPath), '\uFEFF' + JSON.stringify({
+      groups: [
+        { name: 'Chess Club', description: 'Weekly chess games', created_time: 'Unparsed Facebook date', metadata: { value: 'Open chess community' }, email: 'private@example.test', access_token: 'synthetic-secret' },
+        { name: 'Book Club', description: 'Monthly reading meetings', timestamp: 1572878551 }
+      ],
+      exported_at: '2024-01-01'
+    }), 'utf8');
+    await writeFile(join(root, securityPath), JSON.stringify([
+      { name: 'Recent login', description: 'Synthetic session details', ip_address: '192.0.2.10' }
+    ]), 'utf8');
+    await writeFile(join(root, unknownPath), JSON.stringify({ message: 'Unreviewed section text' }), 'utf8');
+    await writeFile(join(root, invalidPath), '{ invalid json', 'utf8');
+
+    const now = new Date().toISOString();
+    for (const [relativePath, fileName, sectionKey] of [
+      [groupsPath, 'groups.json', 'groups'],
+      [securityPath, 'sessions.json', 'security_and_login_information'],
+      [unknownPath, 'future.json', 'future_section'],
+      [invalidPath, 'malformed.json', 'groups']
+    ]) {
+      database.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, file_size_bytes, status, discovered_at
+        ) VALUES (?, ?, ?, ?, 'json', ?, 'discovered', ?)
+      `).run(snapshotId, relativePath, fileName, sectionKey,
+        (await readFile(join(root, relativePath))).byteLength, now);
+    }
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.sections.json).toMatchObject({
+      filesAttempted: 4,
+      recordsImported: 5,
+      unsupportedFiles: 0,
+      failedFiles: 1
+    });
+
+    const records = database.prepare(`
+      SELECT section_key AS sectionKey, title, body_text AS body,
+        sensitivity, search_enabled AS searchEnabled, event_time_raw AS timestampRaw,
+        event_time_utc AS timestampUtc, payload_json AS payloadJson
+      FROM records WHERE record_type = 'json_item'
+      ORDER BY section_key, source_record_index
+    `).all() as Array<{
+      sectionKey: string; title: string | null; body: string | null;
+      sensitivity: string; searchEnabled: number; timestampRaw: string | null;
+      timestampUtc: string | null; payloadJson: string;
+    }>;
+    const groupRecords = records.filter((record) => record.sectionKey === 'groups');
+    expect(groupRecords).toHaveLength(3);
+    expect(groupRecords[0]).toMatchObject({
+      title: 'Chess Club',
+      body: 'Weekly chess games\nOpen chess community',
+      sensitivity: 'personal',
+      searchEnabled: 1,
+      timestampRaw: 'Unparsed Facebook date'
+    });
+    expect(groupRecords[1]).toMatchObject({
+      title: 'Book Club',
+      timestampRaw: '1572878551',
+      timestampUtc: '2019-11-04T14:42:31.000Z'
+    });
+    expect(groupRecords[0].body).not.toContain('private@example.test');
+    expect(groupRecords[0].body).not.toContain('synthetic-secret');
+    expect(JSON.parse(groupRecords[0].payloadJson)).toMatchObject({
+      source_key: 'groups[0]',
+      value: { name: 'Chess Club', description: 'Weekly chess games' }
+    });
+    const securityRecord = records.find((record) => record.sectionKey === 'security_and_login_information');
+    expect(securityRecord).toMatchObject({
+      title: 'Recent login',
+      body: 'Synthetic session details',
+      sensitivity: 'sensitive',
+      searchEnabled: 0
+    });
+
+    const unknownRecord = records.find((record) => record.sectionKey === 'future_section');
+    expect(unknownRecord).toMatchObject({
+      body: 'Unreviewed section text',
+      sensitivity: 'sensitive',
+      searchEnabled: 0
+    });
+
+    const statuses = database.prepare(`
+      SELECT relative_path AS relativePath, status
+      FROM source_files WHERE snapshot_id = ? AND detected_format = 'json'
+      ORDER BY relative_path
+    `).all(snapshotId) as Array<{ relativePath: string; status: string }>;
+    expect(statuses).toEqual([
+      { relativePath: 'future_section/future.json', status: 'completed' },
+      { relativePath: 'groups/groups.json', status: 'completed' },
+      { relativePath: 'groups/malformed.json', status: 'failed' },
+      { relativePath: 'security_and_login_information/sessions.json', status: 'completed' }
+    ]);
   });
 
   it('imports referenced album detail pages, photo records, and local image links during Import All', async () => {
@@ -207,7 +454,7 @@ describe('Import all supported data', () => {
     await expect(importAllSupportedData(database, snapshotId, root, () => {
       throw new Error('Renderer progress listener is unavailable');
     })).resolves.toMatchObject({
-      totals: { filesAttempted: 6, unsupportedFiles: 6, failedFiles: 0 }
+      totals: { filesAttempted: 12, unsupportedFiles: 6, failedFiles: 0 }
     });
   });
 
@@ -338,17 +585,12 @@ describe('Import all supported data', () => {
     `).run(snapshotId, now);
 
     const result = await importAllSupportedData(database, snapshotId, root);
-    expect(result.totals.filesAttempted).toBe(6);
-    const recoveredFiles = database.prepare("SELECT status, safe_error_code FROM source_files WHERE snapshot_id = ? ORDER BY relative_path")
-      .all(snapshotId) as Array<{ status: string; safe_error_code: string | null }>;
-    expect(recoveredFiles.every((file) => file.status === 'unsupported')).toBe(true);
+    expect(result.totals.filesAttempted).toBe(12);
+    const recoveredFiles = database.prepare("SELECT status, safe_error_code, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? ORDER BY relative_path")
+      .all(snapshotId) as Array<{ status: string; safe_error_code: string | null; parserKey: string | null }>;
+    expect(recoveredFiles.every((file) => file.status === 'completed' && file.safe_error_code === null && file.parserKey === 'html_fallback')).toBe(true);
     expect(recoveredFiles.map((file) => file.safe_error_code)).toEqual([
-      'COMMENT_CARDS_NOT_FOUND',
-      'FRIENDS_CARDS_NOT_FOUND',
-      'REACTION_CARDS_NOT_FOUND',
-      'MESSAGE_CARDS_NOT_FOUND',
-      'PHOTO_ALBUM_INDEX_NOT_RECOGNIZED',
-      'POST_CARDS_NOT_FOUND'
+      null, null, null, null, null, null
     ]);
     const interruptedRun = database.prepare("SELECT status, errors_count FROM import_runs WHERE id = 'interrupted-run'")
       .get() as { status: string; errors_count: number };

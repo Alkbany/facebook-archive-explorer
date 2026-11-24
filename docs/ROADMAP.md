@@ -21,7 +21,9 @@
 - [x] Report live per-file progress from all supported section importers over a narrow IPC event channel.
 - [x] Serialize import requests and prevent backup switching while an import is active.
 - [x] Recover interrupted section imports and Import All runs across all snapshots during application startup, with safe Diagnostics and an atomic SQLite savepoint.
-- [ ] Add durable checkpoints, user-controlled pause/resume, and full integrity reporting.
+- [x] Persist each source-file result atomically so completed files are durable checkpoints and interrupted files can be retried safely.
+- [x] Add user-controlled pause/resume at file boundaries without interrupting an active file transaction.
+- [x] Add archive integrity reporting for record-count mismatches, cross-snapshot records/media links, missing media sources, invalid media metadata, and unfinished import markers.
 - [x] Add ZIP selection and streaming ZIP entry discovery.
 - [x] Read HTML/JSON-sized entries from ZIP archives on demand without extraction.
 - [x] Stream ZIP media from the original archive with byte-range support, including deflated entries.
@@ -29,22 +31,34 @@
 ## Milestone 2 — First reliable parsers
 
 - [x] Implement and test the five known Friends HTML file structures.
+- [x] Classify the current nested Accounts Center directory layout into the app's archive sections.
+- [x] Parse the observed TNG `connections/friends/your_friends.json` `friends_v2` collection into the searchable Friends directory while keeping raw contact fields out of search.
+- [x] Parse the observed TNG Groups `group_posts_v2`, `group_comments_v2`, and `groups_joined_v2` collections into the local Other Data workspace.
 - [x] Add synthetic, non-personal HTML fixtures for the Friends parser and importer.
 - [x] Store Friends records with source-card provenance; keep optional contact details outside FTS5.
 - [x] Report missing-name cards and unrecognized Friends page structures.
 - [x] Implement and test the observed message HTML structure and local media references.
+- [x] Parse the observed Accounts Center Messenger `message_*.json` chunks and link only local photo/sticker media without enabling global message search.
 - [x] Add synthetic fixtures for message cards, reactions, call-event text, and attachments.
 - [x] Implement the sampled Posts card parser/importer with local media references and searchable activity browsing.
+- [x] Parse the observed TNG `your_posts__check_ins__photos_and_videos` timeline JSON chunks into the Posts workspace and link only discovered local post media.
 - [x] Implement the sampled Comments activity-card parser/importer with separate activity, group, body, and raw-date fields.
 - [ ] Implement other activity-card sections.
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
-- [ ] Add parser fixtures for all remaining supported sections.
+- [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
+- [x] Add a bounded generic HTML fallback for unreviewed sections, preserving visible text and source provenance while keeping sensitive sections out of full-text search.
+- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
+- [x] Add a bounded plain-text fallback for discovered `.txt` files, preserving original text while limiting full-text indexing and respecting section sensitivity.
+- [ ] Add schema-specific JSON importers and parser fixtures for the remaining sections.
 
 ## Milestone 3 — Media and remaining activity
 
 - [x] Index all discovered image, video, and audio files in one browsable media library, including unlinked media.
 - [x] Parse sampled album captions, photo dates, and comment authors/text/dates.
-- [ ] Additional photo/video metadata (dimensions, duration, and album membership).
+- [x] Read image dimensions from PNG, JPEG, GIF, and WebP headers using bounded 256 KiB prefix reads in batches of 50 when the media gallery opens; large image files are not loaded in full.
+- [x] Read MP4/MOV/M4V duration from movie headers using bounded 2 MiB prefixes (up to 10 unscanned videos per gallery opening; other containers or later movie metadata remain unavailable).
+- [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
+- [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
 
 ## Milestone 4 — Browsing and search
@@ -78,6 +92,7 @@
 ## Milestone 6 — Windows release
 
 - [x] Build and upload a Windows NSIS test-installer artifact from `main` after type-checking, unit tests, and packaging.
+- [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
 - [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup.

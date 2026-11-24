@@ -22,7 +22,7 @@ export const ARCHIVE_SECTIONS: readonly ArchiveSectionDefinition[] = [
   { key: 'events', title: 'Events', evidence: 'filename-only', sensitivity: 'personal' },
   { key: 'following_and_followers', title: 'Following and followers', evidence: 'filename-only', sensitivity: 'personal' },
   { key: 'friends', title: 'Friends', evidence: 'sampled', sensitivity: 'sensitive' },
-  { key: 'groups', title: 'Groups', evidence: 'filename-only', sensitivity: 'personal' },
+  { key: 'groups', title: 'Groups', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'likes_and_reactions', title: 'Likes and reactions', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'location', title: 'Location', evidence: 'no-data', sensitivity: 'sensitive' },
   { key: 'marketplace', title: 'Marketplace', evidence: 'filename-only', sensitivity: 'personal' },
@@ -43,18 +43,19 @@ export function getArchiveSection(key: string): ArchiveSectionDefinition | undef
   return ARCHIVE_SECTIONS.find((section) => section.key === key);
 }
 
-export type SectionImportCapability = 'known-html' | 'sampled-html' | 'media-index-only' | 'not-implemented';
+export type SectionImportCapability = 'known-html-json' | 'sampled-html-json' | 'sampled-json' | 'known-html' | 'sampled-html' | 'generic-fallback' | 'media-index-only' | 'not-implemented';
 
 const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapability>> = {
-  friends: 'known-html',
-  messages: 'sampled-html',
-  posts: 'sampled-html',
-  comments: 'sampled-html',
-  likes_and_reactions: 'sampled-html',
-  photos_and_videos: 'sampled-html'
+  friends: 'known-html-json',
+  messages: 'sampled-html-json',
+  posts: 'sampled-html-json',
+  comments: 'sampled-html-json',
+  likes_and_reactions: 'sampled-html-json',
+  photos_and_videos: 'sampled-html-json',
+  groups: 'sampled-json'
 };
 
 /** Describes actual importer scope; filename evidence alone never implies parser support. */
 export function getArchiveImportCapability(key: string): SectionImportCapability {
-  return SECTION_IMPORT_CAPABILITIES[key] ?? 'not-implemented';
+  return SECTION_IMPORT_CAPABILITIES[key] ?? 'generic-fallback';
 }

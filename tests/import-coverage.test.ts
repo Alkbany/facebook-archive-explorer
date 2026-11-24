@@ -86,6 +86,63 @@ describe('archive import coverage', () => {
     });
   });
 
+  it('reports cross-snapshot links, stale counts, invalid metadata, and interrupted work', () => {
+    const now = new Date().toISOString();
+    const friendsFile = database.prepare(
+      "SELECT id FROM source_files WHERE snapshot_id = ? AND section_key = 'friends'"
+    ).get(snapshotId) as { id: number };
+    const otherFile = database.prepare(
+      "SELECT id FROM source_files WHERE snapshot_id = ?"
+    ).get('other-snapshot') as { id: number };
+    database.prepare('UPDATE source_files SET record_count = 2 WHERE id = ?').run(friendsFile.id);
+    const pendingFile = database.prepare("SELECT id FROM source_files WHERE snapshot_id = ? AND section_key = 'posts'").get(snapshotId) as { id: number };
+    database.prepare("UPDATE source_files SET status = 'processing' WHERE id = ?").run(pendingFile.id);
+    database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        body_text, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, 0, 'posts', 'post', 'synthetic cross-snapshot record', 'personal', 0, '{}', ?)
+    `).run(snapshotId, otherFile.id, now);
+
+    database.prepare(`
+      INSERT INTO media_assets (snapshot_id, source_file_id, relative_path, media_kind, width, height, created_at)
+      VALUES (?, ?, 'synthetic/cross-snapshot.jpg', 'image', 10, 10, ?)
+    `).run(snapshotId, otherFile.id, now);
+    database.prepare(`
+      INSERT INTO media_assets (snapshot_id, relative_path, media_kind, width, height, created_at)
+      VALUES (?, 'synthetic/unlinked-invalid.png', 'image', 0, 12, ?)
+    `).run(snapshotId, now);
+    database.prepare(`
+      INSERT INTO media_assets (snapshot_id, source_file_id, relative_path, media_kind, created_at)
+      VALUES ('other-snapshot', ?, 'synthetic/other.jpg', 'image', ?)
+    `).run(otherFile.id, now);
+
+    const currentRecord = database.prepare(
+      'SELECT id FROM records WHERE snapshot_id = ? ORDER BY id DESC LIMIT 1'
+    ).get(snapshotId) as { id: number };
+    const otherAsset = database.prepare(
+      "SELECT id FROM media_assets WHERE snapshot_id = 'other-snapshot'"
+    ).get() as { id: number };
+    database.prepare(
+      'INSERT INTO record_media (record_id, media_asset_id, display_order) VALUES (?, ?, 0)'
+    ).run(currentRecord.id, otherAsset.id);
+    database.prepare(`
+      INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at)
+      VALUES ('running-integrity-run', ?, 'import', 'running', ?)
+    `).run(snapshotId, now);
+
+    expect(getImportCoverage(database, snapshotId).integrity).toEqual({
+      sourceRecordCountMismatches: 1,
+      recordsFromAnotherSnapshot: 1,
+      mediaAssetsWithoutSourceFile: 1,
+      mediaAssetsFromAnotherSnapshot: 1,
+      mediaLinksAcrossSnapshots: 1,
+      invalidMediaMetadata: 1,
+      runningImportRuns: 1,
+      processingSourceFiles: 1
+    });
+  });
+
   it('keeps coverage isolated to the selected saved backup', () => {
     const report = getImportCoverage(database, 'other-snapshot');
     expect(report.totals).toMatchObject({

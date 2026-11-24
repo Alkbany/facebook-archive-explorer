@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseReactionsExport } from '../src/main/import/parsers/reactions-parser';
+import { parseReactionsExport, parseReactionsJsonExport } from '../src/main/import/parsers/reactions-parser';
 
 const card = (description: string, image: string, date: string) => `
 <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
@@ -38,5 +38,44 @@ describe('Likes & Reactions parser', () => {
 
   it('rejects files outside the reactions section', () => {
     expect(() => parseReactionsExport('<p/>', 'posts/your_posts.html')).toThrow('Unsupported reactions source');
+  });
+});
+
+
+describe('Accounts Center Likes & Reactions JSON parser', () => {
+  it('parses the data[].reaction representation', () => {
+    const result = parseReactionsJsonExport(JSON.stringify([{
+      timestamp: 12597863400,
+      data: [{ reaction: { reaction: 'LIKE', actor: 'Jean-Luc Picard' } }],
+      title: "Jean-Luc Picard liked William Riker's post."
+    }]), 'likes_and_reactions_1.json');
+    expect(result.issues).toEqual([]);
+    expect(result.records[0]).toMatchObject({
+      reactionType: 'like',
+      descriptionRaw: "Jean-Luc Picard liked William Riker's post.",
+      dateRaw: '12597863400'
+    });
+  });
+
+  it('parses the label_values representation without indexing target URLs', () => {
+    const result = parseReactionsJsonExport(JSON.stringify([{
+      timestamp: 12597863400,
+      label_values: [
+        { label: 'Reaction', value: 'Like' },
+        { label: 'URL', value: 'https://www.facebook.com/private-post' },
+        { label: 'Name', value: 'William Riker' }
+      ]
+    }]), 'likes_and_reactions.json');
+    expect(result.records[0]).toMatchObject({
+      reactionType: 'like',
+      descriptionRaw: 'Reaction involving William Riker',
+      dateRaw: '12597863400'
+    });
+    expect(result.records[0].descriptionRaw).not.toContain('facebook.com');
+  });
+
+  it('reports unfamiliar reaction JSON as unsupported rather than inventing records', () => {
+    expect(parseReactionsJsonExport('[]', 'likes_and_reactions.json').issues)
+      .toEqual([{ code: 'no_cards_found', sourceCardIndex: null }]);
   });
 });

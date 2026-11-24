@@ -51,6 +51,56 @@ describe('inspectArchiveDirectory', () => {
     expect(report.truncated).toBe(false);
   });
 
+  it('classifies the current nested Facebook export layout into its real sections', async () => {
+    const files: Array<[string, string]> = [
+      ['your_facebook_activity/posts/your_posts__check_ins__photos_and_videos_1.json', 'json'],
+      ['your_facebook_activity/posts/album/0.json', 'json'],
+      ['your_facebook_activity/posts/media/your_posts/200000000000003.png', 'image'],
+      ['your_facebook_activity/posts/your_videos.json', 'json'],
+      ['your_facebook_activity/comments_and_reactions/comments.json', 'json'],
+      ['your_facebook_activity/comments_and_reactions/likes_and_reactions_1.json', 'json'],
+      ['your_facebook_activity/groups/group_posts_and_comments.json', 'json'],
+      ['your_facebook_activity/events/no-data.txt', 'text'],
+      ['your_facebook_activity/messages/inbox/williamriker_1000000001/message_1.json', 'json'],
+      ['connections/friends/your_friends.json', 'json'],
+      ['connections/following_and_followers/followers.json', 'json'],
+      ['logged_information/search/your_search_history.json', 'json'],
+      ['personal_information/profile_information/profile_information.json', 'json'],
+      ['ads_information/story_views_in_past_7_days.json', 'json'],
+      ['apps_and_websites_off_of_facebook/apps_and_websites.json', 'json']
+    ];
+
+    for (const [relativePath] of files) {
+      const filePath = join(root, relativePath);
+      const parent = relativePath.split('/').slice(0, -1).join('/');
+      await mkdir(join(root, parent), { recursive: true });
+      await writeFile(filePath, '{}', 'utf8');
+    }
+
+    const report = await inspectArchiveDirectory(root, {
+      snapshotId: 'snapshot-tng',
+      accountId: 'account-tng'
+    });
+
+    expect(report.totalFiles).toBe(files.length);
+    expect(report.sectionFileCounts).toMatchObject({
+      posts: 1,
+      photos_and_videos: 3,
+      comments: 1,
+      likes_and_reactions: 1,
+      groups: 1,
+      events: 1,
+      messages: 1,
+      friends: 1,
+      following_and_followers: 1,
+      search_history: 1,
+      profile_information: 1,
+      ads: 1,
+      apps_and_websites: 1
+    });
+    expect(report.noDataSections).toEqual(['events']);
+  });
+
   it('emits predictable metadata batches without loading file contents', async () => {
     for (let index = 0; index < 5; index += 1) {
       await writeFile(join(root, 'file-' + index + '.html'), '<html>synthetic ' + index + '</html>');

@@ -92,10 +92,13 @@ export function listMessageConversations(
       participants = [];
     }
     const parts = row.relativePath.split('/');
+    const conversationType = parts[0]?.toLocaleLowerCase() === 'your_facebook_activity'
+      ? parts[2]
+      : parts[1];
     return {
       sourceFileId: row.sourceFileId,
       relativePath: row.relativePath,
-      conversationType: parts[1] ?? 'unknown',
+      conversationType: conversationType ?? 'unknown',
       messageCount: row.messageCount,
       participants
     };
@@ -185,7 +188,8 @@ export function listArchiveMediaGallery(database: DatabaseSync, snapshotId: stri
       COALESCE(records.section_key, media_source.section_key, 'other') AS sectionKey,
       records.record_type AS recordType, records.source_record_index AS sourceCardIndex,
       records.title AS title, records.body_text AS body,
-      records.event_time_raw AS timestampRaw
+      records.event_time_raw AS timestampRaw,
+      assets.width AS width, assets.height AS height, assets.duration_ms AS durationMs
     FROM media_assets AS assets
     LEFT JOIN source_files AS media_source ON media_source.id = assets.source_file_id
       AND media_source.snapshot_id = assets.snapshot_id

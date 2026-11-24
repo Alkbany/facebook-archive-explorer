@@ -59,6 +59,36 @@ describe('Likes & Reactions import', () => {
     expect(visible[0]).toMatchObject({ reactionType: 'love', descriptionRaw: 'Synthetic reaction description', dateRaw: 'Raw reaction date' });
   });
 
+  it('imports both observed TNG JSON files into the existing reactions activity list', async () => {
+    const relativeBase = 'your_facebook_activity/comments_and_reactions';
+    await mkdir(join(root, relativeBase), { recursive: true });
+    const firstPath = relativeBase + '/likes_and_reactions.json';
+    const secondPath = relativeBase + '/likes_and_reactions_1.json';
+    await writeFile(join(root, firstPath), JSON.stringify([{
+      timestamp: 12597863400,
+      label_values: [{ label: 'Reaction', value: 'Like' }, { label: 'Name', value: 'Synthetic target' }]
+    }]), 'utf8');
+    await writeFile(join(root, secondPath), JSON.stringify([{
+      timestamp: 12597863400,
+      data: [{ reaction: { reaction: 'LOVE', actor: 'Synthetic account' } }],
+      title: 'Synthetic account reacted to a photo.'
+    }]), 'utf8');
+
+    const now = new Date().toISOString();
+    for (const relativePath of [firstPath, secondPath]) {
+      database.prepare(`
+        INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+        VALUES (?, ?, ?, 'likes_and_reactions', 'json', 'discovered', ?)
+      `).run(snapshotId, relativePath, relativePath.split('/').pop() ?? relativePath, now);
+    }
+
+    const result = await importReactionsSection(database, snapshotId, root);
+    expect(result).toMatchObject({ filesAttempted: 2, recordsImported: 2, unsupportedFiles: 0, failedFiles: 0 });
+    const visible = listReactionRecords(database, snapshotId);
+    expect(visible).toHaveLength(2);
+    expect(visible.map((record) => record.reactionType)).toEqual(['like', 'love']);
+  });
+
   it('marks unrecognized reaction pages as unsupported', async () => {
     await writeFile(join(root, 'likes_and_reactions', 'unknown.html'), '<html><body>Unknown layout</body></html>', 'utf8');
     const now = new Date().toISOString();

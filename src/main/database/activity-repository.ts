@@ -21,7 +21,7 @@ export function listPostRecords(database: DatabaseSync, snapshotId: string): imp
   return database.prepare(`
     SELECT records.id AS id, source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex,
-      records.title AS authorRaw, records.body_text AS bodyRaw,
+      records.title AS activityRaw, records.body_text AS bodyRaw,
       records.event_time_raw AS dateRaw,
       COUNT(record_media.media_asset_id) AS mediaCount
     FROM records

@@ -20,7 +20,9 @@ import type {
   PhotoAlbumDetailView,
   PhotoAlbumsImportSectionResult,
   FriendDirectoryFilter,
-  FriendDirectoryView
+  FriendDirectoryView,
+  FallbackArchiveSectionSummary,
+  FallbackArchiveRecordsPage
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
@@ -33,7 +35,7 @@ import type {
   ArchiveComparisonExportFormat
 } from '../../shared/archive/comparison';
 
-const SECTION_TITLES = new Map(ARCHIVE_SECTIONS.map((section) => [section.key, section.title]));
+const SECTION_TITLES = new Map([...ARCHIVE_SECTIONS.map((section) => [section.key, section.title] as const), ['json', 'Structured JSON'] as const, ['html_fallback', 'HTML fallback'] as const, ['text_fallback', 'Text fallback'] as const]);
 
 const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, string> = {
   discovered: 'Not processed',
@@ -45,6 +47,27 @@ const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, stri
   failed: 'Failed',
   skipped: 'Skipped'
 };
+
+function formatFallbackPayload(
+  payload: string,
+  recordType: 'html_item' | 'json_item' | 'text_item'
+): string {
+  try {
+    const parsed: unknown = JSON.parse(payload);
+    if (
+      recordType === 'text_item' &&
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'text' in parsed &&
+      typeof parsed.text === 'string'
+    ) {
+      return parsed.text;
+    }
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return payload;
+  }
+}
 
 function formatFileSize(bytes: number | null): string {
   if (bytes === null || !Number.isFinite(bytes) || bytes < 0) return 'Size not recorded';
@@ -84,6 +107,13 @@ function App() {
   const [archiveFilePage, setArchiveFilePage] = useState(1);
   const [isLoadingArchiveFiles, setIsLoadingArchiveFiles] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgressEvent | null>(null);
+  const [isImportPaused, setIsImportPaused] = useState(false);
+  const [fallbackSections, setFallbackSections] = useState<FallbackArchiveSectionSummary[]>([]);
+  const [fallbackSectionKey, setFallbackSectionKey] = useState('');
+  const [fallbackQuery, setFallbackQuery] = useState('');
+  const [fallbackAppliedQuery, setFallbackAppliedQuery] = useState('');
+  const [fallbackRecords, setFallbackRecords] = useState<FallbackArchiveRecordsPage | null>(null);
+  const [isLoadingFallbackRecords, setIsLoadingFallbackRecords] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
@@ -154,6 +184,10 @@ function App() {
   const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions || isImportingPhotos;
 
   useEffect(() => {
+    if (!isAnyImporting) setIsImportPaused(false);
+  }, [isAnyImporting]);
+
+  useEffect(() => {
     let cancelled = false;
     const visibleAlbums = photoAlbums.filter((album) =>
       [album.albumTitle, album.dateRaw, album.albumPath, album.sourcePath]
@@ -218,6 +252,11 @@ function App() {
     setImportIssueReport(null);
     setImportCoverage(null);
     setArchiveFileDirectory(null);
+    setFallbackSections([]);
+    setFallbackSectionKey('');
+    setFallbackQuery('');
+    setFallbackAppliedQuery('');
+    setFallbackRecords(null);
     setArchiveFileStatus('all');
     setArchiveFileSection('all');
     setArchiveFileQuery('');
@@ -293,6 +332,8 @@ function App() {
     setImportIssueReport(null);
     setImportCoverage(null);
     setArchiveFileDirectory(null);
+    setFallbackQuery('');
+    setFallbackAppliedQuery('');
     setArchiveFileStatus('all');
     setArchiveFileSection('all');
     setArchiveFileQuery('');
@@ -341,7 +382,7 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files, fallback] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
@@ -351,7 +392,8 @@ function App() {
         window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
-        window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1)
+        window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1),
+        window.desktopApi.listFallbackRecordSectionsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -365,6 +407,8 @@ function App() {
       setImportCoverage(coverage);
       setArchiveFileDirectory(files);
       setArchiveFilePage(files.page);
+      setFallbackSections(fallback);
+      if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
       setInspection(null);
@@ -392,6 +436,26 @@ function App() {
     setSelectedPhotoAlbum(null);
     setPhotoAlbumDetail(null);
     setIsLoadingPhotoAlbum(false);
+  }
+
+  async function loadFallbackArchiveRecords(
+    sectionKey: string,
+    page: number,
+    query = fallbackAppliedQuery
+  ) {
+    const appliedQuery = query.trim().slice(0, 120);
+    setIsLoadingFallbackRecords(true);
+    setFallbackSectionKey(sectionKey);
+    setFallbackAppliedQuery(appliedQuery);
+    try {
+      const result = await window.desktopApi.listFallbackArchiveRecordsForSelectedBackup(sectionKey, page, appliedQuery);
+      setFallbackRecords(result);
+    } catch {
+      setFallbackRecords(null);
+      setError('The preserved archive records could not be loaded.');
+    } finally {
+      setIsLoadingFallbackRecords(false);
+    }
   }
 
   async function refreshMediaGallery() {
@@ -648,7 +712,8 @@ function App() {
       activity: 'activity-tools',
       search: 'unified-search-panel',
       files: 'archive-files-workspace',
-      overview: 'welcome-panel'
+      overview: 'welcome-panel',
+      other: 'fallback-records-workspace'
     };
     const target = document.getElementById(targetId)
       ?? document.getElementById(fallbackTargets[section] ?? 'import-actions')
@@ -674,6 +739,17 @@ function App() {
     }
   }
 
+  async function toggleImportPause() {
+    try {
+      const changed = isImportPaused
+        ? await window.desktopApi.resumeImport()
+        : await window.desktopApi.pauseImport();
+      if (changed) setIsImportPaused(!isImportPaused);
+    } catch {
+      setError('The import pause request could not be applied. The current file remains safe.');
+    }
+  }
+
   async function importAllSupportedData() {
     setIsImportingAll(true);
     setImportAllSummary(null);
@@ -689,13 +765,14 @@ function App() {
       setReactionsImport(result.sections.reactions);
       setPhotosImport(result.sections.photosAndVideos);
 
-      const [posts, comments, reactions, foundConversations, albums, friends] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, albums, friends, fallback] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
-        window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1)
+        window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
+        window.desktopApi.listFallbackRecordSectionsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -706,6 +783,9 @@ function App() {
       setFriendTypeFilter('all');
       setFriendQuery('');
       setFriendPage(friends.page);
+      setFallbackSections(fallback);
+      if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
+      else { setFallbackSectionKey(''); setFallbackRecords(null); }
       if (foundConversations.length > 0) {
         await loadConversation(foundConversations[0].sourceFileId);
       } else {
@@ -852,6 +932,9 @@ function App() {
         <button type="button" className={activeNavigation === 'photos' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('photos', 'photo-albums-workspace')}><span>▧</span> Photos &amp; videos</button>
         <button type="button" className={activeNavigation === 'activity' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('activity', 'activity-tools')}><span>◷</span> Activity</button>
         <button type="button" className={activeNavigation === 'search' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('search', 'unified-search-panel')}><span>⌕</span> Search</button>
+        {fallbackSections.length > 0 && (
+          <button type="button" className={activeNavigation === 'other' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('other', 'fallback-records-workspace')}><span>▤</span> Other data</button>
+        )}
 
         <div className="sidebar-bottom">
           <div className="local-indicator"><i /> Local workspace</div>
@@ -950,7 +1033,7 @@ function App() {
             <div className="friends-import-action import-all-action">
               <div>
                 <strong>Import all supported data</strong>
-                <span>Run Friends, Messages, Posts, Comments, Likes &amp; Reactions, and Photos &amp; Videos album importers in sequence. Completed files are skipped; failed or unsupported files remain retryable.</span>
+                <span>Run the reviewed section importers first, then bounded HTML and JSON fallbacks for other files. Completed files are skipped; failed or unsupported files remain retryable.</span>
                 {importAllSummary && (
                   <span className="import-all-summary">
                     {importAllSummary.filesAttempted} files checked · {importAllSummary.recordsImported} records imported ·
@@ -984,7 +1067,16 @@ function App() {
                       {importProgress.failedFiles.toLocaleString()} failed
                     </span>
                   </div>
-                  <span className="import-progress-phase">{importProgress.phase === 'completed' ? 'Complete' : 'In progress'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="import-progress-phase">
+                      {importProgress.phase === 'completed' ? 'Complete' : isImportPaused ? 'Pause requested' : 'In progress'}
+                    </span>
+                    {isAnyImporting && (
+                      <button className="secondary-button" onClick={() => void toggleImportPause()}>
+                        {isImportPaused ? 'Resume import' : 'Pause import'}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div
                   className="import-progress-track"
@@ -1005,6 +1097,9 @@ function App() {
                     }}
                   />
                 </div>
+                {isImportPaused && isAnyImporting && (
+                  <p className="import-progress-note">Pause requested. The current file will finish safely before the import pauses.</p>
+                )}
                 {importProgress.filesTotal === 0 && importProgress.phase === 'started' && (
                   <p className="import-progress-note">No remaining files were found for this section.</p>
                 )}
@@ -1035,22 +1130,43 @@ function App() {
                     <div><strong>{importCoverage.totals.failedFiles.toLocaleString()}</strong><span>Failed</span></div>
                     <div><strong>{importCoverage.totals.unprocessedFiles.toLocaleString()}</strong><span>Not processed</span></div>
                   </div>
+                  <div className="import-coverage-stats import-integrity-stats" aria-label="Import integrity checks">
+                    <div><strong>{importCoverage.integrity.sourceRecordCountMismatches.toLocaleString()}</strong><span>Record count mismatches</span></div>
+                    <div><strong>{importCoverage.integrity.recordsFromAnotherSnapshot.toLocaleString()}</strong><span>Cross-snapshot records</span></div>
+                    <div><strong>{importCoverage.integrity.mediaAssetsWithoutSourceFile.toLocaleString()}</strong><span>Unlinked media assets</span></div>
+                    <div><strong>{importCoverage.integrity.mediaAssetsFromAnotherSnapshot.toLocaleString()}</strong><span>Cross-snapshot media</span></div>
+                    <div><strong>{importCoverage.integrity.mediaLinksAcrossSnapshots.toLocaleString()}</strong><span>Cross-snapshot media links</span></div>
+                    <div><strong>{importCoverage.integrity.invalidMediaMetadata.toLocaleString()}</strong><span>Invalid media metadata</span></div>
+                    <div><strong>{importCoverage.integrity.runningImportRuns.toLocaleString()}</strong><span>Unfinished import runs</span></div>
+                    <div><strong>{importCoverage.integrity.processingSourceFiles.toLocaleString()}</strong><span>Files left processing</span></div>
+                  </div>
+                  <p className="import-coverage-note">
+                    Integrity checks look for inconsistent record counts, cross-backup links, missing media sources, invalid metadata, and interrupted work. A zero count means no mismatch was detected.
+                  </p>
                   <div className="import-coverage-list">
                     {importCoverage.sections.map((section) => {
                       const capability = getArchiveImportCapability(section.sectionKey);
-                      const capabilityLabel = capability === 'known-html'
-                        ? 'Known HTML exports'
+                      const capabilityLabel = capability === 'sampled-json'
+                        ? 'Sampled TNG Groups JSON parser'
+                        : capability === 'sampled-html-json'
+                        ? 'Sampled HTML + TNG JSON parsers'
+                        : capability === 'known-html-json'
+                        ? 'Reviewed Friends HTML + TNG JSON parser'
+                        : capability === 'known-html'
+                        ? 'Known HTML parser + generic JSON/TXT fallback'
                         : capability === 'sampled-html'
-                          ? 'Sample-based HTML parser'
-                          : capability === 'media-index-only'
-                            ? 'Media inventory only'
-                            : 'No importer yet';
+                          ? 'Sampled HTML parser + generic fallback'
+                          : capability === 'generic-fallback'
+                            ? 'Generic HTML/JSON/TXT fallback'
+                            : capability === 'media-index-only'
+                              ? 'Media inventory only'
+                              : 'No importer yet';
                       return (
                       <article className="import-coverage-row" key={section.sectionKey}>
                         <div className="import-coverage-section">
                           <strong>{SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey}</strong>
                           <span>
-                            {section.totalFiles.toLocaleString()} files · {section.htmlFiles} HTML · {section.jsonFiles} JSON · {section.mediaFiles} media
+                            {section.totalFiles.toLocaleString()} files · {section.htmlFiles} HTML · {section.jsonFiles} JSON · {section.textFiles} TXT · {section.mediaFiles} media
                           </span>
                           <small className={'import-capability-badge import-capability-' + capability}>{capabilityLabel}</small>
                         </div>
@@ -1367,17 +1483,17 @@ function App() {
                   <div>
                     <p className="eyebrow">YOUR ACTIVITY</p>
                     <h3>Posts</h3>
-                    <p>Original author labels and raw exported dates are preserved. Only local archive media is linked.</p>
+                    <p>Facebook activity headings and raw exported dates are preserved. Only safe local archive media references are linked.</p>
                   </div>
                   <span>{postRecords.length.toLocaleString()} records</span>
                 </div>
                 <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} placeholder="Filter posts…" />
                 <div className="media-gallery-list">
-                  {postRecords.filter((record) => [record.authorRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase())).map((record) => (
+                  {postRecords.filter((record) => [record.activityRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase())).map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">P</div>
                       <div className="media-gallery-copy">
-                        <strong>{record.authorRaw ?? 'Post'}</strong>
+                        <strong>{record.activityRaw ?? 'Post'}</strong>
                         <span>{record.bodyRaw ?? 'No text in export'}{record.mediaCount ? ` · ${record.mediaCount} attachments` : ''}</span>
                         <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
                       </div>
@@ -1749,6 +1865,8 @@ function App() {
                       <div className="media-gallery-copy">
                         <strong>{media.relativePath.split('/').pop()}</strong>
                         <span>{SECTION_TITLES.get(media.sectionKey) ?? media.sectionKey} · {media.mediaKind}</span>
+                        {media.width !== null && media.height !== null && <small>{media.width.toLocaleString()} × {media.height.toLocaleString()} px</small>}
+                        {media.durationMs !== null && <small>{(media.durationMs / 1000).toFixed(1)} sec</small>}
                         <small>{media.title ?? 'Not linked to an imported record'}{media.recordType ? ' · ' + media.recordType.replaceAll('_', ' ') : ''}</small>
                         <small>{media.sourcePath}</small>
                         {media.body && <small className="media-gallery-caption">{media.body}</small>}
@@ -2070,6 +2188,108 @@ function App() {
             </div>
           )}
         </section>
+
+        {fallbackSections.length > 0 && (
+          <section className="fallback-records-panel" id="fallback-records-workspace">
+            <div className="media-gallery-heading">
+              <div>
+                <p className="eyebrow">PRESERVED ARCHIVE CONTENT</p>
+                <h3>Other data</h3>
+                <p>Browse text preserved from HTML, JSON, and TXT files that do not yet have a dedicated section parser. Search is scoped to the selected section; original source files remain unchanged.</p>
+              </div>
+              <span>{fallbackSections.reduce((total, section) => total + section.recordCount, 0).toLocaleString()} records</span>
+            </div>
+            <div className="fallback-record-controls">
+              <label>
+                <span>Archive section</span>
+                <select
+                  value={fallbackSectionKey}
+                  onChange={(event) => {
+                    setFallbackQuery('');
+                    void loadFallbackArchiveRecords(event.target.value, 1, '');
+                  }}
+                  disabled={isLoadingFallbackRecords}
+                >
+                  {fallbackSections.map((section) => (
+                    <option key={section.sectionKey} value={section.sectionKey}>
+                      {SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey} ({section.recordCount.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="fallback-query-label">
+                <span>Search within this section</span>
+                <input
+                  type="search"
+                  value={fallbackQuery}
+                  maxLength={120}
+                  placeholder="Search titles, text, or source paths…"
+                  onChange={(event) => setFallbackQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void loadFallbackArchiveRecords(fallbackSectionKey, 1, fallbackQuery);
+                  }}
+                  disabled={isLoadingFallbackRecords}
+                />
+              </label>
+              <div className="fallback-query-actions">
+                <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, 1, fallbackQuery)} disabled={isLoadingFallbackRecords || !fallbackSectionKey}>Search</button>
+                <button className="secondary-button" onClick={() => { setFallbackQuery(''); void loadFallbackArchiveRecords(fallbackSectionKey, 1, ''); }} disabled={isLoadingFallbackRecords || (!fallbackQuery && !fallbackAppliedQuery)}>Clear</button>
+              </div>
+              {fallbackSections.find((section) => section.sectionKey === fallbackSectionKey)?.sensitivity === 'sensitive'
+                ? <span className="fallback-sensitivity sensitive">Sensitive section · excluded from global search; filter within this section only</span>
+                : <span className="fallback-sensitivity">Preserved fallback text · not a verified structured parser</span>}
+            </div>
+            {isLoadingFallbackRecords ? (
+              <p className="fallback-records-empty">Loading preserved records…</p>
+            ) : fallbackRecords && fallbackRecords.records.length > 0 ? (
+              <div className="fallback-record-list">
+                {fallbackRecords.records.map((record) => (
+                  <article className="fallback-record-card" key={record.id}>
+                    <div className="fallback-record-heading">
+                      <strong>{record.title || 'Archive entry'}</strong>
+                      <span>{record.recordType === 'json_item' ? 'JSON' : record.recordType === 'text_item' ? 'TXT' : 'HTML'} · {record.sensitivity}</span>
+                    </div>
+                    {record.body && <p>{record.body}</p>}
+                    <details className="fallback-record-payload">
+                      <summary>
+                        {record.recordType === 'json_item'
+                          ? 'View original JSON fields'
+                          : record.recordType === 'text_item'
+                            ? 'View preserved text'
+                            : 'View extracted HTML item data'}
+                      </summary>
+                      <pre>{formatFallbackPayload(record.payloadPreview, record.recordType)}</pre>
+                      {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete stored record remains in the local database.</small>}
+                    </details>
+                    <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="fallback-records-empty">
+                {fallbackAppliedQuery
+                  ? 'No records match this section filter. Clear the search to see all preserved records.'
+                  : 'There are no preserved records in this section.'}
+              </p>
+            )}
+            {fallbackRecords && (
+              <div className="fallback-record-pagination">
+                <span>
+                  {fallbackRecords.total === 0 ? '0 records' :
+                    'Showing ' + (((fallbackRecords.page - 1) * fallbackRecords.pageSize) + 1) + '–' +
+                    Math.min(fallbackRecords.page * fallbackRecords.pageSize, fallbackRecords.total) +
+                    ' of ' + fallbackRecords.total.toLocaleString()}
+                </span>
+                <div>
+                  <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, fallbackRecords.page - 1, fallbackAppliedQuery)} disabled={isLoadingFallbackRecords || fallbackRecords.page <= 1}>Previous</button>
+                  <span>Page {fallbackRecords.page} / {Math.max(1, Math.ceil(fallbackRecords.total / fallbackRecords.pageSize))}</span>
+                  <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, fallbackRecords.page + 1, fallbackAppliedQuery)} disabled={isLoadingFallbackRecords || fallbackRecords.page >= Math.max(1, Math.ceil(fallbackRecords.total / fallbackRecords.pageSize))}>Next</button>
+                </div>
+              </div>
+            )}
+            <p className="fallback-record-note">Fallback records are preserved for local reference. Their field meanings, dates, and relationships have not been verified by a section-specific importer.</p>
+          </section>
+        )}
 
         <section className="section-heading">
           <div>

@@ -17,6 +17,7 @@ export interface ParsedMessage {
   media: MessageMediaReference[];
   sourceCardIndex: number;
   recordType: 'message' | 'call_event' | 'attachment';
+  rawPayload?: unknown;
 }
 
 export interface MessageParseIssue {
@@ -159,6 +160,118 @@ export function parseMessageConversation(html: string, sourceFile: string): Mess
       media,
       sourceCardIndex,
       recordType: isCallEvent ? 'call_event' : media.length > 0 && !bodyText ? 'attachment' : 'message'
+    });
+  });
+
+  return result;
+}
+
+
+function safeTngMessageMediaPath(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim() || value.length > 2000) return null;
+  const candidate = value.trim();
+  if (
+    !candidate.startsWith('your_facebook_activity/messages/') ||
+    candidate.startsWith('/') ||
+    /^[a-z][a-z0-9+.-]*:/iu.test(candidate) ||
+    candidate.split('/').some((part) => part === '.' || part === '..' || !part)
+  ) return null;
+  return candidate;
+}
+
+/** Parses the observed Accounts Center message_*.json conversation structure. */
+export function parseMessageConversationJson(jsonText: string, sourceFile: string): MessageParseResult {
+  const normalizedPath = sourceFile.toLocaleLowerCase().replace(/\\/gu, '/');
+  if (
+    !normalizedPath.startsWith('your_facebook_activity/messages/') ||
+    !/^message_\d+\.json$/u.test(basename(normalizedPath))
+  ) {
+    throw new Error('Unsupported Accounts Center message JSON source.');
+  }
+
+  const parsed: unknown = JSON.parse(jsonText);
+  const root = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : null;
+  const sourceMessages = root && Array.isArray(root.messages) ? root.messages : [];
+  const result: MessageParseResult = { messages: [], issues: [] };
+  if (sourceMessages.length === 0) {
+    result.issues.push({ code: 'no_message_cards_found', sourceCardIndex: null });
+    return result;
+  }
+
+  sourceMessages.slice(0, 10000).forEach((value, sourceCardIndex) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      result.issues.push({ code: 'missing_message_content', sourceCardIndex });
+      return;
+    }
+    const message = value as Record<string, unknown>;
+    const senderRaw = typeof message.sender_name === 'string' && message.sender_name.trim()
+      ? cleanText(message.sender_name)
+      : null;
+    const bodyParts: string[] = [];
+    const content = typeof message.content === 'string' ? cleanText(message.content) : '';
+    const share = typeof message.share === 'object' && message.share !== null && !Array.isArray(message.share)
+      ? message.share as Record<string, unknown>
+      : null;
+    const shareText = typeof share?.share_text === 'string' ? cleanText(share.share_text) : '';
+    if (content) bodyParts.push(content);
+    if (shareText && !bodyParts.includes(shareText)) bodyParts.push(shareText);
+    if (message.is_unsent === true && bodyParts.length === 0) bodyParts.push('This message was unsent.');
+
+    const media: MessageMediaReference[] = [];
+    const seen = new Set<string>();
+    const addMedia = (candidate: unknown, explicitKind?: MessageMediaKind) => {
+      const relativePath = safeTngMessageMediaPath(candidate);
+      if (!relativePath || seen.has(relativePath)) return;
+      seen.add(relativePath);
+      media.push({
+        kind: explicitKind ?? mediaKind(relativePath, 'img'),
+        relativePath,
+        element: 'img'
+      });
+    };
+
+    if (Array.isArray(message.photos)) {
+      for (const photo of message.photos) {
+        if (typeof photo !== 'object' || photo === null || Array.isArray(photo)) continue;
+        addMedia((photo as Record<string, unknown>).uri);
+      }
+    }
+    if (typeof message.sticker === 'object' && message.sticker !== null && !Array.isArray(message.sticker)) {
+      addMedia((message.sticker as Record<string, unknown>).uri, 'sticker');
+    }
+
+    const reactionsRaw = Array.isArray(message.reactions)
+      ? message.reactions.flatMap((reaction) => {
+        if (typeof reaction !== 'object' || reaction === null || Array.isArray(reaction)) return [];
+        const value = (reaction as Record<string, unknown>).reaction;
+        return typeof value === 'string' && value.trim() ? [cleanText(value)] : [];
+      })
+      : [];
+    const timestamp = message.timestamp_ms;
+    const timestampRaw = typeof timestamp === 'number' && Number.isFinite(timestamp)
+      ? String(timestamp)
+      : typeof timestamp === 'string' && timestamp.trim()
+        ? timestamp.trim()
+        : null;
+    const bodyRaw = bodyParts.join('\n') || null;
+    if (!bodyRaw && media.length === 0 && reactionsRaw.length === 0) {
+      result.issues.push({ code: 'missing_message_content', sourceCardIndex });
+      return;
+    }
+
+    const isCallEvent = typeof message.call_duration === 'number' ||
+      typeof message.video_chat === 'object' && message.video_chat !== null;
+    result.messages.push({
+      senderRaw,
+      bodyRaw,
+      timestampRaw,
+      reactionsRaw,
+      media,
+      sourceCardIndex,
+      recordType: isCallEvent ? 'call_event' : media.length > 0 && !bodyRaw ? 'attachment' : 'message',
+      rawPayload: message
     });
   });
 

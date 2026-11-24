@@ -16,6 +16,18 @@ on:
       - 'tsconfig*.json'
       - '.github/workflows/windows-installer.yml'
       - 'docs/CODE-SIGNING.md'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - 'electron.vite.config.ts'
+      - 'tsconfig*.json'
+      - '.github/workflows/windows-installer.yml'
+      - 'docs/CODE-SIGNING.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

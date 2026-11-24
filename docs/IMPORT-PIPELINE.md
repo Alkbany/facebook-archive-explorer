@@ -122,3 +122,43 @@ Runtime discovery remains authoritative.
 - Restore is refused while a database transaction, import, or discovery run is active.
 - The current database is backed up to a recovery file before the staged restore is swapped into place. Startup restores the previous file if the process was interrupted before the new file was installed.
 - Restoring restarts the application. The database file contains local archive indexes and imported records, not the original Facebook export folders, ZIP files, or media.
+
+
+## Generic fallbacks
+
+After reviewed section-specific HTML importers run, Import All checks remaining HTML files outside those reviewed sections, plus files that a reviewed importer explicitly marked unsupported. The generic HTML fallback reads at most 20 MiB per file, extracts visible text from semantic article/list/paragraph blocks, caps output at 5,000 records and 20,000 characters per record, and stores source path/card order. It does not execute scripts, fetch links, or modify source files. Sensitive and unknown sections are stored locally but excluded from full-text search. A parser-rejected file in a known section uses that section's sensitivity classification and is kept available in Other Data.
+
+The JSON fallback separately reads JSON files with bounded file/record/count limits and preserves parsed values in a local payload. Neither fallback claims to understand an unreviewed Facebook schema. A reviewed section parser remains necessary for reliable field mapping, media relationships, and semantic date handling.
+
+
+The plain-text fallback separately processes discovered `.txt` files (including section-level `no-data.txt` notices) up to 5 MiB each. It removes a UTF-8 BOM for display, preserves the remaining source text in the local record payload, indexes at most 20,000 characters for eligible non-sensitive sections, and keeps unknown or sensitive sections out of global search. Empty files are marked empty rather than indexed. This preserves content but does not infer the semantic meaning of a text file.
+
+
+The plain-text fallback recognizes UTF-8, UTF-8 with BOM, and UTF-16 little-/big-endian files with their respective BOMs. Files without a BOM are treated as UTF-8; ambiguous legacy encodings are not guessed.
+
+
+## Browsing preserved fallback records
+
+The **Other Data** workspace pages through the stored HTML/JSON/text fallback records by section. Its optional search filters only the selected section's visible title, text, and source path. This allows a user to inspect a sensitive section locally without adding its contents to global FTS5 search. JSON payload previews and the preserved text/HTML-item payloads are bounded to 20,000 characters in the UI; the stored record payload remains in the local database.
+
+
+For generic JSON records, `event_time_utc` is populated only when the preserved date field is an unambiguous Unix timestamp (seconds or milliseconds within the supported 2000–2100 range) or an ISO timestamp carrying an explicit timezone. The original value remains in `event_time_raw`. Locale-formatted dates and ISO date-only strings without a timezone remain raw and are not assigned an invented UTC time.
+
+
+## Current nested Accounts Center layout
+
+Inventory recognizes the current nested paths before assigning a section: \`connections/friends\`, \`personal_information/profile_information\`, \`logged_information/search\`, \`your_facebook_activity/posts\`, \`comments_and_reactions\`, \`groups\`, \`events\`, and \`messages\`, plus the ads and off-Facebook apps roots. Posts album/media and \`your_videos\` files map to Photos & Videos; comments and reaction JSON files are separated by their filenames. This is path classification only — it does not imply that every one of those JSON schemas has a semantic parser.
+
+The observed \`connections/friends/your_friends.json\` \`friends_v2\` collection is parsed into the existing Friends directory. Only names enter full-text search; raw friend fields are retained locally in the record payload. The five known HTML Friends pages continue to use their existing parser.
+
+
+The Posts importer also recognizes \`your_facebook_activity/posts/your_posts__check_ins__photos_and_videos*.json\` when it contains the observed timeline array. It imports the Facebook activity heading, post text, raw timestamp, and media URIs only from the selected archive's \`posts/media\` folder. Place addresses/coordinates, EXIF, IP metadata, and external URLs are deliberately not copied into searchable fields. Album JSON and posts-on-other-pages \`label_values\` records remain on the generic fallback until their dedicated views are implemented.
+
+
+The Groups-specific JSON importer recognizes the TNG \`group_posts_v2\`, \`group_comments_v2\`, and \`groups_joined_v2\` collections in their three reviewed filenames under \`your_facebook_activity/groups/\`. It indexes only the activity title and visible post/comment/group-name text; external links, identifiers, member/contact fields, places, and attachment metadata are excluded from searchable fields. Unsupported structures remain eligible for the generic JSON fallback.
+
+
+The Messages importer recognizes current Accounts Center \`message_*.json\` chunks beneath \`your_facebook_activity/messages/\` alongside the existing legacy HTML conversation layout. It imports sender, message text, raw millisecond timestamp, reaction labels, call-event markers, photo and sticker references. Only local archive-relative photo/sticker paths are linked. Share URLs and remote media URLs are never copied into message text, and all message content remains sensitive and excluded from global full-text search.
+
+
+The Photos & Videos importer also recognizes self-contained Accounts Center album JSON files at \`your_facebook_activity/posts/album/{id}.json\`. It imports the album title, description, raw last-modified timestamp, photo captions and raw creation timestamps into the existing album/photo workspace. Cover and photo links are created only for image paths that match discovered local image files. Original JSON metadata remains in the local record payload but is not copied into full-text fields; EXIF, upload IPs, locations, and other metadata are therefore not part of global search. Unrecognized album JSON layouts remain eligible for the generic JSON fallback.

@@ -62,6 +62,33 @@ describe('Comments import', () => {
     ]);
   });
 
+  it('imports the current comments_v2 JSON file into the existing comments activity list', async () => {
+    const relativePath = 'your_facebook_activity/comments_and_reactions/comments.json';
+    const absolutePath = join(root, relativePath);
+    const source = {
+      comments_v2: [{
+        timestamp: 12597674400,
+        title: 'Synthetic account commented on a synthetic post.',
+        data: [{ comment: { timestamp: 12597674400, comment: 'Synthetic comment body', author: 'Synthetic account' } }]
+      }]
+    };
+    await mkdir(join(root, 'your_facebook_activity', 'comments_and_reactions'), { recursive: true });
+    await writeFile(absolutePath, '\uFEFF' + JSON.stringify(source), 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+      VALUES (?, ?, 'comments.json', 'comments', 'json', 'discovered', ?)
+    `).run(snapshotId, relativePath, now);
+
+    const result = await importCommentsSection(database, snapshotId, root);
+    expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, unsupportedFiles: 0, failedFiles: 0 });
+    expect(listCommentActivities(database, snapshotId)).toMatchObject([{
+      activityRaw: 'Synthetic account commented on a synthetic post.',
+      bodyRaw: 'Synthetic comment body',
+      dateRaw: '12597674400'
+    }]);
+  });
+
   it('marks an unknown comments HTML layout as unsupported', async () => {
     await writeFile(join(root, 'comments', 'unknown.html'), '<html><body>Unknown</body></html>', 'utf8');
     const now = new Date().toISOString();

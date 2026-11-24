@@ -98,7 +98,7 @@ describe('Friends file import', () => {
     await expect(readFile(filePath, 'utf8')).resolves.toBe(html);
   });
 
-  it('imports only the five registered Friends export filenames', async () => {
+  it('imports only the five registered Friends HTML filenames', async () => {
     const friendsHtml = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
       <div class="_3-96 _2pio _2lek _2lel">Synthetic First Person</div>
       <div class="_3-94 _2lem">Raw date one</div>
@@ -153,6 +153,56 @@ describe('Friends file import', () => {
     expect(unknownFile.status).toBe('discovered');
     expect(importedCount.count).toBe(2);
     expect(sentFileId).toBeGreaterThan(0);
+  });
+
+  it('imports the current TNG friends_v2 JSON file into the Friends directory safely', async () => {
+    const jsonPath = 'connections/friends/your_friends.json';
+    const jsonFile = join(root, jsonPath);
+    const source = {
+      friends_v2: [
+        { name: 'Synthetic TNG Friend', timestamp: 1572878551, contact: 'Never searchable Contact' },
+        { name: 'Second TNG Friend', timestamp: 1572878560 }
+      ]
+    };
+    await mkdir(join(root, 'connections', 'friends'), { recursive: true });
+    await writeFile(jsonFile, '\uFEFF' + JSON.stringify(source), 'utf8');
+    database.prepare("UPDATE source_files SET status = 'skipped' WHERE id = ?").run(sourceFileId);
+
+    const now = new Date().toISOString();
+    const jsonFileId = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, ?, 'your_friends.json', 'friends', 'json', 'discovered', ?)
+    `).run(snapshotId, jsonPath, now).lastInsertRowid);
+
+    const result = await importFriendsSection(database, snapshotId, root);
+    expect(result).toEqual({
+      filesAttempted: 1,
+      recordsImported: 2,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+
+    const records = database.prepare(`
+      SELECT title, record_type AS recordType, event_time_raw AS dateRaw,
+        sensitivity, search_enabled AS searchEnabled, payload_json AS payload
+      FROM records WHERE source_file_id = ? ORDER BY source_record_index
+    `).all(jsonFileId) as Array<{
+      title: string; recordType: string; dateRaw: string; sensitivity: string;
+      searchEnabled: number; payload: string;
+    }>;
+    expect(records[0]).toMatchObject({
+      title: 'Synthetic TNG Friend',
+      recordType: 'friend',
+      dateRaw: '1572878551',
+      sensitivity: 'personal',
+      searchEnabled: 1
+    });
+    expect(JSON.parse(records[0].payload)).toEqual(source.friends_v2[0]);
+    const contactSearch = database.prepare(
+      "SELECT record_id FROM record_search WHERE record_search MATCH 'neversearchable'"
+    ).all();
+    expect(contactSearch).toHaveLength(0);
   });
 
   it('marks an unrecognized Friends page as unsupported rather than importing zero records silently', async () => {

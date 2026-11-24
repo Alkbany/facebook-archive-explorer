@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseFriendsExport } from '../src/main/import/parsers/friends-parser';
+import { parseFriendsExport, parseFriendsJsonExport } from '../src/main/import/parsers/friends-parser';
 
 function card(name: string, date: string, contact = ''): string {
   return `
@@ -77,5 +77,41 @@ describe('parseFriendsExport', () => {
   it('rejects unrecognized filenames so they are not parsed with the wrong model', () => {
     expect(() => parseFriendsExport('<html></html>', 'another_section.html'))
       .toThrow('Unsupported friends export file');
+  });
+});
+
+
+describe('parseFriendsJsonExport', () => {
+  it('parses the observed friends_v2 array while preserving names and raw timestamps', () => {
+    const result = parseFriendsJsonExport(JSON.stringify({
+      friends_v2: [
+        { name: 'William Riker', timestamp: 12433860000 },
+        { name: 'Data', timestamp: 12433860300 },
+        { name: 'Beverly Crusher', timestamp: 12437260200 }
+      ]
+    }), 'connections/friends/your_friends.json');
+
+    expect(result.issues).toEqual([]);
+    expect(result.records).toHaveLength(3);
+    expect(result.records[0]).toMatchObject({
+      recordType: 'friend',
+      nameRaw: 'William Riker',
+      dateRaw: '12433860000',
+      sourceFile: 'connections/friends/your_friends.json',
+      sourceCardIndex: 0
+    });
+    expect(result.records[0].rawPayload).toEqual({ name: 'William Riker', timestamp: 12433860000 });
+  });
+
+  it('reports missing names and falls back cleanly for an unrecognized JSON shape', () => {
+    const result = parseFriendsJsonExport(JSON.stringify({
+      friends_v2: [{ timestamp: 123 }, { name: 'Visible Friend' }]
+    }), 'connections/friends/your_friends.json');
+
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0].nameRaw).toBe('Visible Friend');
+    expect(result.issues).toEqual([{ code: 'missing_name', sourceCardIndex: 0 }]);
+    expect(parseFriendsJsonExport('[]', 'friends/your_friends.json').issues)
+      .toEqual([{ code: 'no_cards_found', sourceCardIndex: null }]);
   });
 });

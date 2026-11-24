@@ -3,6 +3,8 @@ import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parsePhotoAlbumsIndex } from '../parsers/photo-albums-parser';
+import { importTngPhotoAlbumJsonSection } from './tng-photo-album-importer';
+import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 
 export interface PhotoAlbumsImportSectionResult {
@@ -26,7 +28,7 @@ function safeFailure(error: unknown): { code: string; message: string } {
  * Imports only the root-level Photos & Videos album index. Album detail pages
  * are deliberately left untouched until their export layout is verified.
  */
-export async function importPhotoAlbumsSection(
+async function importLegacyPhotoAlbumsSection(
   database: DatabaseSync,
   snapshotId: string,
   archiveRoot: string,
@@ -58,6 +60,7 @@ export async function importPhotoAlbumsSection(
   emitProgress('started');
 
   for (const file of files) {
+    await waitIfImportPaused();
     summary.filesAttempted += 1;
     const runId = randomUUID();
     const startedAt = new Date().toISOString();
@@ -180,4 +183,23 @@ export async function importPhotoAlbumsSection(
 
   emitProgress('completed');
   return summary;
+}
+
+
+/** Imports TNG JSON album details and the legacy HTML album index. */
+export async function importPhotoAlbumsSection(
+  database: DatabaseSync,
+  snapshotId: string,
+  archiveRoot: string,
+  onProgress?: ImportProgressReporter
+): Promise<PhotoAlbumsImportSectionResult> {
+  const tng = await importTngPhotoAlbumJsonSection(database, snapshotId, archiveRoot, onProgress);
+  const legacy = await importLegacyPhotoAlbumsSection(database, snapshotId, archiveRoot, onProgress);
+  return {
+    filesAttempted: tng.filesAttempted + legacy.filesAttempted,
+    recordsImported: tng.recordsImported + legacy.recordsImported,
+    mediaReferences: tng.mediaReferences + legacy.mediaReferences,
+    unsupportedFiles: tng.unsupportedFiles + legacy.unsupportedFiles,
+    failedFiles: tng.failedFiles + legacy.failedFiles
+  };
 }

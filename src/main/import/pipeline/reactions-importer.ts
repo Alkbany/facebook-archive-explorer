@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
-import { parseReactionsExport } from '../parsers/reactions-parser';
+import { parseReactionsExport, parseReactionsJsonExport } from '../parsers/reactions-parser';
 
 export interface ReactionsImportSectionResult {
   filesAttempted: number;
@@ -12,7 +13,7 @@ export interface ReactionsImportSectionResult {
   failedFiles: number;
 }
 
-interface SourceFileRow { id: number; relative_path: string; detected_format: string; }
+interface SourceFileRow { id: number; relative_path: string; file_name: string; detected_format: string; }
 
 function safeFailure(error: unknown): { code: string; message: string } {
   if (error instanceof ArchiveReadError) return { code: error.code, message: 'The source file could not be safely read from the selected backup.' };
@@ -27,10 +28,11 @@ export async function importReactionsSection(
   onProgress?: ImportProgressReporter
 ): Promise<ReactionsImportSectionResult> {
   const files = database.prepare(`
-    SELECT id, relative_path, detected_format
+    SELECT id, relative_path, file_name, detected_format
     FROM source_files
     WHERE snapshot_id = ? AND section_key = 'likes_and_reactions'
-      AND detected_format = 'html' AND status IN ('discovered', 'failed', 'unsupported')
+      AND ((detected_format = 'html') OR (detected_format = 'json' AND lower(file_name) GLOB 'likes_and_reactions*.json'))
+      AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as SourceFileRow[];
   const summary: ReactionsImportSectionResult = { filesAttempted: 0, recordsImported: 0, unsupportedFiles: 0, failedFiles: 0 };
@@ -47,6 +49,7 @@ export async function importReactionsSection(
   emitProgress('started');
 
   for (const file of files) {
+    await waitIfImportPaused();
     summary.filesAttempted += 1;
     const runId = randomUUID();
     const startedAt = new Date().toISOString();
@@ -56,8 +59,10 @@ export async function importReactionsSection(
       .run(file.id, snapshotId);
     database.exec('SAVEPOINT reactions_file');
     try {
-      const html = await readArchiveUtf8File(archiveRoot, file.relative_path);
-      const parsed = parseReactionsExport(html, file.relative_path);
+      const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path);
+      const parsed = file.detected_format === 'json'
+        ? parseReactionsJsonExport(sourceText.replace(/^\uFEFF/u, ''), file.relative_path)
+        : parseReactionsExport(sourceText, file.relative_path);
       const timestamp = new Date().toISOString();
       const insert = database.prepare(`
         INSERT INTO records (

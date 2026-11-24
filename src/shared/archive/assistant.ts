@@ -13,6 +13,14 @@ export interface ArchiveAssistantCitation {
   dateRaw: string | null;
   title: string | null;
   excerpt: string;
+  snapshotId?: string;
+  snapshotLabel?: string;
+  comparisonSide?: 'baseline' | 'compared';
+}
+
+export interface ArchiveAssistantComparisonSelection {
+  baselineSnapshotId: string;
+  comparedSnapshotId: string;
 }
 
 export interface ArchiveAssistantAnswer {
@@ -21,6 +29,7 @@ export interface ArchiveAssistantAnswer {
   evidenceCount: number;
   retrievalScope: {
     snapshotId: string;
+    comparedSnapshotId?: string;
     sectionKey: string | null;
     year: number | null;
   };

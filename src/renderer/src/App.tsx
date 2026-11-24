@@ -179,6 +179,7 @@ function App() {
   const [isUpdatingAiAssistant, setIsUpdatingAiAssistant] = useState(false);
   const [assistantQuestion, setAssistantQuestion] = useState('');
   const [assistantSection, setAssistantSection] = useState('all');
+  const [assistantCompareMode, setAssistantCompareMode] = useState(false);
   const [assistantConversation, setAssistantConversation] = useState<Array<{
     question: string;
     response: ArchiveAssistantAnswer;
@@ -821,6 +822,12 @@ function App() {
   async function askArchiveAssistant() {
     const question = assistantQuestion.trim();
     if (question.length < 2 || !aiAssistantStatus?.enabled) return;
+    if (assistantCompareMode && (
+      !comparisonBaselineId || !comparisonTargetId || comparisonBaselineId === comparisonTargetId
+    )) {
+      setError('Choose two different backups from the same account to compare.');
+      return;
+    }
     setIsAskingAssistant(true);
     setError(null);
     try {
@@ -833,7 +840,10 @@ function App() {
       const response = await window.desktopApi.askArchiveAssistant(
         question,
         assistantSection === 'all' ? null : assistantSection,
-        history
+        history,
+        assistantCompareMode
+          ? { baselineSnapshotId: comparisonBaselineId, comparedSnapshotId: comparisonTargetId }
+          : null
       );
       setAssistantConversation((current) => [...current, { question, response }].slice(-8));
       setAssistantQuestion('');
@@ -847,6 +857,9 @@ function App() {
   }
 
   async function openAssistantSource(source: ArchiveAssistantAnswer['citations'][number]) {
+    if (source.snapshotId && source.snapshotId !== inspection?.snapshotId) {
+      await openSavedBackup(source.snapshotId);
+    }
     await loadArchiveFiles('all', 'all', source.sourcePath, 1);
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => navigateToSection('files', 'archive-files-workspace'));
@@ -2031,6 +2044,67 @@ function App() {
                   </button>
                 )}
               </div>
+              <div className="search-privacy-setting assistant-compare-setting">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={assistantCompareMode}
+                    onChange={(event) => {
+                      setAssistantCompareMode(event.target.checked);
+                      setAssistantConversation([]);
+                      setError(null);
+                    }}
+                    disabled={!aiAssistantStatus?.enabled || isAskingAssistant}
+                  />
+                  <span>
+                    <strong>Compare two saved backups</strong>
+                    <small>Answer from both snapshots of the same account. Each source is labelled with its backup.</small>
+                  </span>
+                </label>
+                {assistantCompareMode && (
+                  <div className="backup-compare-controls assistant-backup-compare-controls">
+                    <label>
+                      <span>Older backup</span>
+                      <select
+                        value={comparisonBaselineId}
+                        onChange={(event) => {
+                          const nextId = event.target.value;
+                          const nextAccount = savedBackups.find((backup) => backup.id === nextId)?.accountName;
+                          const targetAccount = savedBackups.find((backup) => backup.id === comparisonTargetId)?.accountName;
+                          setComparisonBaselineId(nextId);
+                          if (targetAccount && nextAccount && targetAccount !== nextAccount) setComparisonTargetId('');
+                          setAssistantConversation([]);
+                        }}
+                        disabled={!aiAssistantStatus?.enabled || isAskingAssistant}
+                      >
+                        <option value="">Select older backup</option>
+                        {savedBackups.map((backup) => (
+                          <option key={backup.id} value={backup.id}>{backup.accountName} · {backup.backupName}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Newer backup</span>
+                      <select
+                        value={comparisonTargetId}
+                        onChange={(event) => {
+                          setComparisonTargetId(event.target.value);
+                          setAssistantConversation([]);
+                        }}
+                        disabled={!aiAssistantStatus?.enabled || isAskingAssistant || !comparisonBaselineId}
+                      >
+                        <option value="">Select newer backup</option>
+                        {savedBackups.filter((backup) =>
+                          !comparisonBaselineId ||
+                          backup.accountName === savedBackups.find((item) => item.id === comparisonBaselineId)?.accountName
+                        ).map((backup) => (
+                          <option key={backup.id} value={backup.id}>{backup.backupName}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </div>
               <div className="archive-assistant-compose">
                 <label>
                   <span>Limit answers to a section</span>
@@ -2061,11 +2135,15 @@ function App() {
                   aria-label="Ask a question about this archive"
                 />
                 <div className="archive-assistant-compose-footer">
-                  <span>{aiAssistantStatus?.enabled ? 'Use Enter to ask · Shift+Enter for a new line' : 'Enable the local assistant to ask questions'}</span>
+                  <span>{!aiAssistantStatus?.enabled
+                    ? 'Enable the local assistant to ask questions'
+                    : assistantCompareMode ? 'Question uses both selected backups · Enter to ask'
+                      : 'Use Enter to ask · Shift+Enter for a new line'}</span>
                   <button
                     className="secondary-button"
                     onClick={() => void askArchiveAssistant()}
-                    disabled={!aiAssistantStatus?.enabled || !inspection || isAskingAssistant || assistantQuestion.trim().length < 2}
+                    disabled={!aiAssistantStatus?.enabled || !inspection || isAskingAssistant || assistantQuestion.trim().length < 2 ||
+                      (assistantCompareMode && (!comparisonBaselineId || !comparisonTargetId || comparisonBaselineId === comparisonTargetId))}
                   >
                     {isAskingAssistant ? 'Researching local records…' : 'Ask archive'}
                   </button>
@@ -2099,7 +2177,10 @@ function App() {
                                   <strong>{source.title || source.recordType.replaceAll('_', ' ')}</strong>
                                   <span>{SECTION_TITLES.get(source.sectionKey) ?? source.sectionKey} · {source.dateRaw || 'Date not recorded'}</span>
                                   <p>{source.excerpt}</p>
-                                  <small>{source.sourcePath} · card {source.sourceCardIndex + 1} · record #{source.recordId}</small>
+                                  <small>
+                        {source.snapshotLabel && <>{source.comparisonSide === 'baseline' ? 'Older backup' : 'Compared backup'}: {source.snapshotLabel} · </>}
+                        {source.sourcePath} · card {source.sourceCardIndex + 1} · record #{source.recordId}
+                      </small>
                                 </div>
                                 <button
                                   className="secondary-button"

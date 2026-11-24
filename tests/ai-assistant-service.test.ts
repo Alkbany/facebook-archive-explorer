@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeArchiveAssistantEvidence, validateArchiveAssistantCitations } from '../src/main/database/ai-assistant-service';
+import { combineArchiveAssistantComparisonEvidence, mergeArchiveAssistantEvidence, validateArchiveAssistantCitations } from '../src/main/database/ai-assistant-service';
 import type { ArchiveSearchResult } from '../src/shared/archive/search';
 import type { ArchiveAssistantCitation } from '../src/shared/archive/assistant';
 
@@ -80,6 +80,27 @@ describe('AI Assistant evidence merge', () => {
     expect(merged).toHaveLength(12);
     expect(merged[0].sourceId).toBe('S1');
     expect(merged[11].sourceId).toBe('S12');
+  });
+});
+
+describe('AI Assistant multi-snapshot evidence', () => {
+  it('assigns unique citation IDs and explicit backup provenance to both evidence sets', () => {
+    const baseline = { ...source('S1'), recordId: 11 };
+    const compared = { ...source('S1'), recordId: 22 };
+    const result = combineArchiveAssistantComparisonEvidence(
+      [baseline],
+      [compared],
+      { id: 'older-id', backupName: 'Older backup' },
+      { id: 'newer-id', backupName: 'Newer backup' }
+    );
+
+    expect(result.map((item) => item.sourceId)).toEqual(['S1', 'S2']);
+    expect(result[0]).toMatchObject({
+      recordId: 11, snapshotId: 'older-id', snapshotLabel: 'Older backup', comparisonSide: 'baseline'
+    });
+    expect(result[1]).toMatchObject({
+      recordId: 22, snapshotId: 'newer-id', snapshotLabel: 'Newer backup', comparisonSide: 'compared'
+    });
   });
 });
 

@@ -9,7 +9,7 @@ import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from 
 import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
 import type { ArchiveSearchMode } from '../../shared/archive/search';
 import { getArchiveSection } from '../../shared/archive/section-registry';
-import type { AiAssistantHistoryMessage } from '../../shared/archive/assistant';
+import type { AiAssistantComparisonSelection, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -444,9 +444,26 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.askArchiveAssistant, async (
-    _event, question: unknown, sectionKey: unknown, history: unknown
+    _event, question: unknown, sectionKey: unknown, history: unknown, comparison: unknown
   ) => {
-    if (!selectedSnapshotId) throw new Error('Inspect a backup before asking the archive assistant.');
+    let comparisonSelection: AiAssistantComparisonSelection | null = null;
+    if (comparison !== undefined && comparison !== null) {
+      if (
+        typeof comparison !== 'object' || Array.isArray(comparison) ||
+        !('baselineSnapshotId' in comparison) || !('comparedSnapshotId' in comparison) ||
+        typeof comparison.baselineSnapshotId !== 'string' || comparison.baselineSnapshotId.length > 128 ||
+        typeof comparison.comparedSnapshotId !== 'string' || comparison.comparedSnapshotId.length > 128
+      ) {
+        throw new Error('Invalid assistant backup comparison selection.');
+      }
+      comparisonSelection = {
+        baselineSnapshotId: comparison.baselineSnapshotId,
+        comparedSnapshotId: comparison.comparedSnapshotId
+      };
+      compareArchiveSnapshots(database, comparisonSelection.baselineSnapshotId, comparisonSelection.comparedSnapshotId);
+    }
+    const assistantSnapshotId = comparisonSelection?.baselineSnapshotId ?? selectedSnapshotId;
+    if (!assistantSnapshotId) throw new Error('Inspect a backup before asking the archive assistant.');
     if (
       typeof question !== 'string' || question.trim().length < 2 || question.length > 2_000 ||
       !(sectionKey === null || typeof sectionKey === 'string') ||
@@ -470,11 +487,12 @@ export function registerIpcHandlers(
     });
     return askLocalArchiveAssistant(
       database,
-      selectedSnapshotId,
+      assistantSnapshotId,
       question,
       getAiAssistantModelCacheDirectory(),
       sectionKey,
-      safeHistory
+      safeHistory,
+      comparisonSelection?.comparedSnapshotId ?? null
     );
   });
 

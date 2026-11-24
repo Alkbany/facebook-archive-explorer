@@ -1990,6 +1990,8 @@ h1 {
   color:#6d7184; background:#f8f8fc; font-size:9px; font-weight:700;
 }
 .assistant-enable-setting { margin-bottom:14px; }
+.assistant-compare-setting { margin-bottom:14px; }
+.assistant-backup-compare-controls { margin-top:10px; }
 .archive-assistant-compose {
   display:grid; grid-template-columns:minmax(170px,220px) minmax(0,1fr); gap:10px;
   padding:13px; border:1px solid #e9eaf2; border-radius:12px; background:#fff;

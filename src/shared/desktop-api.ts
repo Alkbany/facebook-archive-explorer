@@ -1,7 +1,7 @@
 import type { MessageConversationListPage, MessageConversationPage, MessageMediaGalleryItem } from './archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
 import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult, SemanticSearchStatus } from './archive/search';
-import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from './archive/assistant';
+import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage, ArchiveAssistantComparisonSelection } from './archive/assistant';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -160,7 +160,7 @@ export interface DesktopApi {
   retrySemanticIndexing(): Promise<SemanticSearchStatus>;
   getAiAssistantStatus(): Promise<AiAssistantStatus>;
   setAiAssistantEnabled(enabled: boolean): Promise<AiAssistantStatus>;
-  askArchiveAssistant(question: string, sectionKey: string | null, history: AiAssistantHistoryMessage[]): Promise<ArchiveAssistantAnswer>;
+  askArchiveAssistant(question: string, sectionKey: string | null, history: AiAssistantHistoryMessage[], comparison?: ArchiveAssistantComparisonSelection | null): Promise<ArchiveAssistantAnswer>;
   searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number, dateFrom?: string | null, dateTo?: string | null, offset?: number): Promise<ArchiveSearchResult[]>;
   exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number, dateFrom?: string | null, dateTo?: string | null, offset?: number): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;

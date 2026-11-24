@@ -115,7 +115,7 @@ describe('TNG Messenger JSON importer', () => {
     expect(messages).toHaveLength(3);
     expect(messages[0]).toMatchObject({
       sender: 'Jean-Luc Picard',
-      body: 'Engage.\\nA private share description.',
+      body: 'Engage.\nA private share description.',
       timestampRaw: '12600000480000',
       reactions: ['❤️']
     });

@@ -129,7 +129,7 @@ describe('Accounts Center Messenger JSON parser', () => {
     expect(result.messages).toHaveLength(5);
     expect(result.messages[0]).toMatchObject({
       senderRaw: 'Jean-Luc Picard',
-      bodyRaw: 'Remember this one?\\nThe Picard Maneuver.',
+      bodyRaw: 'Remember this one?\nThe Picard Maneuver.',
       timestampRaw: '12600000180000',
       reactionsRaw: ['❤️'],
       recordType: 'message'

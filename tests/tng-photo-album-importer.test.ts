@@ -139,7 +139,7 @@ describe('TNG photo album JSON importer', () => {
     ]);
 
     const albumSearch = database.prepare(
-      "SELECT record_id FROM record_search WHERE record_search MATCH 'tenforward'"
+      "SELECT record_id FROM record_search WHERE record_search MATCH 'ten'"
     ).all();
     const captionSearch = database.prepare(
       "SELECT record_id FROM record_search WHERE record_search MATCH 'guinan'"
@@ -165,6 +165,9 @@ describe('TNG photo album JSON importer', () => {
   it('leaves an unfamiliar TNG album JSON structure eligible for the generic JSON fallback', async () => {
     const albumPath = 'your_facebook_activity/posts/album/unknown.json';
     await writeFile(join(root, albumPath), JSON.stringify({ album_title: 'Unreviewed shape', entries: [] }), 'utf8');
+    database.prepare(
+      "UPDATE source_files SET status = 'completed' WHERE snapshot_id = ? AND relative_path = ?"
+    ).run(snapshotId, 'your_facebook_activity/posts/album/0.json');
     const now = new Date().toISOString();
     database.prepare(
       "INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) " +

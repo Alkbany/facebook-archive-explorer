@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { facebookDateToUtc } from '../../../shared/time/facebook-date';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -67,16 +68,16 @@ export async function importCommentsSection(
       const insertRecord = database.prepare(`
         INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type,
           title, body_text, normalized_text, event_time_raw, event_time_utc, sensitivity, search_enabled, payload_json, created_at)
-        VALUES (?, ?, ?, 'comments', 'comment_activity', ?, ?, ?, ?, NULL, 'personal', 1, ?, ?)
+        VALUES (?, ?, ?, 'comments', 'comment_activity', ?, ?, ?, ?, ?, 'personal', 1, ?, ?)
         ON CONFLICT(source_file_id, source_record_index) DO UPDATE SET
           title=excluded.title, body_text=excluded.body_text, normalized_text=excluded.normalized_text,
-          event_time_raw=excluded.event_time_raw, payload_json=excluded.payload_json, created_at=excluded.created_at
+          event_time_raw=excluded.event_time_raw, event_time_utc=excluded.event_time_utc, payload_json=excluded.payload_json, created_at=excluded.created_at
       `);
       for (const record of parsed.records) {
         const normalized = normalizeSearchText([record.activityRaw, record.groupRaw, record.bodyRaw].filter(Boolean).join(' '));
         insertRecord.run(
           snapshotId, file.id, record.sourceCardIndex, record.activityRaw, record.bodyRaw,
-          normalized, record.dateRaw,
+          normalized, record.dateRaw, facebookDateToUtc(record.dateRaw),
           JSON.stringify({ group_raw: record.groupRaw, permalink_raw: record.permalinkRaw }), now
         );
       }

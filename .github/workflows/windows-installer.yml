@@ -82,11 +82,25 @@ jobs:
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-      - name: Require trusted signatures for version releases
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Verify trusted signatures before publishing installer
+        id: verify-signatures
         shell: pwsh
-        run: ./scripts/verify-windows-signatures.ps1
-      - name: Upload installer artifact
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WIN_CSC_LINK)) {
+            if ($env:GITHUB_REF -like 'refs/tags/v*') {
+              throw 'A trusted Windows code-signing certificate is required for version releases.'
+            }
+            "signed=false" >> $env:GITHUB_OUTPUT
+            Write-Warning 'No trusted signing certificate is configured. The installer will not be uploaded because Smart App Control may block an unsigned build.'
+          }
+          else {
+            ./scripts/verify-windows-signatures.ps1
+            "signed=true" >> $env:GITHUB_OUTPUT
+          }
+      - name: Upload signed installer artifact
+        if: steps.verify-signatures.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ startsWith(github.ref, 'refs/tags/v') && 'facebook-archive-explorer-windows' || 'facebook-archive-explorer-windows-test' }}

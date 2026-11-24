@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import { load } from 'cheerio';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
@@ -150,6 +151,7 @@ async function importHtmlFile(
     }
     const html = await readArchiveUtf8File(archiveRoot, file.relative_path, MAX_HTML_FILE_BYTES);
     const items = makeHtmlItems(html);
+    clearSourceFileRecords(database, file.id);
     const section = getArchiveSection(file.section_key);
     const sensitivity = section?.sensitivity ?? 'sensitive';
     const searchEnabled = sensitivity === 'sensitive' ? 0 : 1;

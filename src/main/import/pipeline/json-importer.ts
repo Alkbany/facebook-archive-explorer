@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
 import { normalizeSearchText } from '../../../shared/text/normalize';
@@ -214,6 +215,7 @@ async function importJsonFile(
     const jsonText = (await readArchiveUtf8File(archiveRoot, file.relative_path, MAX_JSON_FILE_BYTES)).replace(/^\uFEFF/u, '');
     const parsed: unknown = JSON.parse(jsonText);
     const items = toJsonItems(parsed);
+    clearSourceFileRecords(database, file.id);
     const section = getArchiveSection(file.section_key);
     // Unknown sections fail closed: they remain out of full-text search until reviewed.
     const sensitivity = section?.sensitivity ?? 'sensitive';

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { facebookDateToUtc } from '../../../shared/time/facebook-date';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
@@ -64,6 +65,7 @@ export async function importReactionsSection(
       const parsed = file.detected_format === 'json'
         ? parseReactionsJsonExport(sourceText.replace(/^\uFEFF/u, ''), file.relative_path)
         : parseReactionsExport(sourceText, file.relative_path);
+      clearSourceFileRecords(database, file.id);
       const timestamp = new Date().toISOString();
       const insert = database.prepare(`
         INSERT INTO records (

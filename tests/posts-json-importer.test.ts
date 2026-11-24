@@ -91,6 +91,7 @@ describe('TNG Posts JSON importer', () => {
       activityRaw: 'Jean-Luc Picard added 1 new photo.',
       bodyRaw: 'Two views of the bridge before alpha shift.\nThe bridge at dawn.',
       dateRaw: '1540000000',
+      eventTimeUtc: '2018-10-20T01:46:40.000Z',
       mediaCount: 1
     });
 

@@ -221,6 +221,45 @@ function searchMessagesWithoutGlobalIndex(
   return rows.map((row) => ({ ...row, matchType: 'exact', similarity: 1 }));
 }
 
+function searchArchiveMetadata(
+  database: DatabaseSync,
+  snapshotId: string,
+  query: string,
+  sectionKey: string | null,
+  includeMessages: boolean
+): SearchHit[] {
+  const rawNeedle = query.trim().replace(/^"|"$/gu, '');
+  if (!rawNeedle) return [];
+  const rows = database.prepare(\`
+    SELECT records.id AS id, records.section_key AS sectionKey,
+      records.record_type AS recordType, source.relative_path AS sourcePath,
+      records.source_record_index AS sourceCardIndex, records.title AS title,
+      records.body_text AS body, records.event_time_raw AS dateRaw,
+      20.0 AS relevance
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ?
+      AND (records.search_enabled = 1
+        OR (? = 1 AND records.section_key = 'messages' AND records.sensitivity = 'sensitive')
+        OR (? = 'messages' AND records.section_key = 'messages' AND records.sensitivity = 'sensitive'))
+      AND (? IS NULL OR records.section_key = ?)
+      AND (
+        instr(lower(COALESCE(source.relative_path, '')), lower(?)) > 0
+        OR instr(lower(COALESCE(source.file_name, '')), lower(?)) > 0
+        OR instr(lower(COALESCE(records.event_time_raw, '')), lower(?)) > 0
+        OR instr(lower(COALESCE(records.event_time_utc, '')), lower(?)) > 0
+      )
+    ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
+    LIMIT ?
+  \`).all(
+    snapshotId, includeMessages ? 1 : 0, sectionKey, sectionKey, sectionKey,
+    rawNeedle, rawNeedle, rawNeedle, rawNeedle, MAX_RESULTS
+  ) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;
+
+  return rows.map((row) => ({ ...row, matchType: 'exact', similarity: 1 }));
+}
+
 /** Local Exact/Fuzzy search. Sensitive messages use a separate, explicit opt-in FTS index. */
 export function searchArchiveRecords(
   database: DatabaseSync,
@@ -264,6 +303,10 @@ export function searchArchiveRecords(
       'message_search', 'message_search_vocab'
     );
     results.push(...messages);
+  }
+
+  if (mode === 'exact') {
+    results.push(...searchArchiveMetadata(database, snapshotId, query, sectionKey, messageSearchEnabled));
   }
 
   const unique = new Map<number, SearchHit>();

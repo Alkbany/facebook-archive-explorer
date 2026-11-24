@@ -68,7 +68,7 @@ describe('Accounts Center TNG Posts JSON parser', () => {
     expect(result.records).toHaveLength(1);
     expect(result.records[0]).toMatchObject({
       activityRaw: 'Jean-Luc Picard added 1 new photo.',
-      bodyRaw: 'Two views of the bridge before alpha shift.\\nThe bridge at dawn.',
+      bodyRaw: 'Two views of the bridge before alpha shift.\nThe bridge at dawn.',
       dateRaw: '12597672600',
       media: [{
         relativePath: 'your_facebook_activity/posts/media/your_posts/200000000000003.png',

@@ -95,6 +95,39 @@ describe('Import all supported data', () => {
     expect(snapshot.status).toBe('partial');
   });
 
+  it('runs the plain-text fallback as part of Import All', async () => {
+    await mkdir(join(root, 'events'), { recursive: true });
+    const path = 'events/no-data.txt';
+    const sourceText = 'No events were included in this export.';
+    await writeFile(join(root, path), sourceText, 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(\`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format,
+        file_size_bytes, status, discovered_at
+      ) VALUES (?, ?, 'no-data.txt', 'events', 'text', ?, 'discovered', ?)
+    \`).run(snapshotId, path, Buffer.byteLength(sourceText), now);
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+    expect(result.sections.textFallback).toMatchObject({
+      filesAttempted: 1,
+      recordsImported: 1,
+      unsupportedFiles: 0,
+      failedFiles: 0
+    });
+    const record = database.prepare(\`
+      SELECT record_type AS recordType, title, body_text AS body, sensitivity, search_enabled AS searchEnabled
+      FROM records WHERE snapshot_id = ? AND section_key = 'events'
+    \`).get(snapshotId);
+    expect(record).toMatchObject({
+      recordType: 'text_item',
+      title: sourceText,
+      body: sourceText,
+      sensitivity: 'personal',
+      searchEnabled: 1
+    });
+  });
+
   it('imports unknown JSON shapes as safe raw records and disables search for sensitive sections', async () => {
     await mkdir(join(root, 'groups'), { recursive: true });
     await mkdir(join(root, 'security_and_login_information'), { recursive: true });

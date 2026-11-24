@@ -7,6 +7,7 @@ import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, I
 import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from '../../shared/archive/comparison';
 import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
 import type { ArchiveSearchMode } from '../../shared/archive/search';
+import { getArchiveSection } from '../../shared/archive/section-registry';
 import type { AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import {
   beginDiscoverySession,

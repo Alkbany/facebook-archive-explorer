@@ -210,6 +210,7 @@ function App() {
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
   const [mediaTotal, setMediaTotal] = useState(0);
   const [mediaPage, setMediaPage] = useState(1);
+  const [mediaPageSize, setMediaPageSize] = useState(50);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [photoAlbums, setPhotoAlbums] = useState<PhotoAlbumRecordSummary[]>([]);
   const [albumFilter, setAlbumFilter] = useState('');
@@ -371,6 +372,7 @@ function App() {
       setMediaGallery(media.items);
       setMediaTotal(media.total);
       setMediaPage(media.page);
+      setMediaPageSize(media.pageSize);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
       setArchiveFileDirectory(files);
@@ -532,6 +534,7 @@ function App() {
       setMediaGallery(result.items);
       setMediaTotal(result.total);
       setMediaPage(result.page);
+      setMediaPageSize(result.pageSize);
       setMediaFilter(filter);
     } catch {
       setError('The local media index could not be refreshed.');
@@ -2005,7 +2008,7 @@ function App() {
               {mediaTotal > 0 && (
                 <div className="archive-files-pagination">
                   <span>
-                    Showing {((mediaPage - 1) * 50) + 1}–{Math.min(mediaPage * 50, mediaTotal)} of {mediaTotal.toLocaleString()} files
+                    Showing {((mediaPage - 1) * mediaPageSize) + 1}–{Math.min(mediaPage * mediaPageSize, mediaTotal)} of {mediaTotal.toLocaleString()} files
                   </span>
                   <div>
                     <button
@@ -2015,11 +2018,11 @@ function App() {
                     >
                       Previous
                     </button>
-                    <span>Page {mediaPage} / {Math.max(1, Math.ceil(mediaTotal / 50))}</span>
+                    <span>Page {mediaPage} / {Math.max(1, Math.ceil(mediaTotal / mediaPageSize))}</span>
                     <button
                       className="secondary-button"
                       onClick={() => void loadMediaGallery(mediaFilter, mediaPage + 1)}
-                      disabled={isLoadingMedia || mediaPage >= Math.max(1, Math.ceil(mediaTotal / 50))}
+                      disabled={isLoadingMedia || mediaPage >= Math.max(1, Math.ceil(mediaTotal / mediaPageSize))}
                     >
                       Next
                     </button>

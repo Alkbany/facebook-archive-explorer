@@ -1785,3 +1785,42 @@ h1 {
   color: #9a7a50;
   font-size: 8px;
 }
+
+
+.activity-date-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 9px;
+  padding: 0 12px 12px;
+}
+.activity-date-filters label {
+  display: flex;
+  min-width: 135px;
+  flex-direction: column;
+  gap: 4px;
+  color: #777d90;
+  font-size: 8px;
+  font-weight: 700;
+}
+.activity-date-filters input[type="date"] {
+  min-height: 31px;
+  padding: 5px 7px;
+  border: 1px solid #e5e7ef;
+  border-radius: 7px;
+  color: #41465c;
+  background: #fff;
+  font: inherit;
+  font-size: 9px;
+}
+.activity-date-filters > span {
+  flex: 1 1 230px;
+  padding: 0 0 7px;
+  color: #969aab;
+  font-size: 8px;
+  line-height: 1.5;
+}
+@media (max-width: 560px) {
+  .activity-date-filters label { flex: 1 1 125px; }
+  .activity-date-filters > span { flex-basis: 100%; }
+}

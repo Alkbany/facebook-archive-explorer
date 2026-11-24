@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importMessagesSection } from '../src/main/import/pipeline/messages-importer';
+import { normalizeSearchText } from '../src/shared/text/normalize';
 import { getMessageConversation, listMessageConversations, listMessageMediaGallery } from '../src/main/database/messages-repository';
 
 describe('Messages conversation import', () => {
@@ -166,6 +167,49 @@ describe('Messages conversation import', () => {
       event_time_raw: '١٥/٠٧/٢٠١٧ ٢:٢٥ ص',
       event_time_utc: '2017-07-15T00:25:00.000Z'
     });
+  });
+
+  it('searches all words only inside the selected conversation and paginates without indexing messages globally', () => {
+    const source = database.prepare(
+      "SELECT id FROM source_files WHERE relative_path = 'messages/inbox/thread-1/thread.html'"
+    ).get() as { id: number } | undefined;
+    expect(source).toBeDefined();
+    const sourceFileId = source!.id;
+    const timestamp = new Date().toISOString();
+    const insertRecord = database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, ?, 'messages', 'message', ?, ?, ?, 'sensitive', 0, '{}', ?)
+    `);
+    for (let index = 0; index < 55; index += 1) {
+      const body = `Meeting in Alexandria archive item ${index}`;
+      insertRecord.run(snapshotId, sourceFileId, index, 'Synthetic Sender', body, normalizeSearchText(body), timestamp);
+    }
+    const otherSource = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, 'messages/inbox/thread-2/thread.html', 'thread.html', 'messages', 'html', 'completed', ?)
+    `).run(snapshotId, timestamp).lastInsertRowid);
+    const otherBody = 'Meeting in Alexandria in a different conversation';
+    insertRecord.run(snapshotId, otherSource, 0, 'Other Sender', otherBody, normalizeSearchText(otherBody), timestamp);
+    const nonMatch = 'Meeting in Cairo instead';
+    insertRecord.run(snapshotId, sourceFileId, 55, 'Synthetic Sender', nonMatch, normalizeSearchText(nonMatch), timestamp);
+
+    const firstPage = getMessageConversation(database, snapshotId, sourceFileId, 1, 'MEETING Alexandria');
+    const secondPage = getMessageConversation(database, snapshotId, sourceFileId, 2, 'meeting Alexandria');
+    expect(firstPage.total).toBe(55);
+    expect(firstPage.page).toBe(1);
+    expect(firstPage.records).toHaveLength(50);
+    expect(secondPage.total).toBe(55);
+    expect(secondPage.page).toBe(2);
+    expect(secondPage.records).toHaveLength(5);
+    expect(firstPage.records.every((record) => record.body?.includes('Alexandria'))).toBe(true);
+    expect(firstPage.records.every((record) => !record.body?.includes('Cairo'))).toBe(true);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM record_search').get()).toMatchObject({ count: 0 });
+    expect(database.prepare(
+      "SELECT COUNT(*) AS count FROM records WHERE source_file_id = ? AND sensitivity = 'sensitive' AND search_enabled = 0"
+    ).get(sourceFileId)).toMatchObject({ count: 56 });
   });
 
   it('does not import arbitrary HTML outside conversation folders', async () => {

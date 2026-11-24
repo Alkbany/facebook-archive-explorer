@@ -265,6 +265,8 @@ function App() {
   const [mediaViewMode, setMediaViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
+  const [conversationSearchInput, setConversationSearchInput] = useState('');
+  const [conversationSearch, setConversationSearch] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const conversationRequestGate = useRef(createRequestGate());
   const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; streamUrl: string | null; loading: boolean; error: string | null } | null>(null);
@@ -438,6 +440,8 @@ function App() {
     setMediaPage(1);
     setSelectedConversationId(null);
     setConversationFilter('');
+    setConversationSearchInput('');
+    setConversationSearch('');
 
     try {
       const selection = await window.desktopApi.selectBackupDirectory(accountName);
@@ -526,6 +530,8 @@ function App() {
     setConversationMessages([]);
     setSelectedConversationId(null);
     setConversationFilter('');
+    setConversationSearchInput('');
+    setConversationSearch('');
     setActiveMedia(null);
     setMediaFilter('all');
     setMediaQuery('');
@@ -573,7 +579,7 @@ function App() {
       setMarketplaceListings(marketplace);
       setSavedItems(savedItems);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
-      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
+      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId, 1, '');
     } catch {
       setInspection(null);
       setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the original folder or ZIP again to create a fresh inventory.');
@@ -1180,7 +1186,7 @@ function App() {
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       else { setFallbackSectionKey(''); setFallbackRecords(null); }
       if (foundConversations.length > 0) {
-        await loadConversation(foundConversations[0].sourceFileId);
+        await loadConversation(foundConversations[0].sourceFileId, 1, '');
       } else {
         conversationRequestGate.current.invalidate();
         setIsLoadingConversation(false);
@@ -1200,12 +1206,12 @@ function App() {
     }
   }
 
-  async function loadConversation(sourceFileId: number, page = 1) {
+  async function loadConversation(sourceFileId: number, page = 1, searchQuery = conversationSearch) {
     const requestId = conversationRequestGate.current.begin();
     setSelectedConversationId(sourceFileId);
     setIsLoadingConversation(true);
     try {
-      const result = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId, page);
+      const result = await window.desktopApi.getMessagesForSelectedConversation(sourceFileId, page, searchQuery);
       let previewsLoaded = 0;
       const withPreviews = await Promise.all(result.records.map(async (message) => ({
         ...message,
@@ -1232,6 +1238,19 @@ function App() {
     } finally {
       if (conversationRequestGate.current.isCurrent(requestId)) setIsLoadingConversation(false);
     }
+  }
+
+  function runConversationSearch() {
+    if (selectedConversationId === null) return;
+    const query = conversationSearchInput.trim();
+    setConversationSearch(query);
+    void loadConversation(selectedConversationId, 1, query);
+  }
+
+  function clearConversationSearch() {
+    setConversationSearchInput('');
+    setConversationSearch('');
+    if (selectedConversationId !== null) void loadConversation(selectedConversationId, 1, '');
   }
 
   async function openMedia(media: { id: number; mediaKind: string; relativePath: string }) {
@@ -1295,7 +1314,7 @@ function App() {
       await refreshImportIssues();
       await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
-      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
+      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId, 1, '');
     } catch {
       setError('Messages data could not be imported. Check the local import report.');
     } finally {
@@ -2478,7 +2497,11 @@ function App() {
                           <button
                             className={conversation.sourceFileId === selectedConversationId ? 'conversation-list-item selected' : 'conversation-list-item'}
                             key={conversation.sourceFileId}
-                            onClick={() => void loadConversation(conversation.sourceFileId)}
+                            onClick={() => {
+                              setConversationSearchInput('');
+                              setConversationSearch('');
+                              void loadConversation(conversation.sourceFileId, 1, '');
+                            }}
                           >
                             <span className="conversation-avatar">{(conversation.participants[0] ?? 'M').slice(0, 1).toLocaleUpperCase()}</span>
                             <span className="conversation-list-copy">
@@ -2497,9 +2520,24 @@ function App() {
                           <div className="conversation-detail-heading">
                             <div>
                               <strong>{selectedConversation.participants.join(' · ') || 'Conversation'}</strong>
-                              <span>{conversationTotal.toLocaleString()} imported records · Showing {conversationTotal === 0 ? 0 : ((conversationPage - 1) * conversationPageSize + 1).toLocaleString()}–{Math.min(conversationPage * conversationPageSize, conversationTotal).toLocaleString()} · Original order preserved</span>
+                              <span>{conversationSearch
+                                ? conversationTotal.toLocaleString() + ' matching messages for "' + conversationSearch + '"'
+                                : conversationTotal.toLocaleString() + ' imported records'} · Showing {conversationTotal === 0 ? 0 : ((conversationPage - 1) * conversationPageSize + 1).toLocaleString()}–{Math.min(conversationPage * conversationPageSize, conversationTotal).toLocaleString()} · Original order preserved</span>
                             </div>
                             <span className="conversation-type-pill">{selectedConversation.conversationType.replaceAll('_', ' ')}</span>
+                          </div>
+                          <div className="conversation-message-search">
+                            <div className="conversation-message-search-controls">
+                              <input type="search" value={conversationSearchInput}
+                                onChange={(event) => setConversationSearchInput(event.target.value)}
+                                onKeyDown={(event) => { if (event.key === 'Enter') runConversationSearch(); }}
+                                maxLength={120} placeholder="Search message text in this conversation…"
+                                aria-label="Search messages in the selected conversation" />
+                              <button className="secondary-button" onClick={runConversationSearch}
+                                disabled={isLoadingConversation || conversationSearchInput.trim().length === 0}>Find</button>
+                              {conversationSearch && <button className="text-button" onClick={clearConversationSearch} disabled={isLoadingConversation}>Clear</button>}
+                            </div>
+                            <small>All words must match. This search stays in the selected conversation and does not enable global message search.</small>
                           </div>
                           {isLoadingConversation ? (
                             <div className="conversation-empty">Loading conversation…</div>

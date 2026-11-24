@@ -304,6 +304,12 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 .conversation-detail-heading strong { overflow: hidden; color: #343950; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .conversation-detail-heading span { color: #969aab; font-size: 8px; }
 .conversation-type-pill { padding: 5px 8px; border-radius: 20px; background: #f2f1fc; color: #6d62c5 !important; white-space: nowrap; text-transform: capitalize; }
+.conversation-message-search { display: flex; flex-direction: column; gap: 6px; padding: 11px 17px; border-bottom: 1px solid #eef0f5; background: #fff; }
+.conversation-message-search-controls { display: flex; align-items: center; gap: 7px; }
+.conversation-message-search-controls input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid #e1e5ed; border-radius: 8px; color: #30364a; background: #fff; font: inherit; font-size: 10px; }
+.conversation-message-search-controls input:focus { border-color: #a49aea; outline: 2px solid #eeeaff; }
+.conversation-message-search-controls button { flex: 0 0 auto; }
+.conversation-message-search > small { color: #9299aa; font-size: 8px; line-height: 1.5; }
 .message-timeline { display: flex; flex: 1; flex-direction: column; gap: 9px; overflow: auto; padding: 15px 17px; background: linear-gradient(#fafbfe, #fff); }
 .conversation-pagination { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px 14px; border-top:1px solid #eef0f5; }
 .conversation-pagination > span { color:#7f8498; font-size:9px; font-weight:700; min-width:70px; text-align:center; }
@@ -321,6 +327,7 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 @media (max-width: 900px) {
   .conversation-browser { grid-template-columns: minmax(170px, 38%) minmax(0, 1fr); }
   .conversation-detail-heading { align-items: flex-start; flex-direction: column; }
+  .conversation-message-search { padding: 10px 12px; }
 }
 
 

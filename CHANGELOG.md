@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add paginated all-word search inside the selected Messenger conversation. The query stays within that conversation and works without enabling or populating the global message-search index.
 - Rank AI Assistant evidence with reciprocal-rank fusion across lexical BM25 and optional semantic results; matching records receive combined rank contributions, with deterministic record-ID tie-breaking and lexical fallback.
 - Optimize Semantic Search top-result selection with a bounded heap and stable tie-breaking; add regression coverage for 300 ranked records across non-overlapping pages and invalid offsets.
 - Add 250-result previous/next pagination for Exact, Fuzzy, and Semantic Search; page-aware JSON export now exports the currently displayed page.

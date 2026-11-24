@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { readArchiveBinaryPrefix } from '../import/discovery/read-archive-file';
+import { readArchiveBinaryPrefix, readArchiveBinarySuffix } from '../import/discovery/read-archive-file';
 import { readImageDimensions } from './image-dimensions';
-import { readMp4DurationMs } from './video-duration';
+import { readMp4DurationMs, readMp4DurationMsFromTail } from './video-duration';
 
 /** Indexes discovered image, video, and audio paths without opening or copying media bytes. */
 export function indexDiscoveredMediaAssets(database: DatabaseSync, snapshotId: string): number {
@@ -59,9 +59,9 @@ const attemptedVideoDurationScans = new WeakMap<DatabaseSync, Map<string, Set<st
 
 /**
  * Reads MP4/MOV/M4V movie headers for up to 10 previously unseen video assets
- * each time the gallery is opened. A bounded 2 MiB prefix avoids loading video
- * payloads into memory. Unsupported containers and late movie headers remain
- * unavailable rather than causing an unbounded read.
+ * each time the gallery is opened. A 2 MiB prefix handles fast-start files;
+ * when that misses, a 2 MiB suffix handles ordinary files with moov at the end.
+ * Neither path loads the video payload in full.
  */
 export async function indexDiscoveredVideoDurations(
   database: DatabaseSync,
@@ -105,7 +105,11 @@ export async function indexDiscoveredVideoDurations(
     scanned += 1;
     try {
       const prefix = await readArchiveBinaryPrefix(archiveRoot, item.relativePath, 2 * 1024 * 1024);
-      const durationMs = readMp4DurationMs(prefix);
+      let durationMs = readMp4DurationMs(prefix);
+      if (durationMs === null) {
+        const suffix = await readArchiveBinarySuffix(archiveRoot, item.relativePath, 2 * 1024 * 1024);
+        durationMs = readMp4DurationMsFromTail(suffix);
+      }
       if (durationMs !== null) {
         update.run(durationMs, snapshotId, item.relativePath);
         indexed += 1;

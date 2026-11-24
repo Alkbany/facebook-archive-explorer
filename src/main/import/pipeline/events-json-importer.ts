@@ -173,13 +173,6 @@ function eventCandidate(
   };
 }
 
-function collection(value: unknown, key: string): unknown[] | null {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
-  const entry = Object.entries(value as Record<string, unknown>)
-    .find(([name]) => name.toLocaleLowerCase() === key.toLocaleLowerCase());
-  return Array.isArray(entry?.[1]) ? (entry?.[1] as unknown[]).slice(0, MAX_EVENT_RECORDS) : null;
-}
-
 function parseEventFile(jsonText: string, fileName: string, relativePath: string): ParsedEventFile {
   const role = EVENT_FILE_ROLES[fileName.toLocaleLowerCase()];
   if (!role) return { recognized: false, records: [], invalidItems: 0 };

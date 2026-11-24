@@ -1,5 +1,7 @@
 # Roadmap
 
+> **Current integration baseline:** the reviewed beta implementation has been merged into `main`. This checklist describes the code now present on `main`; completed parser items mean reviewed implementation plus automated fixtures, not validation against every real Facebook export variant.
+
 ## Milestone 0 — Foundation
 
 - [x] Confirm Electron + React + TypeScript architecture.
@@ -43,13 +45,13 @@
 - [x] Implement the sampled Posts card parser/importer with local media references and searchable activity browsing.
 - [x] Parse the observed TNG `your_posts__check_ins__photos_and_videos` timeline JSON chunks into the Posts workspace and link only discovered local post media.
 - [x] Implement the sampled Comments activity-card parser/importer with separate activity, group, body, and raw-date fields.
-- [ ] Implement other activity-card sections.
+- [ ] Implement additional activity-card sections beyond the reviewed Posts, Comments, and Likes & Reactions structures.
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
 - [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
 - [x] Add a bounded generic HTML fallback for unreviewed sections, preserving visible text and source provenance while keeping sensitive sections out of full-text search.
 - [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
 - [x] Add a bounded plain-text fallback for discovered `.txt` files, preserving original text while limiting full-text indexing and respecting section sensitivity.
-- [ ] Add schema-specific JSON importers and parser fixtures for the remaining sections.
+- [ ] Add schema-specific JSON importers and parser fixtures for Events, Marketplace, Saved Items & Collections, additional Groups/Pages formats, and remaining sections.
 
 ## Milestone 3 — Media and remaining activity
 
@@ -59,7 +61,7 @@
 - [x] Read MP4/MOV/M4V duration from movie headers using bounded 2 MiB prefixes (up to 10 unscanned videos per gallery opening; other containers or later movie metadata remain unavailable).
 - [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
 - [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
-- [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
+- [ ] Events, Marketplace, Saved Items & Collections, additional Groups export formats, and remaining activity sections. The observed Groups TNG collections (`group_posts_v2`, `group_comments_v2`, `groups_joined_v2`) already have a reviewed importer.
 
 ## Milestone 4 — Browsing and search
 
@@ -72,7 +74,7 @@
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).
 - [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
 - [x] Unified local full-text search with section filtering across eligible records.
-- [ ] Date filters after raw Facebook date formats have safe, evidence-backed parsers.
+- [ ] Evidence-backed normalization of raw Facebook date formats, followed by date-range filters in the relevant browsing workspaces.
 - [x] Searchable Likes & Reactions activity panel with snapshot-scoped results.
 - [x] Sampled Photos & Videos root album index import, searchable album summaries, and cover-image association.
 - [x] Sampled album-detail parsing, photo captions/dates, comment records, and local photo browsing.
@@ -95,9 +97,19 @@
 - [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
-- [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup.
+- [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup; automated unit/build checks do not replace this validation.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
 - [x] Add secure CI support for a trusted Windows code-signing certificate and require signature verification before version-tag release.
 - [ ] Configure a trusted signing identity; no certificate is currently available in repository secrets.
 - [ ] Complete code-signing provider onboarding and verify Smart App Control behavior on a clean Windows 11 device.
 - [ ] Final privacy/security review and release checklist.
+
+## Next implementation order
+
+1. **Parser coverage:** inspect each remaining section's actual export files, add a section-specific parser only when its structure is evidenced, and add non-personal fixtures for every supported variant.
+2. **Activity and date handling:** extend activity-card coverage, then normalize observed Facebook date formats and add date filters without guessing ambiguous dates.
+3. **Media completeness:** broaden album-layout recognition and safely improve metadata coverage while retaining bounded reads and original-file references.
+4. **Reliability at scale:** benchmark large directory and ZIP backups, test retries/recovery, and run a complete real-backup end-to-end pass.
+5. **Windows release readiness:** clean-device install/upgrade/uninstall checks, signing identity and Smart App Control validation, privacy/security review, and final release checklist.
+
+**Evidence rule:** when a section's export structure has not been inspected, keep it clearly marked as fallback/unsupported. Do not promote filename discovery or generic text preservation to verified parser support. Ask for a representative export sample only when implementation of that exact section requires it; never commit personal export data or fixtures derived from it.

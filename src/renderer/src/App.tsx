@@ -162,6 +162,10 @@ function App() {
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
   const [searchMode, setSearchMode] = useState<ArchiveSearchMode>('exact');
   const [searchThreshold, setSearchThreshold] = useState(0.8);
+  const [searchDateFrom, setSearchDateFrom] = useState('');
+  const [searchDateTo, setSearchDateTo] = useState('');
+  const [searchedDateFrom, setSearchedDateFrom] = useState('');
+  const [searchedDateTo, setSearchedDateTo] = useState('');
   const [includeMessagesInGlobalSearch, setIncludeMessagesInGlobalSearch] = useState(false);
   const [isUpdatingMessageSearch, setIsUpdatingMessageSearch] = useState(false);
   const [semanticSearchStatus, setSemanticSearchStatus] = useState<SemanticSearchStatus | null>(null);
@@ -652,12 +656,17 @@ function App() {
     setError(null);
     try {
       const effectiveMode = searchSection === 'messages' && !includeMessagesInGlobalSearch ? 'exact' : searchMode;
-      const results = await window.desktopApi.searchRecordsForSelectedBackup(query, section, effectiveMode, searchThreshold);
+      const results = await window.desktopApi.searchRecordsForSelectedBackup(
+        query, section, effectiveMode, searchThreshold,
+        searchDateFrom || null, searchDateTo || null
+      );
       setSearchResults(results);
       setSearchedQuery(query);
       setSearchedSection(searchSection);
       setSearchedMode(effectiveMode);
       setSearchedThreshold(searchThreshold);
+      setSearchedDateFrom(searchDateFrom);
+      setSearchedDateTo(searchDateTo);
     } catch {
       setSearchResults([]);
       setError('Search could not be completed. Try a shorter search phrase.');
@@ -785,7 +794,8 @@ function App() {
     setError(null);
     try {
       const result = await window.desktopApi.exportSearchResultsForSelectedBackup(
-        searchedQuery, searchedSection === 'all' ? null : searchedSection, searchedMode, searchedThreshold
+        searchedQuery, searchedSection === 'all' ? null : searchedSection, searchedMode, searchedThreshold,
+        searchedDateFrom || null, searchedDateTo || null
       );
       setSearchExportStatus(result.status === 'saved'
         ? `Saved ${result.recordsExported} records to ${result.fileName}.`
@@ -1657,6 +1667,39 @@ function App() {
                 <button className="secondary-button" onClick={() => void runArchiveSearch()} disabled={isSearching || !searchQuery.trim()}>
                   {isSearching ? 'Searching…' : 'Search'}
                 </button>
+              </div>
+              <div className="search-date-controls">
+                <label>
+                  <span>From date (UTC)</span>
+                  <input
+                    type="date"
+                    value={searchDateFrom}
+                    max={searchDateTo || undefined}
+                    onChange={(event) => {
+                      setSearchDateFrom(event.target.value);
+                      setSearchResults([]);
+                      setSearchedQuery(null);
+                      setSearchExportStatus('');
+                    }}
+                    aria-label="Search start date in UTC"
+                  />
+                </label>
+                <label>
+                  <span>To date (UTC)</span>
+                  <input
+                    type="date"
+                    value={searchDateTo}
+                    min={searchDateFrom || undefined}
+                    onChange={(event) => {
+                      setSearchDateTo(event.target.value);
+                      setSearchResults([]);
+                      setSearchedQuery(null);
+                      setSearchExportStatus('');
+                    }}
+                    aria-label="Search end date in UTC"
+                  />
+                </label>
+                <span>Only records with a reliable normalized UTC timestamp are included while a date filter is active. Ambiguous dates are not guessed.</span>
               </div>
               <div className="search-mode-controls">
                 <label>

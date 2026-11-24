@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../shared/text/normalize';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from '../../shared/archive/media';
-import { MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationPage } from '../../shared/archive/messages';
+import { MESSAGE_CONVERSATION_LIST_PAGE_SIZE, MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationListPage, type MessageConversationPage } from '../../shared/archive/messages';
 
 export interface MessageConversationSummary {
   sourceFileId: number;
@@ -59,8 +59,48 @@ function parseReactions(payloadJson: string): string[] {
 
 export function listMessageConversations(
   database: DatabaseSync,
-  snapshotId: string
-): MessageConversationSummary[] {
+  snapshotId: string,
+  requestedPage = 1,
+  searchQuery = ''
+): MessageConversationListPage {
+  if (!Number.isSafeInteger(requestedPage) || requestedPage < 1 || requestedPage > 1_000_000) {
+    throw new Error('The requested conversation-list page is invalid.');
+  }
+  if (typeof searchQuery !== 'string' || searchQuery.length > 100) {
+    throw new Error('The conversation-list search query is invalid.');
+  }
+
+  const query = searchQuery.trim();
+  const searchClause = query
+    ? `AND (
+        instr(lower(source.relative_path), lower(?)) > 0
+        OR EXISTS (
+          SELECT 1 FROM records AS matching
+          WHERE matching.source_file_id = source.id
+            AND matching.snapshot_id = source.snapshot_id
+            AND matching.section_key = 'messages'
+            AND instr(lower(COALESCE(matching.title, '')), lower(?)) > 0
+        )
+      )`
+    : '';
+  const searchParameters = query ? [query, query] : [];
+
+  const totalRow = database.prepare(`
+    SELECT COUNT(*) AS total
+    FROM source_files AS source
+    WHERE source.snapshot_id = ? AND source.section_key = 'messages'
+      AND EXISTS (
+        SELECT 1 FROM records
+        WHERE records.source_file_id = source.id
+          AND records.snapshot_id = source.snapshot_id
+          AND records.section_key = 'messages'
+      )
+      ${searchClause}
+  `).get(snapshotId, ...searchParameters) as { total: number };
+  const total = Number(totalRow.total);
+  const maxPage = Math.max(1, Math.ceil(total / MESSAGE_CONVERSATION_LIST_PAGE_SIZE));
+  const page = Math.min(requestedPage, maxPage);
+
   const rows = database.prepare(`
     SELECT
       source.id AS sourceFileId,
@@ -82,11 +122,17 @@ export function listMessageConversations(
       AND records.snapshot_id = source.snapshot_id
       AND records.section_key = 'messages'
     WHERE source.snapshot_id = ? AND source.section_key = 'messages'
+      ${searchClause}
     GROUP BY source.id, source.relative_path
-    ORDER BY source.relative_path COLLATE NOCASE
-  `).all(snapshotId) as unknown as ConversationRow[];
+    ORDER BY source.relative_path COLLATE NOCASE, source.id ASC
+    LIMIT ? OFFSET ?
+  `).all(
+    snapshotId, ...searchParameters,
+    MESSAGE_CONVERSATION_LIST_PAGE_SIZE,
+    (page - 1) * MESSAGE_CONVERSATION_LIST_PAGE_SIZE
+  ) as unknown as ConversationRow[];
 
-  return rows.map((row) => {
+  const items = rows.map((row) => {
     let participants: string[] = [];
     try {
       const parsed: unknown = JSON.parse(row.participantsJson ?? '[]');
@@ -106,6 +152,8 @@ export function listMessageConversations(
       participants
     };
   });
+
+  return { items, page, pageSize: MESSAGE_CONVERSATION_LIST_PAGE_SIZE, total };
 }
 
 export function getMessageConversation(

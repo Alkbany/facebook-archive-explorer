@@ -48,7 +48,7 @@ const desktopApi: DesktopApi = {
     ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId),
   getMessageMediaPreview: (mediaAssetId) =>
     ipcRenderer.invoke(IPC_CHANNELS.getMessageMediaPreview, mediaAssetId),
-  listMediaForSelectedBackup: (filter, page, query) => ipcRenderer.invoke(IPC_CHANNELS.listMediaForSelectedBackup, filter, page, query),
+  listMediaForSelectedBackup: (filter, page, query, pageSize) => ipcRenderer.invoke(IPC_CHANNELS.listMediaForSelectedBackup, filter, page, query, pageSize),
   getArchiveSearchSettings: () => ipcRenderer.invoke(IPC_CHANNELS.getArchiveSearchSettings),
   setIncludeMessagesInGlobalSearch: (enabled) =>
     ipcRenderer.invoke(IPC_CHANNELS.setIncludeMessagesInGlobalSearch, enabled),

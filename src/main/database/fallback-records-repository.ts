@@ -6,7 +6,7 @@ import type {
 } from '../../shared/archive/inspection';
 
 const PAGE_SIZE = 40;
-const FALLBACK_RECORD_TYPES = ['html_item', 'json_item'] as const;
+const FALLBACK_RECORD_TYPES = ['html_item', 'json_item', 'text_item'] as const;
 
 function assertSectionKey(sectionKey: string): void {
   if (typeof sectionKey !== 'string' || !/^[a-z0-9_]{1,80}$/u.test(sectionKey)) {
@@ -14,7 +14,7 @@ function assertSectionKey(sectionKey: string): void {
   }
 }
 
-/** Lists sections that contain records preserved by the generic HTML/JSON fallbacks. */
+/** Lists sections that contain records preserved by the generic HTML, JSON, and plain-text fallbacks. */
 export function listFallbackRecordSections(
   database: DatabaseSync,
   snapshotId: string
@@ -32,7 +32,7 @@ export function listFallbackRecordSections(
   ).all(snapshotId, ...FALLBACK_RECORD_TYPES) as unknown as FallbackArchiveSectionSummary[];
 }
 
-/** Returns one bounded page from a single selected section, including source provenance. */
+/** Returns one bounded page from a single selected section, including source provenance and a limited original-payload preview. */
 export function listFallbackArchiveRecords(
   database: DatabaseSync,
   snapshotId: string,

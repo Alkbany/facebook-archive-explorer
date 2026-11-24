@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, a schema-agnostic JSON fallback importer, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
+> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, bounded HTML, JSON, and plain-text fallback importers, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
 
 ## Product decisions
 
@@ -76,7 +76,7 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 - In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking. This works for directory backups and ZIP backups without extraction; deflated ZIP media is streamed through decompression to satisfy byte ranges.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
-- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, Likes & Reactions, Photos & Videos album summaries, and eligible generic JSON records from non-sensitive sections, with section filtering and JSON export of search results.
+- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, Likes & Reactions, Photos & Videos album summaries, and eligible generic JSON, HTML, and plain-text records from non-sensitive sections, with section filtering and JSON export of search results.
 - Snapshot comparison for two backups of the same account, matching section, source-relative path, and original card index and reporting aggregate changes.
 - Verified local application-database export and restore, using SQLite's online backup API, integrity/foreign-key/schema checks, a pre-restore recovery copy, and interrupted-swap recovery. The database backup contains indexes and imported records, not the original Facebook media.
 
@@ -85,7 +85,7 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 The following are genuine remaining product tasks; filename discovery alone is not treated as parser support:
 
 - Durable checkpoints inside a single source file; current recovery boundaries are atomic per-file commits, and pause/resume takes effect after the active file finishes.
-- Verified field-level parsing for unreviewed HTML and JSON exports; generic fallbacks preserve bounded text and source provenance (including HTML layouts rejected by a reviewed parser) but do not interpret every field or relationship.
+- Verified field-level parsing for unreviewed HTML and JSON exports; generic fallbacks preserve bounded text and source provenance (including HTML layouts rejected by a reviewed parser and plain-text files) but do not interpret every field or relationship.
 - Additional activity-card importers beyond the currently supported Friends, Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos album pages.
 - Video duration is read for MP4/MOV/M4V files when the movie header is present in a bounded 2 MiB prefix; other containers and files with later movie metadata remain unsupported. Sampled album-detail imports link recognized photos to local media assets.
 - Verified section-specific importers for Groups, Events, Marketplace, Saved Items, and remaining export sections. Generic fallbacks may preserve visible text but cannot guarantee complete field mapping or relationships without representative export samples and parser fixtures.
@@ -122,4 +122,4 @@ ZIP backups can be selected, inventoried, reopened, and read on demand without e
 The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.
 
 
-Generic fallback records are browsable in the local **Other data** workspace, grouped by source section and paginated. Sensitive sections can be viewed there but remain excluded from global full-text search.
+Generic HTML, JSON, and text fallback records are browsable in the local **Other data** workspace, grouped by source section and paginated. Sensitive sections can be viewed there but remain excluded from global full-text search.

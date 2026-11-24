@@ -35,7 +35,7 @@ import type {
   ArchiveComparisonExportFormat
 } from '../../shared/archive/comparison';
 
-const SECTION_TITLES = new Map([...ARCHIVE_SECTIONS.map((section) => [section.key, section.title] as const), ['json', 'Structured JSON'] as const, ['html_fallback', 'HTML fallback'] as const]);
+const SECTION_TITLES = new Map([...ARCHIVE_SECTIONS.map((section) => [section.key, section.title] as const), ['json', 'Structured JSON'] as const, ['html_fallback', 'HTML fallback'] as const, ['text_fallback', 'Text fallback'] as const]);
 
 const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, string> = {
   discovered: 'Not processed',
@@ -2199,7 +2199,7 @@ function App() {
                   <article className="fallback-record-card" key={record.id}>
                     <div className="fallback-record-heading">
                       <strong>{record.title || 'Archive entry'}</strong>
-                      <span>{record.recordType === 'json_item' ? 'JSON' : 'HTML'} · {record.sensitivity}</span>
+                      <span>{record.recordType === 'json_item' ? 'JSON' : record.recordType === 'text_item' ? 'TXT' : 'HTML'} · {record.sensitivity}</span>
                     </div>
                     {record.body && <p>{record.body}</p>}
                     {record.recordType === 'json_item' && (

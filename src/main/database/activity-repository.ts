@@ -200,3 +200,121 @@ export function getPhotoAlbumDetail(
     }))
   };
 }
+
+interface EventPayload {
+  event_key?: unknown;
+  rsvp?: unknown;
+  start_timestamp?: unknown;
+  end_timestamp?: unknown;
+  response_time?: unknown;
+  place?: {
+    name?: unknown;
+    address?: unknown;
+    latitude?: unknown;
+    longitude?: unknown;
+  };
+  url?: unknown;
+}
+
+function parseEventPayload(value: string): EventPayload {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null ? parsed as EventPayload : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Lists unique Events merged from the separately exported response/invitation/hosting files. */
+export function listEventRecords(
+  database: DatabaseSync,
+  snapshotId: string
+): import('../../shared/archive/inspection').EventRecordSummary[] {
+  const rows = database.prepare(`
+    SELECT records.id AS id, records.title AS title, records.body_text AS description,
+      records.event_time_raw AS startDateRaw, records.event_time_utc AS startDateUtc,
+      source.relative_path AS sourcePath, records.source_record_index AS sourceCardIndex,
+      records.payload_json AS payloadJson
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ? AND records.section_key = 'events'
+      AND records.record_type = 'event'
+    ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
+  `).all(snapshotId) as Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    startDateRaw: string | null;
+    startDateUtc: string | null;
+    sourcePath: string;
+    sourceCardIndex: number;
+    payloadJson: string;
+  }>;
+
+  const priority: Record<string, number> = {
+    joined: 0, hosted: 1, interested: 2, declined: 3, invited: 4, unknown: 5
+  };
+  const merged = new Map<string, import('../../shared/archive/inspection').EventRecordSummary>();
+
+  for (const row of rows) {
+    const payload = parseEventPayload(row.payloadJson);
+    const eventKey = typeof payload.event_key === 'string' && payload.event_key
+      ? payload.event_key
+      : `record:${row.id}`;
+    const rsvp = typeof payload.rsvp === 'string' ? payload.rsvp : 'unknown';
+    const place = payload.place ?? {};
+    const source = {
+      sourcePath: row.sourcePath,
+      sourceCardIndex: row.sourceCardIndex,
+      recordId: row.id
+    };
+    const next: import('../../shared/archive/inspection').EventRecordSummary = {
+      id: row.id,
+      eventKey,
+      title: row.title,
+      description: row.description,
+      startDateRaw: row.startDateRaw,
+      startDateUtc: row.startDateUtc,
+      endDateRaw: typeof payload.end_timestamp === 'string' ? payload.end_timestamp : null,
+      responseTimeRaw: typeof payload.response_time === 'string' ? payload.response_time : null,
+      rsvp,
+      locationName: typeof place.name === 'string' ? place.name : null,
+      address: typeof place.address === 'string' ? place.address : null,
+      latitude: typeof place.latitude === 'number' && Number.isFinite(place.latitude) ? place.latitude : null,
+      longitude: typeof place.longitude === 'number' && Number.isFinite(place.longitude) ? place.longitude : null,
+      url: typeof payload.url === 'string' ? payload.url : null,
+      sources: [source]
+    };
+
+    const previous = merged.get(eventKey);
+    if (!previous) {
+      merged.set(eventKey, next);
+      continue;
+    }
+
+    previous.sources.push(source);
+    if ((priority[rsvp] ?? 10) < (priority[previous.rsvp] ?? 10)) {
+      previous.rsvp = rsvp;
+      previous.id = row.id;
+    }
+    previous.description ||= next.description;
+    previous.startDateRaw ||= next.startDateRaw;
+    previous.startDateUtc ||= next.startDateUtc;
+    previous.endDateRaw ||= next.endDateRaw;
+    previous.responseTimeRaw ||= next.responseTimeRaw;
+    previous.locationName ||= next.locationName;
+    previous.address ||= next.address;
+    previous.latitude ??= next.latitude;
+    previous.longitude ??= next.longitude;
+    previous.url ||= next.url;
+  }
+
+  return [...merged.values()].sort((left, right) => {
+    if (left.startDateUtc && right.startDateUtc) return left.startDateUtc.localeCompare(right.startDateUtc);
+    if (left.startDateUtc) return -1;
+    if (right.startDateUtc) return 1;
+    return left.title.localeCompare(right.title);
+  });
+}
+

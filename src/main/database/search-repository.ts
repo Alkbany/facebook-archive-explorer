@@ -159,7 +159,7 @@ function searchFtsTable(
     INNER JOIN source_files AS source ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id
     WHERE ${table} MATCH ? AND records.snapshot_id = ?
-      AND (${table} = 'message_search' OR records.search_enabled = 1)
+      AND ${table === 'message_search' ? '1 = 1' : 'records.search_enabled = 1'}
       AND (? IS NULL OR records.section_key = ?)
     ORDER BY relevance ASC, source.relative_path COLLATE NOCASE,
       records.source_record_index ASC

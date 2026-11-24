@@ -1944,3 +1944,15 @@ h1 {
   .media-gallery-list.media-gallery-grid { grid-template-columns:minmax(0,1fr); }
 }
 
+.semantic-search-setting { align-items:flex-start; }
+.semantic-search-setting .semantic-search-status {
+  display:flex; flex:0 1 auto; align-items:flex-end; flex-direction:column; gap:6px;
+  min-width:180px; color:#777e93; font-size:9px; text-align:right;
+}
+.semantic-search-setting .semantic-search-status .secondary-button {
+  min-height:28px; padding:5px 9px; font-size:9px;
+}
+@media (max-width: 720px) {
+  .semantic-search-setting .semantic-search-status { align-items:flex-start; text-align:left; }
+}
+

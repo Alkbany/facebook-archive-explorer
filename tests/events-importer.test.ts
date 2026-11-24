@@ -119,11 +119,6 @@ describe('Accounts Center Events JSON importer', () => {
       longitude: 29.9187,
       url: 'https://www.facebook.com/events/123456789/',
       sources: expect.arrayContaining([
-        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_event_responses.json' }),
-        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_events.json' }),
-        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/event_invitations.json' })
-      ]),
-      sources: expect.arrayContaining([
         expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_event_responses.json', sourceCardIndex: 0 }),
         expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_event_responses.json', sourceCardIndex: 1 }),
         expect.objectContaining({ sourcePath: 'your_facebook_activity/events/event_invitations.json', sourceCardIndex: 0 }),

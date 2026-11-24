@@ -29,6 +29,7 @@ import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import type { ArchiveSearchMode, ArchiveSearchResult, SemanticSearchStatus } from '../../shared/archive/search';
+import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -165,6 +166,16 @@ function App() {
   const [isUpdatingMessageSearch, setIsUpdatingMessageSearch] = useState(false);
   const [semanticSearchStatus, setSemanticSearchStatus] = useState<SemanticSearchStatus | null>(null);
   const [isUpdatingSemanticSearch, setIsUpdatingSemanticSearch] = useState(false);
+  const [aiAssistantStatus, setAiAssistantStatus] = useState<AiAssistantStatus | null>(null);
+  const [isUpdatingAiAssistant, setIsUpdatingAiAssistant] = useState(false);
+  const [assistantQuestion, setAssistantQuestion] = useState('');
+  const [assistantSection, setAssistantSection] = useState('all');
+  const [assistantConversation, setAssistantConversation] = useState<Array<{
+    question: string;
+    response: ArchiveAssistantAnswer;
+  }>>([]);
+  const [isAskingAssistant, setIsAskingAssistant] = useState(false);
+
   const [searchedMode, setSearchedMode] = useState<ArchiveSearchMode>('exact');
   const [searchedThreshold, setSearchedThreshold] = useState(0.8);
   const [isSearching, setIsSearching] = useState(false);
@@ -310,6 +321,17 @@ function App() {
   }, [semanticSearchStatus?.enabled]);
 
   useEffect(() => {
+    if (!aiAssistantStatus?.enabled) return;
+    const refresh = () => {
+      void window.desktopApi.getAiAssistantStatus()
+        .then(setAiAssistantStatus)
+        .catch(() => undefined);
+    };
+    const interval = window.setInterval(refresh, 1_500);
+    return () => window.clearInterval(interval);
+  }, [aiAssistantStatus?.enabled]);
+
+  useEffect(() => {
     void window.desktopApi.getAppInfo()
       .then((info) => setVersion(info.appVersion))
       .catch(() => setError('Could not read application information.'));
@@ -324,6 +346,9 @@ function App() {
     void window.desktopApi.getSemanticSearchStatus()
       .then(setSemanticSearchStatus)
       .catch(() => setError('Could not load Semantic Search status.'));
+    void window.desktopApi.getAiAssistantStatus()
+      .then(setAiAssistantStatus)
+      .catch(() => setError('Could not load AI Assistant status.'));
   }, []);
 
   async function chooseFolder() {
@@ -688,6 +713,70 @@ function App() {
     } finally {
       setIsUpdatingSemanticSearch(false);
     }
+  }
+
+  async function updateAiAssistantSetting(enabled: boolean) {
+    setIsUpdatingAiAssistant(true);
+    setError(null);
+    try {
+      const status = await window.desktopApi.setAiAssistantEnabled(enabled);
+      setAiAssistantStatus(status);
+      if (!enabled) setAssistantConversation([]);
+    } catch {
+      setError('The local AI Assistant setting could not be updated.');
+      const status = await window.desktopApi.getAiAssistantStatus().catch(() => null);
+      if (status) setAiAssistantStatus(status);
+    } finally {
+      setIsUpdatingAiAssistant(false);
+    }
+  }
+
+  async function retryAiAssistantModel() {
+    setIsUpdatingAiAssistant(true);
+    setError(null);
+    try {
+      const status = await window.desktopApi.setAiAssistantEnabled(true);
+      setAiAssistantStatus(status);
+    } catch {
+      setError('The local AI Assistant model could not be prepared.');
+    } finally {
+      setIsUpdatingAiAssistant(false);
+    }
+  }
+
+  async function askArchiveAssistant() {
+    const question = assistantQuestion.trim();
+    if (question.length < 2 || !aiAssistantStatus?.enabled) return;
+    setIsAskingAssistant(true);
+    setError(null);
+    try {
+      const history: AiAssistantHistoryMessage[] = assistantConversation
+        .slice(-6)
+        .flatMap((turn) => [
+          { role: 'user' as const, content: turn.question },
+          { role: 'assistant' as const, content: turn.response.answer }
+        ]);
+      const response = await window.desktopApi.askArchiveAssistant(
+        question,
+        assistantSection === 'all' ? null : assistantSection,
+        history
+      );
+      setAssistantConversation((current) => [...current, { question, response }].slice(-8));
+      setAssistantQuestion('');
+    } catch {
+      setError('The local assistant could not complete this question. Check its model status and try again.');
+      const status = await window.desktopApi.getAiAssistantStatus().catch(() => null);
+      if (status) setAiAssistantStatus(status);
+    } finally {
+      setIsAskingAssistant(false);
+    }
+  }
+
+  async function openAssistantSource(source: ArchiveAssistantAnswer['citations'][number]) {
+    await loadArchiveFiles('all', 'all', source.sourcePath, 1);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => navigateToSection('files', 'archive-files-workspace'));
+    });
   }
 
   async function exportArchiveSearch() {
@@ -1623,6 +1712,130 @@ function App() {
                   Export results as JSON
                 </button>
               </div>
+            </section>
+
+            <section className="archive-assistant-panel" id="archive-assistant-panel">
+              <div className="archive-assistant-heading">
+                <div>
+                  <p className="eyebrow">OPTIONAL · LOCAL LANGUAGE MODEL</p>
+                  <h3>Ask your archive</h3>
+                  <p>Ask questions across imported records. The model runs on this device; answers show the archive records used as evidence.</p>
+                </div>
+                <div className="assistant-model-state">
+                  {aiAssistantStatus?.phase === 'disabled' && <span>Off</span>}
+                  {aiAssistantStatus?.phase === 'idle' && <span>Preparing model…</span>}
+                  {aiAssistantStatus?.phase === 'downloading' && <span>Downloading model{aiAssistantStatus.progressPercent === null ? '…' : ' · ' + Math.round(aiAssistantStatus.progressPercent) + '%'}</span>}
+                  {aiAssistantStatus?.phase === 'loading' && <span>Loading local model…</span>}
+                  {aiAssistantStatus?.phase === 'ready' && <span>Local model ready</span>}
+                  {aiAssistantStatus?.phase === 'error' && <span>Model needs attention</span>}
+                </div>
+              </div>
+              <div className="search-privacy-setting assistant-enable-setting">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={aiAssistantStatus?.enabled ?? false}
+                    onChange={(event) => void updateAiAssistantSetting(event.target.checked)}
+                    disabled={isUpdatingAiAssistant || !aiAssistantStatus}
+                  />
+                  <span>
+                    <strong>Enable AI Assistant · download local LLM</strong>
+                    <small>Separate from Semantic Search. No archive text is sent to a cloud AI service. The first enable downloads model files to the local app data folder.</small>
+                  </span>
+                </label>
+                {aiAssistantStatus?.phase === 'error' && (
+                  <button className="secondary-button" onClick={() => void retryAiAssistantModel()} disabled={isUpdatingAiAssistant}>
+                    Retry model setup
+                  </button>
+                )}
+              </div>
+              <div className="archive-assistant-compose">
+                <label>
+                  <span>Limit answers to a section</span>
+                  <select
+                    value={assistantSection}
+                    onChange={(event) => setAssistantSection(event.target.value)}
+                    disabled={!aiAssistantStatus?.enabled || isAskingAssistant}
+                  >
+                    <option value="all">All eligible sections</option>
+                    {ARCHIVE_SECTIONS.filter((section) => section.key !== 'messages' || includeMessagesInGlobalSearch).map((section) => (
+                      <option key={section.key} value={section.key}>{section.title}</option>
+                    ))}
+                  </select>
+                </label>
+                <textarea
+                  value={assistantQuestion}
+                  onChange={(event) => setAssistantQuestion(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      void askArchiveAssistant();
+                    }
+                  }}
+                  rows={3}
+                  maxLength={2000}
+                  placeholder="For example: What did I discuss about work, and which records mention it?"
+                  disabled={!aiAssistantStatus?.enabled || isAskingAssistant}
+                  aria-label="Ask a question about this archive"
+                />
+                <div className="archive-assistant-compose-footer">
+                  <span>{aiAssistantStatus?.enabled ? 'Use Enter to ask · Shift+Enter for a new line' : 'Enable the local assistant to ask questions'}</span>
+                  <button
+                    className="secondary-button"
+                    onClick={() => void askArchiveAssistant()}
+                    disabled={!aiAssistantStatus?.enabled || !inspection || isAskingAssistant || assistantQuestion.trim().length < 2}
+                  >
+                    {isAskingAssistant ? 'Researching local records…' : 'Ask archive'}
+                  </button>
+                </div>
+              </div>
+              {assistantConversation.length > 0 && (
+                <div className="archive-assistant-conversation">
+                  <div className="archive-assistant-history-heading">
+                    <strong>Recent answers</strong>
+                    <button className="text-button" onClick={() => setAssistantConversation([])} disabled={isAskingAssistant}>Clear conversation</button>
+                  </div>
+                  {assistantConversation.map((turn, index) => (
+                    <article className="archive-assistant-turn" key={index}>
+                      <div className="assistant-question-bubble">
+                        <span>You asked</span>
+                        <p>{turn.question}</p>
+                      </div>
+                      <div className="assistant-answer-block">
+                        <strong>Archive Assistant</strong>
+                        <p className="assistant-answer-text">{turn.response.answer}</p>
+                        {turn.response.retrievalScope.year && (
+                          <small>Year filter: {turn.response.retrievalScope.year}</small>
+                        )}
+                        {turn.response.citations.length > 0 && (
+                          <div className="assistant-citation-list">
+                            <strong>Sources · {turn.response.citations.length} of {turn.response.evidenceCount} retrieved records</strong>
+                            {turn.response.citations.map((source) => (
+                              <article className="assistant-citation" key={source.sourceId}>
+                                <div className="assistant-citation-id">{source.sourceId}</div>
+                                <div className="assistant-citation-copy">
+                                  <strong>{source.title || source.recordType.replaceAll('_', ' ')}</strong>
+                                  <span>{SECTION_TITLES.get(source.sectionKey) ?? source.sectionKey} · {source.dateRaw || 'Date not recorded'}</span>
+                                  <p>{source.excerpt}</p>
+                                  <small>{source.sourcePath} · card {source.sourceCardIndex + 1} · record #{source.recordId}</small>
+                                </div>
+                                <button
+                                  className="secondary-button"
+                                  onClick={() => void openAssistantSource(source)}
+                                  disabled={!archiveFileDirectory}
+                                  title="Find this source in the Archive Files browser"
+                                >
+                                  Find source
+                                </button>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
 
             <div className="section-counts">

@@ -44,7 +44,7 @@ describe('TNG photo album JSON importer', () => {
     const secondPhotoPath = 'your_facebook_activity/posts/media/TenForwardNights/second.png';
     const source = {
       name: 'Ten Forward Nights',
-      description: 'Off-duty evenings on Deck 10.',
+      description: 'Off-duty evenings between shifts.',
       last_modified_timestamp: 12599096400,
       cover_photo: {
         uri: coverPath,

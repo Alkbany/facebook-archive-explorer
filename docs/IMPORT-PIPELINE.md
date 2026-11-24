@@ -70,7 +70,7 @@ Startup recovery records an `IMPORT_INTERRUPTED` error for each recovered source
 
 ## Import coverage
 
-The per-snapshot coverage summary groups discovered files by section and format. It labels importer capability separately from file state: Friends has five known HTML exports; Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos album index/detail HTML use sample-based parsers; other sections have no importer yet. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
+The per-snapshot coverage summary groups discovered files by section and format. It labels importer capability separately from file state: Friends has five known HTML exports plus the reviewed `friends_v2` JSON collection; Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos use parsers for explicitly reviewed HTML/JSON structures; Groups, Events, Marketplace, and Saved Items have partial JSON importers for their reviewed TNG collections. Other sections and unrecognized variants remain generic fallback or not implemented. Image, video, and audio files are counted as media inventory and excluded from content-import status totals. Content files are grouped into completed, unsupported, failed, not processed, empty, and skipped states. "Not processed" only means an importer has not attempted the file; it does not claim that a parser exists for that section or format.
 
 ## Photos & Videos albums and photo pages
 
@@ -82,15 +82,16 @@ An image or album preview is linked only when its path is relative, remains insi
 
 ## Search and comparison
 
-FTS5 searches only records whose `search_enabled` flag is set. Message records remain excluded by default. Search results can be saved as JSON through the native save dialog. Snapshot comparison uses section key, source-relative HTML path, and original card index; it returns aggregate counts only and does not infer dates or compare binary file contents.
+FTS5 searches only records whose `search_enabled` flag is set. Message records remain excluded by default. Search results can be saved as JSON through the native save dialog. Snapshot comparison matches records by section, source-relative path, and original card index; the comparison workspace shows record-level before/after values with change-type and section filters, text/path search, pagination, and CSV/JSON export. It does not infer dates or compare binary media contents.
 
-## Still not implemented
+## Remaining implementation and validation
 
-- JSON-backed section parsing; ZIP inventory and on-demand reads are implemented for HTML and media sources.
-- Full resumable import orchestration across all sections and integrity reporting.
-- Photo dimensions, video duration, and other media metadata not present in the sampled HTML cards.
-- Groups, events, Marketplace, saved items, and other remaining export sections; these require their own verified samples.
-- Advanced raw-date parsing and date filters.
+- Broaden schema-specific parsing beyond the reviewed structures: additional activity-card sections, more Groups/Pages formats, Marketplace listing variants, Saved Items collections, and other Facebook export sections. Current Groups, Events, Marketplace, and Saved Items importers cover only their documented JSON collections; other files remain fallback-preserved or unsupported.
+- Expand Photos & Videos parsing for unreviewed album and media-detail layouts. The current bounded metadata scanners already read common image dimensions and MP4/MOV/M4V durations; unsupported formats or metadata layouts remain unknown rather than guessed.
+- Add evidence-backed timezone handling for localized Facebook HTML dates and extend date filters only where source dates are unambiguous. Raw date strings must remain available.
+- Large-archive benchmarking and a complete end-to-end pass against representative real Facebook backups are still required. Unit fixtures alone do not prove coverage of every export variation.
+- Per-file atomic commits, retry/recovery, pause/resume at file boundaries, and integrity diagnostics are implemented. Durable checkpoints inside a single very large file are not; an interrupted file is retried as a unit.
+- Clean-device Windows install, launch, upgrade, and uninstall smoke tests plus the final privacy/security review remain required before the stable 1.0.0 release.
 
 ## Import progress events
 
@@ -98,9 +99,9 @@ Each section importer emits a start event, a progress event after each attempted
 
 ## One-click import and resume behavior
 
-The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, Likes & Reactions, the Photos & Videos album index, and only the album-detail pages referenced by parsed album entries. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.
+The overview offers **Import All Supported Data**, which runs Friends, Messages, Posts, Comments, Likes & Reactions, the Photos & Videos album index and referenced album-detail pages, reviewed Groups/Events/Marketplace/Saved Items JSON importers, and bounded HTML/JSON/plain-text fallbacks. Each importer maintains per-file status and its own transaction. Completed files are skipped on the next run; failed or unsupported files are retried. The overall summary reports attempted files, imported records, media references, unsupported files, and failed files.
 
-At the beginning of the next Import All run, files left in `processing` and their still-running import rows are marked as interrupted/failed. The eligible failed files are then retried. Durable mid-file checkpoints, user-controlled pause/resume, and complete integrity reconciliation remain planned. ZIP archives use the same flow because importer reads are archive-source agnostic.
+At startup, source files left in `processing` and their still-running import rows are marked as interrupted/failed with safe diagnostics, then become eligible for retry. Each file is committed atomically; a failed retry preserves the last successful records. User-controlled pause/resume takes effect at file boundaries. Import Coverage reports record/media consistency and unfinished-work diagnostics. ZIP archives use the same flow because importer reads are archive-source agnostic.
 
 ## Duplicate handling
 

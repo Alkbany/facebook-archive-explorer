@@ -87,7 +87,7 @@ export interface PhotoAlbumRecordSummary {
 }
 
 export interface PhotoAlbumCommentSummary {
-  activityRaw: string | null;
+  authorRaw: string | null;
   bodyRaw: string | null;
   dateRaw: string | null;
 }
@@ -117,7 +117,7 @@ export interface PostRecordSummary {
   id: number;
   sourcePath: string;
   sourceCardIndex: number;
-  authorRaw: string | null;
+  activityRaw: string | null;
   bodyRaw: string | null;
   dateRaw: string | null;
   mediaCount: number;

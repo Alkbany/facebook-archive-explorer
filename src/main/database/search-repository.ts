@@ -147,8 +147,8 @@ function searchFtsTable(
     SELECT records.id AS id, records.section_key AS sectionKey,
       records.record_type AS recordType, source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex, records.title AS title,
-      records.body_text AS body, records.event_time_raw AS dateRaw,
-      bm25(${table}) AS relevance
+      records.body_text AS body, records.normalized_text AS normalizedText,
+      records.event_time_raw AS dateRaw, bm25(${table}) AS relevance
     FROM ${table}
     INNER JOIN records ON records.id = CAST(${table}.record_id AS INTEGER)
     INNER JOIN source_files AS source ON source.id = records.source_file_id
@@ -159,7 +159,7 @@ function searchFtsTable(
     ORDER BY relevance ASC, source.relative_path COLLATE NOCASE,
       records.source_record_index ASC
     LIMIT ?
-  `).all(matchExpression, snapshotId, sectionKey, sectionKey, MAX_RESULTS) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;
+  `).all(matchExpression, snapshotId, sectionKey, sectionKey, MAX_RESULTS) as Array<Omit<SearchHit, 'matchType' | 'similarity'> & { normalizedText: string | null }>; 
 
   const hits: SearchHit[] = [];
   for (const row of rows) {
@@ -168,7 +168,7 @@ function searchFtsTable(
       const searchableTokens = normalizeSearchText([
         row.title ?? '',
         row.body ?? '',
-        (row as typeof row & { normalizedText?: string | null }).normalizedText ?? ''
+        row.normalizedText ?? ''
       ].join(' ')).match(/[\\p{L}\\p{N}_]+/gu) ?? [];
       const tokenScores = fuzzyQueryTerms.map((queryTerm) =>
         searchableTokens.length === 0
@@ -178,8 +178,9 @@ function searchFtsTable(
       if (tokenScores.some((score) => score < threshold)) continue;
       similarity = tokenScores.reduce((sum, score) => sum + score, 0) / tokenScores.length;
     }
+    const { normalizedText: _normalizedText, ...result } = row;
     hits.push({
-      ...row,
+      ...result,
       matchType: mode === 'fuzzy' && similarity < 1 ? 'fuzzy' : 'exact',
       similarity
     });

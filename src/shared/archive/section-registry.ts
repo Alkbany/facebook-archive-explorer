@@ -43,14 +43,14 @@ export function getArchiveSection(key: string): ArchiveSectionDefinition | undef
   return ARCHIVE_SECTIONS.find((section) => section.key === key);
 }
 
-export type SectionImportCapability = 'known-html-json' | 'known-html' | 'sampled-html' | 'generic-fallback' | 'media-index-only' | 'not-implemented';
+export type SectionImportCapability = 'known-html-json' | 'sampled-html-json' | 'known-html' | 'sampled-html' | 'generic-fallback' | 'media-index-only' | 'not-implemented';
 
 const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapability>> = {
   friends: 'known-html-json',
   messages: 'sampled-html',
   posts: 'sampled-html',
-  comments: 'sampled-html',
-  likes_and_reactions: 'sampled-html',
+  comments: 'sampled-html-json',
+  likes_and_reactions: 'sampled-html-json',
   photos_and_videos: 'sampled-html'
 };
 

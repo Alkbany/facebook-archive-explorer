@@ -4,7 +4,7 @@ import { normalizeSearchText } from '../../../shared/text/normalize';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
-import { parseCommentsExport } from '../parsers/comments-parser';
+import { parseCommentsExport, parseCommentsJsonExport } from '../parsers/comments-parser';
 
 export interface CommentsImportSectionResult {
   filesAttempted: number;
@@ -12,7 +12,7 @@ export interface CommentsImportSectionResult {
   unsupportedFiles: number;
   failedFiles: number;
 }
-interface SourceFileRow { id: number; relative_path: string; }
+interface SourceFileRow { id: number; relative_path: string; file_name: string; detected_format: string; }
 
 function safeFailure(error: unknown): { code: string; message: string } {
   if (error instanceof ArchiveReadError) return { code: error.code, message: 'The source file could not be safely read from the selected backup.' };
@@ -27,8 +27,9 @@ export async function importCommentsSection(
   onProgress?: ImportProgressReporter
 ): Promise<CommentsImportSectionResult> {
   const files = database.prepare(`
-    SELECT id, relative_path FROM source_files
-    WHERE snapshot_id = ? AND section_key = 'comments' AND detected_format = 'html'
+    SELECT id, relative_path, file_name, detected_format FROM source_files
+    WHERE snapshot_id = ? AND section_key = 'comments'
+      AND ((detected_format = 'html') OR (detected_format = 'json' AND lower(file_name) = 'comments.json'))
       AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as SourceFileRow[];
@@ -58,7 +59,10 @@ export async function importCommentsSection(
       .run(file.id, snapshotId);
     database.exec('SAVEPOINT comments_file');
     try {
-      const parsed = parseCommentsExport(await readArchiveUtf8File(archiveRoot, file.relative_path), file.relative_path);
+      const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path);
+      const parsed = file.detected_format === 'json'
+        ? parseCommentsJsonExport(sourceText.replace(/^\\uFEFF/u, ''), file.relative_path)
+        : parseCommentsExport(sourceText, file.relative_path);
       const now = new Date().toISOString();
       const insertRecord = database.prepare(`
         INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type,

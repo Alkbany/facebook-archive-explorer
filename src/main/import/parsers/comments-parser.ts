@@ -96,3 +96,68 @@ export function parseCommentsExport(html: string, sourceFile: string): CommentsP
   });
   return result;
 }
+
+
+/** Parses the observed Accounts Center comments_v2 JSON array. */
+export function parseCommentsJsonExport(jsonText: string, sourceFile: string): CommentsParseResult {
+  const parsed: unknown = JSON.parse(jsonText);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
+  }
+  const root = parsed as Record<string, unknown>;
+  const items = Object.entries(root).find(([key]) => key.toLocaleLowerCase() === 'comments_v2')?.[1];
+  if (!Array.isArray(items)) {
+    return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
+  }
+
+  const records: CommentActivityRecord[] = [];
+  const issues: CommentsParseIssue[] = [];
+  items.forEach((item, sourceCardIndex) => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      issues.push({ code: 'card_without_content', sourceCardIndex });
+      return;
+    }
+    const row = item as Record<string, unknown>;
+    const data = Array.isArray(row.data) ? row.data : [];
+    const commentEntry = data.find((entry) =>
+      typeof entry === 'object' && entry !== null && !Array.isArray(entry) &&
+      Object.prototype.hasOwnProperty.call(entry, 'comment')
+    ) as Record<string, unknown> | undefined;
+    const comment = commentEntry?.comment;
+    const detail = typeof comment === 'object' && comment !== null && !Array.isArray(comment)
+      ? comment as Record<string, unknown>
+      : {};
+    const bodyRaw = typeof detail.comment === 'string' && detail.comment.trim()
+      ? detail.comment.trim()
+      : null;
+    const activityRaw = typeof row.title === 'string' && row.title.trim()
+      ? row.title.trim()
+      : null;
+    const groupRaw = typeof detail.group === 'string' && detail.group.trim()
+      ? detail.group.trim()
+      : null;
+    const rawTime = typeof detail.timestamp === 'number' && Number.isFinite(detail.timestamp)
+      ? detail.timestamp
+      : row.timestamp;
+    const dateRaw = typeof rawTime === 'number' && Number.isFinite(rawTime)
+      ? String(rawTime)
+      : typeof rawTime === 'string' && rawTime.trim()
+        ? rawTime.trim()
+        : null;
+
+    if (!activityRaw && !bodyRaw && !groupRaw) {
+      issues.push({ code: 'card_without_content', sourceCardIndex });
+      return;
+    }
+    records.push({
+      activityRaw,
+      bodyRaw,
+      groupRaw,
+      dateRaw,
+      permalinkRaw: null,
+      sourceFile,
+      sourceCardIndex
+    });
+  });
+  return { records, issues };
+}

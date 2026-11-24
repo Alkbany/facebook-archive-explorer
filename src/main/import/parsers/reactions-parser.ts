@@ -60,3 +60,97 @@ export function parseReactionsExport(html: string, sourceFile: string): Reaction
   });
   return result;
 }
+
+
+function jsonLabelValue(labels: unknown[], targetLabel: string): string | null {
+  for (const item of labels) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) continue;
+    const entry = item as Record<string, unknown>;
+    if (typeof entry.label === 'string' && entry.label.toLocaleLowerCase() === targetLabel.toLocaleLowerCase() &&
+        typeof entry.value === 'string' && entry.value.trim()) {
+      return entry.value.trim();
+    }
+  }
+  return null;
+}
+
+function nestedOwnerName(labels: unknown[]): string | null {
+  for (const item of labels) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) continue;
+    const entry = item as Record<string, unknown>;
+    if (typeof entry.title === 'string' && entry.title.toLocaleLowerCase() === 'owner' && Array.isArray(entry.dict)) {
+      const pending: unknown[] = [...entry.dict];
+      while (pending.length > 0) {
+        const value = pending.shift();
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) continue;
+        const nested = value as Record<string, unknown>;
+        if (typeof nested.label === 'string' && nested.label.toLocaleLowerCase() === 'name' &&
+            typeof nested.value === 'string' && nested.value.trim()) return nested.value.trim();
+        if (Array.isArray(nested.dict)) pending.push(...nested.dict);
+      }
+    }
+  }
+  return null;
+}
+
+/** Parses both observed Accounts Center Likes & Reactions JSON representations. */
+export function parseReactionsJsonExport(jsonText: string, sourceFile: string): ReactionParseResult {
+  const lowerPath = sourceFile.toLocaleLowerCase();
+  const fileName = basename(lowerPath);
+  if (!/^likes_and_reactions(?:_\\d+)?\\.json$/u.test(fileName)) {
+    throw new Error('Unsupported reactions JSON filename.');
+  }
+  const parsed: unknown = JSON.parse(jsonText);
+  if (!Array.isArray(parsed)) {
+    return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
+  }
+
+  const records: ReactionRecord[] = [];
+  const issues: ReactionParseIssue[] = [];
+  parsed.forEach((value, sourceCardIndex) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      issues.push({ code: 'card_without_description_or_reaction', sourceCardIndex });
+      return;
+    }
+    const row = value as Record<string, unknown>;
+    const dateRaw = typeof row.timestamp === 'number' && Number.isFinite(row.timestamp)
+      ? String(row.timestamp)
+      : typeof row.timestamp === 'string' && row.timestamp.trim()
+        ? row.timestamp.trim()
+        : null;
+    const data = Array.isArray(row.data) ? row.data : [];
+    const reactionEntry = data.find((entry) =>
+      typeof entry === 'object' && entry !== null && !Array.isArray(entry) &&
+      Object.prototype.hasOwnProperty.call(entry, 'reaction')
+    ) as Record<string, unknown> | undefined;
+    const reactionData = typeof reactionEntry?.reaction === 'object' &&
+      reactionEntry.reaction !== null && !Array.isArray(reactionEntry.reaction)
+      ? reactionEntry.reaction as Record<string, unknown>
+      : null;
+    const labels = Array.isArray(row.label_values) ? row.label_values : [];
+
+    const reactionRaw = typeof reactionData?.reaction === 'string'
+      ? reactionData.reaction
+      : jsonLabelValue(labels, 'Reaction');
+    const reactionType = reactionRaw ? reactionRaw.toLocaleLowerCase() : null;
+    const activityTitle = typeof row.title === 'string' && row.title.trim()
+      ? row.title.trim()
+      : null;
+    const ownerName = jsonLabelValue(labels, 'Name') ?? nestedOwnerName(labels);
+    const descriptionRaw = activityTitle ??
+      (ownerName ? 'Reaction involving ' + ownerName : null);
+    if (!reactionType && !descriptionRaw) {
+      issues.push({ code: 'card_without_description_or_reaction', sourceCardIndex });
+      return;
+    }
+    records.push({
+      descriptionRaw,
+      reactionType,
+      reactionImageRaw: null,
+      dateRaw,
+      sourceFile,
+      sourceCardIndex
+    });
+  });
+  return { records, issues };
+}

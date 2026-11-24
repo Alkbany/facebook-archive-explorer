@@ -140,3 +140,6 @@ The plain-text fallback recognizes UTF-8, UTF-8 with BOM, and UTF-16 little-/big
 ## Browsing preserved fallback records
 
 The **Other Data** workspace pages through the stored HTML/JSON/text fallback records by section. Its optional search filters only the selected section's visible title, text, and source path. This allows a user to inspect a sensitive section locally without adding its contents to global FTS5 search. JSON payload previews and the preserved text/HTML-item payloads are bounded to 20,000 characters in the UI; the stored record payload remains in the local database.
+
+
+For generic JSON records, `event_time_utc` is populated only when the preserved date field is an unambiguous Unix timestamp (seconds or milliseconds within the supported 2000–2100 range) or an ISO timestamp carrying an explicit timezone. The original value remains in `event_time_raw`. Locale-formatted dates and ISO date-only strings without a timezone remain raw and are not assigned an invented UTC time.

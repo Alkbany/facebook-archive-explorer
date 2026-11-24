@@ -139,7 +139,7 @@ describe('Import all supported data', () => {
     await writeFile(join(root, groupsPath), '\uFEFF' + JSON.stringify({
       groups: [
         { name: 'Chess Club', description: 'Weekly chess games', created_time: 'Unparsed Facebook date', metadata: { value: 'Open chess community' }, email: 'private@example.test', access_token: 'synthetic-secret' },
-        { name: 'Book Club', description: 'Monthly reading meetings' }
+        { name: 'Book Club', description: 'Monthly reading meetings', timestamp: 1572878551 }
       ],
       exported_at: '2024-01-01'
     }), 'utf8');
@@ -174,12 +174,14 @@ describe('Import all supported data', () => {
 
     const records = database.prepare(`
       SELECT section_key AS sectionKey, title, body_text AS body,
-        sensitivity, search_enabled AS searchEnabled, event_time_raw AS timestampRaw, payload_json AS payloadJson
+        sensitivity, search_enabled AS searchEnabled, event_time_raw AS timestampRaw,
+        event_time_utc AS timestampUtc, payload_json AS payloadJson
       FROM records WHERE record_type = 'json_item'
       ORDER BY section_key, source_record_index
     `).all() as Array<{
       sectionKey: string; title: string | null; body: string | null;
-      sensitivity: string; searchEnabled: number; timestampRaw: string | null; payloadJson: string;
+      sensitivity: string; searchEnabled: number; timestampRaw: string | null;
+      timestampUtc: string | null; payloadJson: string;
     }>;
     const groupRecords = records.filter((record) => record.sectionKey === 'groups');
     expect(groupRecords).toHaveLength(3);
@@ -189,6 +191,11 @@ describe('Import all supported data', () => {
       sensitivity: 'personal',
       searchEnabled: 1,
       timestampRaw: 'Unparsed Facebook date'
+    });
+    expect(groupRecords[1]).toMatchObject({
+      title: 'Book Club',
+      timestampRaw: '1572878551',
+      timestampUtc: '2019-11-04T14:42:31.000Z'
     });
     expect(groupRecords[0].body).not.toContain('private@example.test');
     expect(groupRecords[0].body).not.toContain('synthetic-secret');

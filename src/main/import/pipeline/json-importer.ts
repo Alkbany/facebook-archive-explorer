@@ -109,6 +109,32 @@ function collectText(value: unknown, output: string[], depth = 0, key = ''): voi
   }
 }
 
+/** Converts only unambiguous epoch values or ISO timestamps with an explicit timezone. */
+function parseKnownUtcTimestamp(rawTimestamp: string | null): string | null {
+  if (!rawTimestamp) return null;
+  const value = rawTimestamp.trim();
+  if (!value) return null;
+
+  if (/^\d+(?:\.\d+)?$/u.test(value)) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    const milliseconds = numeric >= 946_684_800_000 && numeric <= 4_102_444_800_000
+      ? numeric
+      : numeric >= 946_684_800 && numeric <= 4_102_444_800
+        ? numeric * 1000
+        : Number.NaN;
+    if (!Number.isFinite(milliseconds)) return null;
+    const date = new Date(milliseconds);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  // Facebook's locale-formatted dates often omit their timezone; leave those raw.
+  if (!/[Tt].*(?:Z|[+-]\d{2}:?\d{2})$/iu.test(value)) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
+  return new Date(milliseconds).toISOString();
+}
+
 function findRawTimestamp(value: unknown, depth = 0): string | null {
   if (depth > 8) return null;
   const entries = objectEntries(value);
@@ -198,7 +224,7 @@ async function importJsonFile(
         snapshot_id, source_file_id, source_record_index, section_key, record_type,
         title, body_text, normalized_text, event_time_raw, event_time_utc,
         sensitivity, search_enabled, payload_json, created_at
-      ) VALUES (?, ?, ?, ?, 'json_item', ?, ?, ?, ?, NULL, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, 'json_item', ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(source_file_id, source_record_index) DO UPDATE SET
         section_key = excluded.section_key,
         record_type = excluded.record_type,
@@ -206,7 +232,7 @@ async function importJsonFile(
         body_text = excluded.body_text,
         normalized_text = excluded.normalized_text,
         event_time_raw = excluded.event_time_raw,
-        event_time_utc = NULL,
+        event_time_utc = excluded.event_time_utc,
         sensitivity = excluded.sensitivity,
         search_enabled = excluded.search_enabled,
         payload_json = excluded.payload_json,
@@ -224,9 +250,11 @@ async function importJsonFile(
       const title = findTitle(item.value) ?? (item.key === 'value' ? file.relative_path : item.key);
       const body = buildBody(item.value);
       const normalized = searchEnabled ? normalizeSearchText([title, body].filter(Boolean).join(' ')) : null;
+      const eventTimeRaw = findRawTimestamp(item.value);
+      const eventTimeUtc = parseKnownUtcTimestamp(eventTimeRaw);
       insertRecord.run(
         snapshotId, file.id, index, file.section_key, title, body,
-        normalized, findRawTimestamp(item.value), sensitivity, searchEnabled, payload, timestamp
+        normalized, eventTimeRaw, eventTimeUtc, sensitivity, searchEnabled, payload, timestamp
       );
       imported += 1;
     }

@@ -41,3 +41,10 @@ AI features must be local-only, optional, configurable, and disabled by default.
 - A validated copy of the current database is preserved as a local pre-restore recovery file. The app restarts to reopen the restored database, and startup can recover the old file if the swap was interrupted.
 - The exported database is a normal, unencrypted SQLite file. The app displays a warning and asks for confirmation before exporting; it may contain personal archive metadata and imported records, so store it somewhere private and do not share it unintentionally.
 - Database backups do not include Facebook export folders, ZIP files, or original media bytes. The saved archive references still depend on those original files remaining at their recorded paths.
+
+
+## Marketplace and saved links
+
+- Marketplace seller and raw listing source fields are retained only in the local record payload for provenance. Seller values are not copied into Marketplace search text or rendered in the listing workspace by the current importer.
+- Saved-item and Marketplace external links are retained only when their scheme is HTTP or HTTPS. The application does not fetch or preview these URLs automatically; opening a link is an explicit user action.
+- Conversation content, Marketplace messages, saved searches, and unsupported Marketplace/Collections files are not treated as listing records. They remain in generic fallback and follow the applicable sensitivity rules.

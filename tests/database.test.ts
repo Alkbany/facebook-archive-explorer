@@ -37,6 +37,16 @@ const migrations = [
     version: 5,
     name: 'media_metadata_scan_state',
     sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/005_media_metadata_scan_state.sql'), 'utf8')
+  },
+  {
+    version: 6,
+    name: 'search_preferences',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8')
+  },
+  {
+    version: 7,
+    name: 'semantic_search',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/007_semantic_search.sql'), 'utf8')
   }
 ] as const;
 
@@ -56,7 +66,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(initialCount.count).toBe(5);
+    expect(initialCount.count).toBe(7);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
     applyMigrations(database, migrations);
@@ -65,7 +75,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(finalCount.count).toBe(5);
+    expect(finalCount.count).toBe(7);
   });
 
   it('backfills only verified Unix timestamps for records imported by older versions', () => {
@@ -194,6 +204,13 @@ describe('local SQLite storage', () => {
     } finally {
       legacyDatabase.close();
     }
+  });
+
+  it('defaults optional semantic indexing to disabled and creates persistent queue tables', () => {
+    expect(database.prepare("SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled'").get())
+      .toMatchObject({ setting_value: 'false' });
+    expect(database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('semantic_index_jobs', 'semantic_embeddings') ORDER BY name").all())
+      .toHaveLength(2);
   });
 
   it('indexes eligible text in FTS5 and blocks sensitive records from the index', () => {

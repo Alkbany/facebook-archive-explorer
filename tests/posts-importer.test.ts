@@ -68,6 +68,50 @@ describe('Posts import', () => {
     expect(listPostRecords(database, snapshotId)).toMatchObject([{ bodyRaw: 'نص منشور تجريبي', mediaCount: 1 }]);
   });
 
+
+  it('replaces obsolete records on retry and keeps the last good records when a retry fails', async () => {
+    const firstCard = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic First Post</div>
+      <div class="_3-96 _2let"><div><div class="_2pin"><div>FirstPostNeedle</div></div></div></div>
+      <div class="_3-94 _2lem"><a>Raw first date</a></div>
+    </div>`;
+    const secondCard = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic Second Post</div>
+      <div class="_3-96 _2let"><div><div class="_2pin"><div>SecondPostNeedle</div></div></div></div>
+      <div class="_3-94 _2lem"><a>Raw second date</a></div>
+    </div>`;
+    const filePath = join(root, 'posts', 'your_posts.html');
+    await writeFile(filePath, firstCard + secondCard, 'utf8');
+    const now = new Date().toISOString();
+    const fileId = Number(database.prepare(`
+      INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
+      VALUES (?, 'posts/your_posts.html', 'your_posts.html', 'posts', 'html', 'discovered', ?)
+    `).run(snapshotId, now).lastInsertRowid);
+
+    const firstImport = await importPostsSection(database, snapshotId, root);
+    expect(firstImport.recordsImported).toBe(2);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM records WHERE source_file_id = ?').get(fileId))
+      .toMatchObject({ count: 2 });
+
+    await writeFile(filePath, firstCard, 'utf8');
+    database.prepare("UPDATE source_files SET status = 'failed' WHERE id = ?").run(fileId);
+    const retry = await importPostsSection(database, snapshotId, root);
+    expect(retry).toMatchObject({ filesAttempted: 1, recordsImported: 1, failedFiles: 0 });
+    expect(database.prepare('SELECT COUNT(*) AS count FROM records WHERE source_file_id = ?').get(fileId))
+      .toMatchObject({ count: 1 });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM record_search WHERE record_search MATCH 'secondpostneedle'").get())
+      .toMatchObject({ count: 0 });
+
+    await rm(filePath, { force: true });
+    database.prepare("UPDATE source_files SET status = 'failed' WHERE id = ?").run(fileId);
+    const failedRetry = await importPostsSection(database, snapshotId, root);
+    expect(failedRetry.failedFiles).toBe(1);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM records WHERE source_file_id = ?').get(fileId))
+      .toMatchObject({ count: 1 });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM record_search WHERE record_search MATCH 'firstpostneedle'").get())
+      .toMatchObject({ count: 1 });
+  });
+
   it('marks an unknown posts HTML layout as unsupported', async () => {
     await writeFile(join(root, 'posts', 'unknown.html'), '<html><body>Unknown</body></html>', 'utf8');
     const now = new Date().toISOString();

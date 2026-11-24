@@ -1,3 +1,6 @@
+export type ArchiveSearchMode = 'exact' | 'fuzzy';
+export type ArchiveSearchMatchType = 'exact' | 'fuzzy';
+
 export interface ArchiveSearchResult {
   id: number;
   sectionKey: string;
@@ -8,7 +11,14 @@ export interface ArchiveSearchResult {
   body: string | null;
   dateRaw: string | null;
   relevance: number;
+  matchType: ArchiveSearchMatchType;
+  similarity: number;
 }
+
+export interface ArchiveSearchSettings {
+  includeMessagesInGlobalSearch: boolean;
+}
+
 export type SearchExportResult =
   | { status: 'cancelled' }
   | { status: 'saved'; fileName: string; recordsExported: number };

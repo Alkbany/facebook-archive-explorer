@@ -112,17 +112,17 @@ describe('TNG Messenger JSON importer', () => {
     });
 
     const messages = getMessageConversation(database, snapshotId, conversations[0].sourceFileId);
-    expect(messages).toHaveLength(3);
-    expect(messages[0]).toMatchObject({
+    expect(messages.records).toHaveLength(3);
+    expect(messages.records[0]).toMatchObject({
       sender: 'Jean-Luc Picard',
       body: 'Engage.\nA private share description.',
       timestampRaw: '12600000480000',
       reactions: ['❤️']
     });
-    expect(messages[1].media).toEqual([
+    expect(messages.records[1].media).toEqual([
       expect.objectContaining({ relativePath: 'your_facebook_activity/messages/inbox/williamriker_1000000001/photos/photo.jpg', mediaKind: 'image' })
     ]);
-    expect(messages[2].media).toEqual([
+    expect(messages.records[2].media).toEqual([
       expect.objectContaining({ relativePath: 'your_facebook_activity/messages/stickers_used/sticker.png', mediaKind: 'sticker' })
     ]);
 

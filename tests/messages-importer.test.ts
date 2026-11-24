@@ -126,7 +126,7 @@ describe('Messages conversation import', () => {
     ]));
 
     const displayedMessages = getMessageConversation(database, snapshotId, conversations[0].sourceFileId);
-    expect(displayedMessages[0]).toMatchObject({
+    expect(displayedMessages.records[0]).toMatchObject({
       sender: 'Synthetic Sender',
       body: expect.stringContaining('Message Search Exclusion Needle'),
       timestampRaw: 'Raw message date',

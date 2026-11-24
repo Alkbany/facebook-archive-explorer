@@ -58,24 +58,27 @@ export function listFallbackArchiveRecords(
   const query = requestedQuery.trim();
   const escapedQuery = query.replace(/[!%_]/gu, (character) => '!' + character);
   const pattern = '%' + escapedQuery + '%';
-  const searchCondition = \`
-    AND (
-      ? = '' OR COALESCE(records.title, '') LIKE ? ESCAPE '!'
-      OR COALESCE(records.body_text, '') LIKE ? ESCAPE '!'
-      OR source.relative_path LIKE ? ESCAPE '!'
-    )\`;
+  const searchCondition = [
+    'AND (',
+    "  ? = '' OR COALESCE(records.title, '') LIKE ? ESCAPE '!'",
+    "  OR COALESCE(records.body_text, '') LIKE ? ESCAPE '!'",
+    "  OR source.relative_path LIKE ? ESCAPE '!'",
+    ')'
+  ].join('\n');
 
-  const count = database.prepare(\`
-    SELECT COUNT(*) AS total
-    FROM records
-    INNER JOIN source_files AS source
-      ON source.id = records.source_file_id
-      AND source.snapshot_id = records.snapshot_id
-    WHERE records.snapshot_id = ?
-      AND records.section_key = ?
-      AND records.record_type IN (?, ?, ?)
-      @@SEARCH_CONDITION@@
-  \`).get(
+  const countSql = [
+    'SELECT COUNT(*) AS total',
+    'FROM records',
+    'INNER JOIN source_files AS source',
+    '  ON source.id = records.source_file_id',
+    '  AND source.snapshot_id = records.snapshot_id',
+    'WHERE records.snapshot_id = ?',
+    '  AND records.section_key = ?',
+    '  AND records.record_type IN (?, ?, ?)',
+    searchCondition
+  ].join('\n');
+
+  const count = database.prepare(countSql).get(
     snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES,
     query, pattern, pattern, pattern
   ) as { total: number };
@@ -83,30 +86,33 @@ export function listFallbackArchiveRecords(
   const total = count.total;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(requestedPage, pageCount);
-  const rows = database.prepare(\`
-    SELECT
-      records.id AS id,
-      records.section_key AS sectionKey,
-      records.record_type AS recordType,
-      records.title AS title,
-      records.body_text AS body,
-      records.event_time_raw AS dateRaw,
-      source.relative_path AS sourcePath,
-      records.source_record_index AS sourceRecordIndex,
-      records.sensitivity AS sensitivity,
-      substr(records.payload_json, 1, 20000) AS payloadPreview,
-      length(records.payload_json) > 20000 AS payloadTruncated
-    FROM records
-    INNER JOIN source_files AS source
-      ON source.id = records.source_file_id
-      AND source.snapshot_id = records.snapshot_id
-    WHERE records.snapshot_id = ?
-      AND records.section_key = ?
-      AND records.record_type IN (?, ?, ?)
-      @@SEARCH_CONDITION@@
-    ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
-    LIMIT ? OFFSET ?
-  \`).all(
+
+  const rowsSql = [
+    'SELECT',
+    '  records.id AS id,',
+    '  records.section_key AS sectionKey,',
+    '  records.record_type AS recordType,',
+    '  records.title AS title,',
+    '  records.body_text AS body,',
+    '  records.event_time_raw AS dateRaw,',
+    '  source.relative_path AS sourcePath,',
+    '  records.source_record_index AS sourceRecordIndex,',
+    '  records.sensitivity AS sensitivity,',
+    '  substr(records.payload_json, 1, 20000) AS payloadPreview,',
+    '  length(records.payload_json) > 20000 AS payloadTruncated',
+    'FROM records',
+    'INNER JOIN source_files AS source',
+    '  ON source.id = records.source_file_id',
+    '  AND source.snapshot_id = records.snapshot_id',
+    'WHERE records.snapshot_id = ?',
+    '  AND records.section_key = ?',
+    '  AND records.record_type IN (?, ?, ?)',
+    searchCondition,
+    'ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC',
+    'LIMIT ? OFFSET ?'
+  ].join('\n');
+
+  const rows = database.prepare(rowsSql).all(
     snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES,
     query, pattern, pattern, pattern,
     PAGE_SIZE, (page - 1) * PAGE_SIZE

@@ -38,10 +38,11 @@ CREATE INDEX IF NOT EXISTS idx_semantic_embeddings_snapshot_model
 CREATE TRIGGER IF NOT EXISTS records_semantic_insert
 AFTER INSERT ON records
 WHEN (SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled') = 'true'
-  AND NEW.search_enabled = 1
-  AND NEW.sensitivity <> 'sensitive'
-  AND (NEW.section_key <> 'messages'
-    OR (SELECT setting_value FROM app_settings WHERE setting_key = 'include_messages_in_global_search') = 'true')
+  AND (
+    (NEW.search_enabled = 1 AND NEW.sensitivity <> 'sensitive')
+    OR (NEW.section_key = 'messages' AND NEW.sensitivity = 'sensitive'
+      AND (SELECT setting_value FROM app_settings WHERE setting_key = 'include_messages_in_global_search') = 'true')
+  )
 BEGIN
   INSERT INTO semantic_index_jobs (
     record_id, snapshot_id, model_id, model_version, status, attempts, updated_at
@@ -77,10 +78,11 @@ BEGIN
     NEW.id, NEW.snapshot_id, 'Xenova/multilingual-e5-small', 'multilingual-e5-small-v1',
     'pending', 0, CURRENT_TIMESTAMP
   WHERE (SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled') = 'true'
-    AND NEW.search_enabled = 1
-    AND NEW.sensitivity <> 'sensitive'
-    AND (NEW.section_key <> 'messages'
-      OR (SELECT setting_value FROM app_settings WHERE setting_key = 'include_messages_in_global_search') = 'true')
+    AND (
+      (NEW.search_enabled = 1 AND NEW.sensitivity <> 'sensitive')
+      OR (NEW.section_key = 'messages' AND NEW.sensitivity = 'sensitive'
+        AND (SELECT setting_value FROM app_settings WHERE setting_key = 'include_messages_in_global_search') = 'true')
+    )
   ON CONFLICT(record_id, model_id, model_version) DO UPDATE SET
     snapshot_id = excluded.snapshot_id,
     status = 'pending',

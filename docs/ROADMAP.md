@@ -94,6 +94,7 @@
 - [x] Fuzzy Search (no LLM): local token-vocabulary candidate lookup and Damerau-style distance scoring for missing, extra, substituted, and adjacent-transposed characters, with adjustable similarity threshold and per-result match labels.
 - [x] Message global-search privacy control: an independent opt-in setting, off by default, with a separate local FTS5 index; disabling it clears message text from that index. Section-scoped Messages search remains available as an on-demand exact scan.
 - [x] Unified Search UI exposes Exact, Fuzzy, and optional Semantic Search distinctly, with source file/card provenance, match labels, and 250-result offset pagination for large result sets.
+- [x] Bound Semantic Search result ranking to the requested page window with deterministic record-ID tie-breaking, avoiding repeated sorted-array insertion for large indexed snapshots.
 - [x] Apply inclusive UTC calendar-date filters in Exact, Fuzzy, and Semantic Search; exclude records without a reliable normalized `event_time_utc` while a date filter is active.
 - [ ] Broader Search quality and performance validation against large, complete Arabic/English Facebook exports, including false-positive analysis and date-format edge cases.
 - [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.

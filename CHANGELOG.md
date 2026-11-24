@@ -4,6 +4,7 @@
 
 ### Added
 
+- Optimize Semantic Search top-result selection with a bounded heap and stable tie-breaking; add regression coverage for 300 ranked records across non-overlapping pages and invalid offsets.
 - Add 250-result previous/next pagination for Exact, Fuzzy, and Semantic Search; page-aware JSON export now exports the currently displayed page.
 - Normalize the observed Arabic Facebook HTML date format for Posts, Comments, Likes & Reactions, and Messenger only when the same export footer provides a valid explicit UTC offset; preserve the raw date and fail closed for unsupported formats or missing offsets.
 - Add a cross-section Import All regression fixture for Events, Marketplace, and Saved Items, verifying their SQLite records and source-file completion states in one snapshot.

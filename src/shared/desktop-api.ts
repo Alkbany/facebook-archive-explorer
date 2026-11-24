@@ -127,7 +127,7 @@ export interface DesktopApi {
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
-  listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number, query: string): Promise<ArchiveMediaGalleryPage>;
+  listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number, query: string, pageSize?: number): Promise<ArchiveMediaGalleryPage>;
   getArchiveSearchSettings(): Promise<ArchiveSearchSettings>;
   setIncludeMessagesInGlobalSearch(enabled: boolean): Promise<ArchiveSearchSettings>;
   searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<ArchiveSearchResult[]>;

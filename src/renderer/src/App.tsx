@@ -48,6 +48,37 @@ const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, stri
   skipped: 'Skipped'
 };
 
+function isUtcDateInRange(value: string | null, from: string, to: string): boolean {
+  if (!from && !to) return true;
+  if (!value) return false;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return false;
+  if (from && timestamp < Date.parse(`${from}T00:00:00.000Z`)) return false;
+  if (to && timestamp > Date.parse(`${to}T23:59:59.999Z`)) return false;
+  return true;
+}
+
+function ActivityDateFilters(props: {
+  from: string;
+  to: string;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+}) {
+  return (
+    <div className="activity-date-filters">
+      <label>
+        From
+        <input type="date" value={props.from} max={props.to || undefined} onChange={(event) => props.onFromChange(event.target.value)} />
+      </label>
+      <label>
+        To
+        <input type="date" value={props.to} min={props.from || undefined} onChange={(event) => props.onToChange(event.target.value)} />
+      </label>
+      <span>Filters use normalized UTC dates; records with raw-only dates are excluded while a range is active.</span>
+    </div>
+  );
+}
+
 function formatFallbackPayload(
   payload: string,
   recordType: 'html_item' | 'json_item' | 'text_item'
@@ -144,9 +175,13 @@ function App() {
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
   const [postFilter, setPostFilter] = useState('');
+  const [postDateFrom, setPostDateFrom] = useState('');
+  const [postDateTo, setPostDateTo] = useState('');
   const [commentsImport, setCommentsImport] = useState<CommentsImportSectionResult | null>(null);
   const [commentRecords, setCommentRecords] = useState<CommentActivitySummary[]>([]);
   const [commentFilter, setCommentFilter] = useState('');
+  const [commentDateFrom, setCommentDateFrom] = useState('');
+  const [commentDateTo, setCommentDateTo] = useState('');
   const [isImportingComments, setIsImportingComments] = useState(false);
   const [isImportingPosts, setIsImportingPosts] = useState(false);
   const [messagesImport, setMessagesImport] = useState<MessagesImportSectionResult | null>(null);
@@ -154,6 +189,8 @@ function App() {
   const [photosImport, setPhotosImport] = useState<PhotoAlbumsImportSectionResult | null>(null);
   const [reactionRecords, setReactionRecords] = useState<ReactionRecordSummary[]>([]);
   const [reactionFilter, setReactionFilter] = useState('');
+  const [reactionDateFrom, setReactionDateFrom] = useState('');
+  const [reactionDateTo, setReactionDateTo] = useState('');
   const [isImportingReactions, setIsImportingReactions] = useState(false);
   const [isImportingPhotos, setIsImportingPhotos] = useState(false);
   const [isImportingMessages, setIsImportingMessages] = useState(false);
@@ -1488,8 +1525,12 @@ function App() {
                   <span>{postRecords.length.toLocaleString()} records</span>
                 </div>
                 <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} placeholder="Filter posts…" />
+                <ActivityDateFilters from={postDateFrom} to={postDateTo} onFromChange={setPostDateFrom} onToChange={setPostDateTo} />
                 <div className="media-gallery-list">
-                  {postRecords.filter((record) => [record.activityRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase())).map((record) => (
+                  {postRecords.filter((record) =>
+                    [record.activityRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase()) &&
+                    isUtcDateInRange(record.eventTimeUtc, postDateFrom, postDateTo)
+                  ).map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">P</div>
                       <div className="media-gallery-copy">
@@ -1676,8 +1717,12 @@ function App() {
                   <span>{commentRecords.length.toLocaleString()} records</span>
                 </div>
                 <input className="conversation-filter" value={commentFilter} onChange={(event) => setCommentFilter(event.target.value)} placeholder="Filter comments…" />
+                <ActivityDateFilters from={commentDateFrom} to={commentDateTo} onFromChange={setCommentDateFrom} onToChange={setCommentDateTo} />
                 <div className="media-gallery-list">
-                  {commentRecords.filter((record) => [record.activityRaw, record.bodyRaw, record.groupRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(commentFilter.trim().toLocaleLowerCase())).map((record) => (
+                  {commentRecords.filter((record) =>
+                    [record.activityRaw, record.bodyRaw, record.groupRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(commentFilter.trim().toLocaleLowerCase()) &&
+                    isUtcDateInRange(record.eventTimeUtc, commentDateFrom, commentDateTo)
+                  ).map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">C</div>
                       <div className="media-gallery-copy">
@@ -1718,8 +1763,12 @@ function App() {
                   <span>{reactionRecords.length.toLocaleString()} records</span>
                 </div>
                 <input className="conversation-filter" value={reactionFilter} onChange={(event) => setReactionFilter(event.target.value)} placeholder="Filter reactions…" />
+                <ActivityDateFilters from={reactionDateFrom} to={reactionDateTo} onFromChange={setReactionDateFrom} onToChange={setReactionDateTo} />
                 <div className="media-gallery-list">
-                  {reactionRecords.filter((record) => [record.reactionType, record.descriptionRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(reactionFilter.trim().toLocaleLowerCase())).map((record) => (
+                  {reactionRecords.filter((record) =>
+                    [record.reactionType, record.descriptionRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(reactionFilter.trim().toLocaleLowerCase()) &&
+                    isUtcDateInRange(record.eventTimeUtc, reactionDateFrom, reactionDateTo)
+                  ).map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">{record.reactionType === 'love' ? '♥' : record.reactionType === 'haha' ? '☺' : '●'}</div>
                       <div className="media-gallery-copy">

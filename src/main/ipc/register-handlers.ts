@@ -33,12 +33,13 @@ import { getMessageConversation, listMessageConversations, listMessageMediaGalle
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscoveredVideoDurations } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
-import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch } from '../database/search-settings-repository';
+import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../database/search-settings-repository';
+import { createSemanticQueryEmbedding, getSemanticSearchStatus, processSemanticIndexQueue, retryFailedSemanticJobs, searchSemanticArchiveRecords } from '../database/semantic-search-service';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
 import { getImportCoverage } from '../database/import-coverage-repository';
-import { assertNoImportInProgress, pauseActiveImport, resumeActiveImport, runExclusiveImport } from './import-operation-lock';
+import { assertNoImportInProgress, pauseActiveImport, resumeActiveImport, runExclusiveImport as runExclusiveImportLock } from './import-operation-lock';
 
 let selectedBackupDirectory: string | null = null;
 let selectedBackupKind: 'directory' | 'zip' | null = null;
@@ -46,6 +47,24 @@ let selectedAccountId: string | null = null;
 let selectedSnapshotId: string | null = null;
 
 export function getSelectedSnapshotId(): string | null { return selectedSnapshotId; }
+
+function getSemanticModelCacheDirectory(): string {
+  return join(app.getPath('userData'), 'models');
+}
+
+async function runExclusiveImport<T>(importName: string, operation: () => Promise<T>): Promise<T> {
+  return runExclusiveImportLock(importName, async () => {
+    const result = await operation();
+    if (getSemanticSearchStatus(database).enabled) {
+      try {
+        await processSemanticIndexQueue(database, getSemanticModelCacheDirectory());
+      } catch {
+        // Semantic indexing is recoverable and must not turn a successful archive import into a failure.
+      }
+    }
+    return result;
+  });
+}
 
 export function registerIpcHandlers(
   database: DatabaseSync,
@@ -359,29 +378,58 @@ export function registerIpcHandlers(
 
   ipcMain.handle(IPC_CHANNELS.getArchiveSearchSettings, () => getArchiveSearchSettings(database));
 
-  ipcMain.handle(IPC_CHANNELS.setIncludeMessagesInGlobalSearch, (_event, enabled: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.setIncludeMessagesInGlobalSearch, async (_event, enabled: unknown) => {
     if (typeof enabled !== 'boolean') throw new Error('Invalid message-search setting.');
-    return setIncludeMessagesInGlobalSearch(database, enabled);
+    const settings = setIncludeMessagesInGlobalSearch(database, enabled);
+    if (settings.semanticSearchEnabled) {
+      void processSemanticIndexQueue(database, getSemanticModelCacheDirectory()).catch(() => undefined);
+    }
+    return settings;
   });
 
-  ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, (
+  ipcMain.handle(IPC_CHANNELS.getSemanticSearchStatus, () => getSemanticSearchStatus(database));
+
+  ipcMain.handle(IPC_CHANNELS.setSemanticSearchEnabled, async (_event, enabled: unknown) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid Semantic Search setting.');
+    setSemanticSearchEnabled(database, enabled);
+    if (enabled) {
+      void processSemanticIndexQueue(database, getSemanticModelCacheDirectory()).catch(() => undefined);
+    }
+    return getSemanticSearchStatus(database);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.retrySemanticIndexing, async () => {
+    retryFailedSemanticJobs(database);
+    void processSemanticIndexQueue(database, getSemanticModelCacheDirectory()).catch(() => undefined);
+    return getSemanticSearchStatus(database);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, async (
     _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown
   ) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before searching the archive.');
     if (
       typeof query !== 'string' ||
       !(sectionKey === null || typeof sectionKey === 'string') ||
-      !(mode === undefined || mode === 'exact' || mode === 'fuzzy') ||
+      !(mode === undefined || mode === 'exact' || mode === 'fuzzy' || mode === 'semantic') ||
       !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold)))
     ) {
       throw new Error('Invalid search request.');
+    }
+    const searchMode = (mode ?? 'exact') as ArchiveSearchMode;
+    if (searchMode === 'semantic') {
+      if (!getSemanticSearchStatus(database).enabled) {
+        throw new Error('Enable Semantic Search before using semantic queries.');
+      }
+      const vector = await createSemanticQueryEmbedding(query, getSemanticModelCacheDirectory());
+      return searchSemanticArchiveRecords(database, selectedSnapshotId, vector, sectionKey);
     }
     return searchArchiveRecords(
       database,
       selectedSnapshotId,
       query,
       sectionKey,
-      (mode ?? 'exact') as ArchiveSearchMode,
+      searchMode,
       threshold === undefined ? 0.8 : threshold as number
     );
   });
@@ -393,7 +441,7 @@ export function registerIpcHandlers(
     if (
       typeof query !== 'string' ||
       !(sectionKey === null || typeof sectionKey === 'string') ||
-      !(mode === undefined || mode === 'exact' || mode === 'fuzzy') ||
+      !(mode === undefined || mode === 'exact' || mode === 'fuzzy' || mode === 'semantic') ||
       !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold)))
     ) {
       throw new Error('Invalid export request.');
@@ -401,7 +449,16 @@ export function registerIpcHandlers(
     const searchMode = (mode ?? 'exact') as ArchiveSearchMode;
     const similarityThreshold = threshold === undefined ? 0.8 : threshold as number;
     const snapshotId = selectedSnapshotId;
-    const results = searchArchiveRecords(database, snapshotId, query, sectionKey, searchMode, similarityThreshold);
+    const results = searchMode === 'semantic'
+      ? searchSemanticArchiveRecords(
+          database,
+          snapshotId,
+          await createSemanticQueryEmbedding(query, getSemanticModelCacheDirectory()),
+          sectionKey
+        )
+      : searchArchiveRecords(
+          database, snapshotId, query, sectionKey, searchMode, similarityThreshold
+        );
     const save = await dialog.showSaveDialog({
       title: 'Export archive search results',
       defaultPath: 'facebook-archive-search-results.json',

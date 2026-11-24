@@ -49,6 +49,23 @@ describe('parseMessageConversation', () => {
     ]);
   });
 
+  it('deduplicates linked attachments and preserves their actual media element type', () => {
+    const imagePath = 'messages/inbox/thread/photos/photo.jpg';
+    const audioPath = 'messages/inbox/thread/audio/voice-note.mp4';
+    const html = `<html><head><base href="../../../"></head><body>${CARD(`
+      <a href="${imagePath}"><img src="${imagePath}"></a>
+      <audio src="${audioPath}" controls="1">
+        <a href="${audioPath}">Play audio</a>
+      </audio>
+    `)}</body></html>`;
+    const result = parseMessageConversation(html, 'messages/inbox/thread/thread.html');
+
+    expect(result.messages[0].media).toEqual([
+      { kind: 'image', relativePath: imagePath, element: 'img' },
+      { kind: 'audio', relativePath: audioPath, element: 'audio' }
+    ]);
+  });
+
   it('keeps sticker references distinct from ordinary images', () => {
     const html = `<html><head><base href="../../../"></head><body>${CARD('<img src="messages/stickers_used/sticker.png">')}</body></html>`;
     const result = parseMessageConversation(html, 'messages/inbox/thread/thread.html');

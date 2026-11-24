@@ -364,9 +364,15 @@ export function registerIpcHandlers(
     return listFriendDirectory(database, selectedSnapshotId, filter as FriendDirectoryFilter, query, page as number);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listMessagesForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listMessagesForSelectedBackup, (_event, requestedPage: unknown = 1, searchQuery: unknown = '') => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing conversations.');
-    return listMessageConversations(database, selectedSnapshotId);
+    if (!Number.isSafeInteger(requestedPage) || (requestedPage as number) < 1 || (requestedPage as number) > 1_000_000) {
+      throw new Error('Invalid conversation-list page.');
+    }
+    if (typeof searchQuery !== 'string' || searchQuery.length > 100) {
+      throw new Error('Invalid conversation-list search query.');
+    }
+    return listMessageConversations(database, selectedSnapshotId, requestedPage as number, searchQuery);
   });
 
   ipcMain.handle(IPC_CHANNELS.listMessageMediaForSelectedBackup, () => {

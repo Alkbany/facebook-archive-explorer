@@ -151,6 +151,15 @@ describe('archive-wide media, search, and comparison', () => {
     expect(transposed).toEqual([
       expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
     ]);
+
+    const missingFirstCharacter = searchArchiveRecords(database, baselineId, 'lexandria', null, 'fuzzy', 0.8);
+    expect(missingFirstCharacter).toEqual([
+      expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
+    ]);
+    const extraFirstCharacter = searchArchiveRecords(database, baselineId, 'aalexandria', null, 'fuzzy', 0.8);
+    expect(extraFirstCharacter).toEqual([
+      expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
+    ]);
     expect(searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.95)).toHaveLength(0);
   });
 

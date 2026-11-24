@@ -102,7 +102,7 @@ export interface DesktopApi {
   listImportIssuesForSelectedBackup(): Promise<ImportIssueReport>;
   getImportCoverageForSelectedBackup(): Promise<ImportCoverageReport>;
   listFallbackRecordSectionsForSelectedBackup(): Promise<FallbackArchiveSectionSummary[]>;
-  listFallbackArchiveRecordsForSelectedBackup(sectionKey: string, page: number): Promise<FallbackArchiveRecordsPage>;
+  listFallbackArchiveRecordsForSelectedBackup(sectionKey: string, page: number, query?: string): Promise<FallbackArchiveRecordsPage>;
   onImportProgress(listener: (progress: ImportProgressEvent) => void): () => void;
   pauseImport(): Promise<boolean>;
   resumeImport(): Promise<boolean>;

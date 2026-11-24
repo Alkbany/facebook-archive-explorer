@@ -53,8 +53,21 @@ describe('fallback archive records repository', () => {
       .toMatchObject({ sensitivity: 'sensitive', body: 'Private session' });
   });
 
+  it('searches only within the selected section, including sensitive records locally', () => {
+    expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'Weekly'))
+      .toMatchObject({ total: 1, records: [{ title: 'Chess Club', body: 'Weekly games' }] });
+    expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'groups.json'))
+      .toMatchObject({ total: 2 });
+    expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'no matching content'))
+      .toMatchObject({ total: 0, records: [] });
+    expect(listFallbackArchiveRecords(database, snapshotId, 'security_and_login_information', 1, 'Private'))
+      .toMatchObject({ total: 1, records: [{ title: 'Login record', sensitivity: 'sensitive' }] });
+    expect(database.prepare('SELECT COUNT(*) AS count FROM record_search').get()).toMatchObject({ count: 2 });
+  });
+
   it('rejects invalid section keys and page numbers', () => {
     expect(() => listFallbackArchiveRecords(database, snapshotId, '../messages', 1)).toThrow();
     expect(() => listFallbackArchiveRecords(database, snapshotId, 'groups', 0)).toThrow();
+    expect(() => listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'x'.repeat(121))).toThrow();
   });
 });

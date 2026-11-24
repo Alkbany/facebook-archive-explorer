@@ -37,7 +37,8 @@ export function listFallbackArchiveRecords(
   database: DatabaseSync,
   snapshotId: string,
   sectionKey: string,
-  requestedPage = 1
+  requestedPage = 1,
+  requestedQuery = ''
 ): FallbackArchiveRecordsPage {
   if (typeof snapshotId !== 'string' || !snapshotId.trim()) {
     throw new Error('A selected backup is required to browse imported fallback records.');
@@ -46,11 +47,30 @@ export function listFallbackArchiveRecords(
   if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) {
     throw new Error('The fallback record page number is invalid.');
   }
+  if (typeof requestedQuery !== 'string' || requestedQuery.length > 120) {
+    throw new Error('The fallback archive search is invalid.');
+  }
+  const query = requestedQuery.trim();
+  const pattern = `%${query.replace(/[!%_]/gu, '!  if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) {
+    throw new Error('The fallback record page number is invalid.');
+  }
 
   const count = database.prepare(
     'SELECT COUNT(*) AS total FROM records ' +
     'WHERE snapshot_id = ? AND section_key = ? AND record_type IN (?, ?, ?)'
-  ).get(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES) as { total: number };
+  ).get(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES) as { total: number };')}%`;
+  const searchCondition = `
+    AND (
+      ? = '' OR COALESCE(records.title, '') LIKE ? ESCAPE '!'
+      OR COALESCE(records.body_text, '') LIKE ? ESCAPE '!'
+      OR source.relative_path LIKE ? ESCAPE '!'
+    )`;
+
+  const count = database.prepare(
+    'SELECT COUNT(*) AS total FROM records ' +
+    'INNER JOIN source_files AS source ON source.id = records.source_file_id AND source.snapshot_id = records.snapshot_id ' +
+    'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?, ?)' + searchCondition
+  ).get(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES, query, pattern, pattern, pattern) as { total: number };
 
   const total = count.total;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -65,10 +85,11 @@ export function listFallbackArchiveRecords(
     'length(records.payload_json) > 20000 AS payloadTruncated ' +
     'FROM records INNER JOIN source_files AS source ' +
     'ON source.id = records.source_file_id AND source.snapshot_id = records.snapshot_id ' +
-    'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?, ?) ' +
-    'ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC ' +
+    'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?, ?)' +
+    searchCondition +
+    ' ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC ' +
     'LIMIT ? OFFSET ?'
-  ).all(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES, PAGE_SIZE, (page - 1) * PAGE_SIZE) as unknown as Array<Omit<FallbackArchiveRecord, 'payloadTruncated'> & { payloadTruncated: number }>;
+  ).all(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES, query, pattern, pattern, pattern, PAGE_SIZE, (page - 1) * PAGE_SIZE) as unknown as Array<Omit<FallbackArchiveRecord, 'payloadTruncated'> & { payloadTruncated: number }>;
   const records: FallbackArchiveRecord[] = rows.map((record) => ({
     ...record,
     payloadTruncated: record.payloadTruncated !== 0

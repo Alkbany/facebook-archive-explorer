@@ -292,7 +292,7 @@ export function registerIpcHandlers(
     return listFallbackRecordSections(database, selectedSnapshotId);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listFallbackArchiveRecordsForSelectedBackup, (_event, sectionKey: unknown, page: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.listFallbackArchiveRecordsForSelectedBackup, (_event, sectionKey: unknown, page: unknown, query: unknown = '') => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing preserved fallback records.');
     if (typeof sectionKey !== 'string' || !/^[a-z0-9_]{1,80}$/u.test(sectionKey)) {
       throw new Error('Invalid fallback archive section.');
@@ -300,7 +300,10 @@ export function registerIpcHandlers(
     if (!Number.isSafeInteger(page) || (page as number) < 1) {
       throw new Error('Invalid fallback archive page.');
     }
-    return listFallbackArchiveRecords(database, selectedSnapshotId, sectionKey, page as number);
+    if (typeof query !== 'string' || query.length > 120) {
+      throw new Error('Invalid fallback archive search.');
+    }
+    return listFallbackArchiveRecords(database, selectedSnapshotId, sectionKey, page as number, query);
   });
 
   ipcMain.handle(IPC_CHANNELS.listFriendsDirectoryForSelectedBackup, (_event, filter: unknown, query: unknown, page: unknown) => {

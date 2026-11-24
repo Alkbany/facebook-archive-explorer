@@ -97,6 +97,8 @@ function App() {
   const [isImportPaused, setIsImportPaused] = useState(false);
   const [fallbackSections, setFallbackSections] = useState<FallbackArchiveSectionSummary[]>([]);
   const [fallbackSectionKey, setFallbackSectionKey] = useState('');
+  const [fallbackQuery, setFallbackQuery] = useState('');
+  const [fallbackAppliedQuery, setFallbackAppliedQuery] = useState('');
   const [fallbackRecords, setFallbackRecords] = useState<FallbackArchiveRecordsPage | null>(null);
   const [isLoadingFallbackRecords, setIsLoadingFallbackRecords] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,6 +241,8 @@ function App() {
     setArchiveFileDirectory(null);
     setFallbackSections([]);
     setFallbackSectionKey('');
+    setFallbackQuery('');
+    setFallbackAppliedQuery('');
     setFallbackRecords(null);
     setArchiveFileStatus('all');
     setArchiveFileSection('all');
@@ -315,6 +319,8 @@ function App() {
     setImportIssueReport(null);
     setImportCoverage(null);
     setArchiveFileDirectory(null);
+    setFallbackQuery('');
+    setFallbackAppliedQuery('');
     setArchiveFileStatus('all');
     setArchiveFileSection('all');
     setArchiveFileQuery('');
@@ -419,11 +425,17 @@ function App() {
     setIsLoadingPhotoAlbum(false);
   }
 
-  async function loadFallbackArchiveRecords(sectionKey: string, page: number) {
+  async function loadFallbackArchiveRecords(
+    sectionKey: string,
+    page: number,
+    query = fallbackAppliedQuery
+  ) {
+    const appliedQuery = query.trim().slice(0, 120);
     setIsLoadingFallbackRecords(true);
     setFallbackSectionKey(sectionKey);
+    setFallbackAppliedQuery(appliedQuery);
     try {
-      const result = await window.desktopApi.listFallbackArchiveRecordsForSelectedBackup(sectionKey, page);
+      const result = await window.desktopApi.listFallbackArchiveRecordsForSelectedBackup(sectionKey, page, appliedQuery);
       setFallbackRecords(result);
     } catch {
       setFallbackRecords(null);
@@ -2164,7 +2176,7 @@ function App() {
               <div>
                 <p className="eyebrow">PRESERVED ARCHIVE CONTENT</p>
                 <h3>Other data</h3>
-                <p>Browse text preserved from HTML and JSON files that do not yet have a dedicated section parser. Original source files remain unchanged.</p>
+                <p>Browse text preserved from HTML, JSON, and TXT files that do not yet have a dedicated section parser. Search is scoped to the selected section; original source files remain unchanged.</p>
               </div>
               <span>{fallbackSections.reduce((total, section) => total + section.recordCount, 0).toLocaleString()} records</span>
             </div>
@@ -2173,7 +2185,10 @@ function App() {
                 <span>Archive section</span>
                 <select
                   value={fallbackSectionKey}
-                  onChange={(event) => void loadFallbackArchiveRecords(event.target.value, 1)}
+                  onChange={(event) => {
+                    setFallbackQuery('');
+                    void loadFallbackArchiveRecords(event.target.value, 1, '');
+                  }}
                   disabled={isLoadingFallbackRecords}
                 >
                   {fallbackSections.map((section) => (
@@ -2183,8 +2198,26 @@ function App() {
                   ))}
                 </select>
               </label>
+              <label className="fallback-query-label">
+                <span>Search within this section</span>
+                <input
+                  type="search"
+                  value={fallbackQuery}
+                  maxLength={120}
+                  placeholder="Search titles, text, or source paths…"
+                  onChange={(event) => setFallbackQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void loadFallbackArchiveRecords(fallbackSectionKey, 1, fallbackQuery);
+                  }}
+                  disabled={isLoadingFallbackRecords}
+                />
+              </label>
+              <div className="fallback-query-actions">
+                <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, 1, fallbackQuery)} disabled={isLoadingFallbackRecords || !fallbackSectionKey}>Search</button>
+                <button className="secondary-button" onClick={() => { setFallbackQuery(''); void loadFallbackArchiveRecords(fallbackSectionKey, 1, ''); }} disabled={isLoadingFallbackRecords || (!fallbackQuery && !fallbackAppliedQuery)}>Clear</button>
+              </div>
               {fallbackSections.find((section) => section.sectionKey === fallbackSectionKey)?.sensitivity === 'sensitive'
-                ? <span className="fallback-sensitivity sensitive">Sensitive section · excluded from global search</span>
+                ? <span className="fallback-sensitivity sensitive">Sensitive section · excluded from global search; filter within this section only</span>
                 : <span className="fallback-sensitivity">Preserved fallback text · not a verified structured parser</span>}
             </div>
             {isLoadingFallbackRecords ? (
@@ -2221,9 +2254,9 @@ function App() {
                     ' of ' + fallbackRecords.total.toLocaleString()}
                 </span>
                 <div>
-                  <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, fallbackRecords.page - 1)} disabled={isLoadingFallbackRecords || fallbackRecords.page <= 1}>Previous</button>
+                  <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, fallbackRecords.page - 1, fallbackAppliedQuery)} disabled={isLoadingFallbackRecords || fallbackRecords.page <= 1}>Previous</button>
                   <span>Page {fallbackRecords.page} / {Math.max(1, Math.ceil(fallbackRecords.total / fallbackRecords.pageSize))}</span>
-                  <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, fallbackRecords.page + 1)} disabled={isLoadingFallbackRecords || fallbackRecords.page >= Math.max(1, Math.ceil(fallbackRecords.total / fallbackRecords.pageSize))}>Next</button>
+                  <button className="secondary-button" onClick={() => void loadFallbackArchiveRecords(fallbackSectionKey, fallbackRecords.page + 1, fallbackAppliedQuery)} disabled={isLoadingFallbackRecords || fallbackRecords.page >= Math.max(1, Math.ceil(fallbackRecords.total / fallbackRecords.pageSize))}>Next</button>
                 </div>
               </div>
             )}

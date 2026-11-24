@@ -156,7 +156,18 @@ function saveBatch(
   const insertEmbedding = database.prepare(`
     INSERT INTO semantic_embeddings (
       record_id, snapshot_id, model_id, model_version, dimensions, embedding, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    )
+    SELECT ?, ?, ?, ?, ?, ?, ?
+    WHERE (SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled') = 'true'
+      AND EXISTS (
+        SELECT 1 FROM records
+        WHERE id = ? AND snapshot_id = ?
+          AND (
+            (search_enabled = 1 AND sensitivity <> 'sensitive')
+            OR (section_key = 'messages' AND sensitivity = 'sensitive'
+              AND (SELECT setting_value FROM app_settings WHERE setting_key = 'include_messages_in_global_search') = 'true')
+          )
+      )
     ON CONFLICT(record_id, model_id, model_version) DO UPDATE SET
       snapshot_id = excluded.snapshot_id,
       dimensions = excluded.dimensions,
@@ -167,6 +178,8 @@ function saveBatch(
     UPDATE semantic_index_jobs
     SET status = 'completed', safe_error_code = NULL, updated_at = ?
     WHERE record_id = ? AND model_id = ? AND model_version = ?
+      AND EXISTS (SELECT 1 FROM semantic_embeddings
+        WHERE record_id = ? AND model_id = ? AND model_version = ?)
   `);
 
   beginTransaction(database);
@@ -175,15 +188,11 @@ function saveBatch(
       const vector = vectors[index];
       const buffer = Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
       insertEmbedding.run(
-        row.recordId,
-        row.snapshotId,
-        SEMANTIC_MODEL_ID,
-        SEMANTIC_MODEL_VERSION,
-        EMBEDDING_DIMENSIONS,
-        buffer,
-        now
+        row.recordId, row.snapshotId, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION,
+        EMBEDDING_DIMENSIONS, buffer, now, row.recordId, row.snapshotId
       );
-      updateJob.run(now, row.recordId, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
+      updateJob.run(now, row.recordId, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION,
+        row.recordId, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
     });
     database.exec('COMMIT');
   } catch (error) {
@@ -221,8 +230,11 @@ function getPendingBatch(database: DatabaseSync): PendingSemanticRecord[] {
       AND records.snapshot_id = jobs.snapshot_id
     WHERE jobs.model_id = ? AND jobs.model_version = ?
       AND jobs.status = 'pending'
-      AND records.search_enabled = 1
-      AND records.sensitivity <> 'sensitive'
+      AND (
+        (records.search_enabled = 1 AND records.sensitivity <> 'sensitive')
+        OR (records.section_key = 'messages' AND records.sensitivity = 'sensitive'
+          AND (SELECT setting_value FROM app_settings WHERE setting_key = 'include_messages_in_global_search') = 'true')
+      )
     ORDER BY jobs.updated_at ASC, jobs.record_id ASC
     LIMIT ?
   `).all(SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION, MAX_BATCH_SIZE) as unknown as PendingSemanticRecord[];
@@ -255,6 +267,17 @@ async function drainIndexQueue(database: DatabaseSync, modelCacheDirectory: stri
   `).run(new Date().toISOString(), SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
 
   while (true) {
+    const currentEnabled = database.prepare(
+      "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'semantic_search_enabled'"
+    ).get() as { value: string } | undefined;
+    if (currentEnabled?.value !== 'true') {
+      database.prepare(
+        "UPDATE semantic_index_jobs SET status = 'pending', updated_at = ? WHERE status = 'processing' AND model_id = ? AND model_version = ?"
+      ).run(new Date().toISOString(), SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
+      runtimeState.phase = 'disabled';
+      runtimeState.progressPercent = null;
+      return;
+    }
     const batch = getPendingBatch(database);
     if (batch.length === 0) break;
 
@@ -336,6 +359,8 @@ export function retryFailedSemanticJobs(database: DatabaseSync): number {
       AND model_id = ? AND model_version = ?
   `).run(new Date().toISOString(), SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
   runtimeState.lastErrorCode = null;
+  runtimeState.phase = 'idle';
+  runtimeState.progressPercent = null;
   return Number(result.changes);
 }
 

@@ -961,7 +961,11 @@ function App() {
     ? Object.entries(inspection.sectionFileCounts).sort((a, b) => b[1] - a[1]).slice(0, 8)
     : [];
   const groupsFallbackSection = fallbackSections.find((section) => section.sectionKey === 'groups') ?? null;
+  const nonGroupFallbackSections = fallbackSections.filter((section) => section.sectionKey !== 'groups');
   const isGroupsWorkspace = activeNavigation === 'groups';
+  const visibleFallbackSections = isGroupsWorkspace
+    ? (groupsFallbackSection ? [groupsFallbackSection] : [])
+    : nonGroupFallbackSections;
 
   return (
     <div className="app-shell">
@@ -993,8 +997,19 @@ function App() {
             }}
           ><span>♧</span> Groups</button>
         )}
-        {fallbackSections.length > 0 && (
-          <button type="button" className={activeNavigation === 'other' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('other', 'fallback-records-workspace')}><span>▤</span> Other data</button>
+        {nonGroupFallbackSections.length > 0 && (
+          <button
+            type="button"
+            className={activeNavigation === 'other' ? 'nav-item nav-item-active' : 'nav-item'}
+            onClick={() => {
+              const firstSection = nonGroupFallbackSections[0];
+              if (firstSection) {
+                setFallbackQuery('');
+                void loadFallbackArchiveRecords(firstSection.sectionKey, 1, '');
+              }
+              navigateToSection('other', 'fallback-records-workspace');
+            }}
+          ><span>▤</span> Other data</button>
         )}
 
         <div className="sidebar-bottom">
@@ -2262,7 +2277,7 @@ function App() {
           )}
         </section>
 
-        {fallbackSections.length > 0 && (
+        {visibleFallbackSections.length > 0 && (
           <section className="fallback-records-panel" id="fallback-records-workspace">
             <div className="media-gallery-heading">
               <div>
@@ -2272,9 +2287,7 @@ function App() {
                   ? 'Browse posts, comments, and group membership activity from the three reviewed Accounts Center JSON exports. Other Groups export formats remain preserved separately until their structures are verified.'
                   : 'Browse text preserved from HTML, JSON, and TXT files that do not yet have a dedicated section parser. Search is scoped to the selected section; original source files remain unchanged.'}</p>
               </div>
-              <span>{(isGroupsWorkspace
-                ? groupsFallbackSection?.recordCount ?? 0
-                : fallbackSections.reduce((total, section) => total + section.recordCount, 0)).toLocaleString()} records</span>
+              <span>{visibleFallbackSections.reduce((total, section) => total + section.recordCount, 0).toLocaleString()} records</span>
             </div>
             <div className="fallback-record-controls">
               <label>
@@ -2287,7 +2300,7 @@ function App() {
                   }}
                   disabled={isLoadingFallbackRecords}
                 >
-                  {fallbackSections.map((section) => (
+                  {visibleFallbackSections.map((section) => (
                     <option key={section.sectionKey} value={section.sectionKey}>
                       {SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey} ({section.recordCount.toLocaleString()})
                     </option>

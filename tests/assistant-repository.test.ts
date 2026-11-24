@@ -3,9 +3,10 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { retrieveArchiveAssistantEvidence } from '../src/main/database/assistant-repository';
+import { getAiAssistantStatus } from '../src/main/database/ai-assistant-service';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { openAppDatabase } from '../src/main/database/connection';
-import { setIncludeMessagesInGlobalSearch } from '../src/main/database/search-settings-repository';
+import { getArchiveSearchSettings, setAiAssistantEnabled, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../src/main/database/search-settings-repository';
 
 const migrationFiles = [
   '001_initial_schema.sql',
@@ -82,6 +83,25 @@ describe('archive assistant evidence retrieval', () => {
         '2022-11-24', 'sensitive', 0, '{}', ?)
     `).run(snapshotId, messagesSourceId, index, now).lastInsertRowid);
   }
+
+  it('keeps the AI Assistant toggle independent from Semantic Search', () => {
+    expect(getAiAssistantStatus(database).enabled).toBe(false);
+
+    setAiAssistantEnabled(database, true);
+    expect(getAiAssistantStatus(database).enabled).toBe(true);
+    expect(getArchiveSearchSettings(database)).toMatchObject({
+      aiAssistantEnabled: true,
+      semanticSearchEnabled: false
+    });
+
+    setSemanticSearchEnabled(database, true);
+    setAiAssistantEnabled(database, false);
+    expect(getAiAssistantStatus(database).enabled).toBe(false);
+    expect(getArchiveSearchSettings(database)).toMatchObject({
+      aiAssistantEnabled: false,
+      semanticSearchEnabled: true
+    });
+  });
 
   it('retrieves lexical evidence with the exact source path, card number, and record id', () => {
     const id = addPost(2, 'Software interview', 'We discussed a backend engineering role', 2022);

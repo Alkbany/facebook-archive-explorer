@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Prevent packaged applications from loading an environment-configured renderer URL with the privileged preload; allow the override only for loopback HTTP in unpackaged development.
 - Mark an empty local AI response as an assistant error instead of leaving the UI in a misleading ready state; add regression coverage for status and continued archive search.
 - Allow the local `archive-media:` protocol in the renderer Content Security Policy for audio/video playback without widening script, image, or connection sources.
 - Isolate optional AI Assistant model loading and inference failures from archive browsing and Exact/Fuzzy Search; expose distinct load/inference error states and cover both with fault-injection regression tests.

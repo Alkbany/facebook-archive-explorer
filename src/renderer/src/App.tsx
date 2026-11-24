@@ -647,7 +647,8 @@ function App() {
     try {
       const settings = await window.desktopApi.setIncludeMessagesInGlobalSearch(enabled);
       setIncludeMessagesInGlobalSearch(settings.includeMessagesInGlobalSearch);
-      if (!enabled && searchSection === 'messages' && (searchMode === 'fuzzy' || searchMode === 'semantic')) setSearchMode('exact');
+      if (!enabled && searchMode === 'semantic') setSearchMode('exact');
+      if (!includeMessagesInGlobalSearch && searchSection === 'messages' && searchMode === 'fuzzy') setSearchMode('exact');
       setSearchResults([]);
       setSearchedQuery(null);
       setSearchExportStatus('');
@@ -1534,10 +1535,10 @@ function App() {
                   {semanticSearchStatus?.phase === 'indexing' && <span>Indexing {semanticSearchStatus.completed.toLocaleString()} / {semanticSearchStatus.total.toLocaleString()} records</span>}
                   {semanticSearchStatus?.phase === 'ready' && <span>Ready · {semanticSearchStatus.completed.toLocaleString()} records indexed</span>}
                   {semanticSearchStatus?.phase === 'error' && <span>Indexing needs attention · {semanticSearchStatus.failed.toLocaleString()} failed</span>}
-                  {semanticSearchStatus?.phase === 'idle' && <span>Enabled · model will load when indexing starts</span>}
-                  {semanticSearchStatus?.enabled && semanticSearchStatus.failed > 0 && (
+                  {semanticSearchStatus?.phase === 'idle' && <span>Enabled · preparing local model</span>}
+                  {semanticSearchStatus?.enabled && (semanticSearchStatus.failed > 0 || semanticSearchStatus.phase === 'error') && (
                     <button className="secondary-button" onClick={() => void retrySemanticIndexing()} disabled={isUpdatingSemanticSearch}>
-                      Retry failed indexing
+                      Retry model / indexing
                     </button>
                   )}
                 </div>
@@ -1605,7 +1606,7 @@ function App() {
                   <article className="search-result-item" key={result.id}>
                     <div className="search-result-heading">
                       <strong>{SECTION_TITLES.get(result.sectionKey) ?? result.sectionKey}</strong>
-                      <span>{result.matchType === 'fuzzy' ? 'Fuzzy match' : result.matchType === 'semantic' ? 'Semantic match' : 'Exact match'} · {result.recordType.replaceAll('_', ' ')}</span>
+                      <span>{result.matchType === 'fuzzy' ? 'Fuzzy match · ' + Math.round(result.similarity * 100) + '%' : result.matchType === 'semantic' ? 'Semantic match · ' + Math.round(result.similarity * 100) + '%' : 'Exact match'} · {result.recordType.replaceAll('_', ' ')}</span>
                     </div>
                     {result.title && <strong>{result.title}</strong>}
                     {result.body && <p>{result.body}</p>}
@@ -1613,7 +1614,7 @@ function App() {
                   </article>
                 ))}
                 {searchResults.length === 0 && searchQuery.trim() && !isSearching && (
-                  <p className="conversation-empty">No matching records. Import the relevant section first, or try a less strict Fuzzy Search setting.</p>
+                  <p className="conversation-empty">No matching records for this search level. Check that the relevant section has been imported, or try another search level.</p>
                 )}
               </div>
               <div className="search-export-row">

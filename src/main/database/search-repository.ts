@@ -287,6 +287,9 @@ export function searchArchiveRecords(
   ).get(MESSAGE_SEARCH_SETTING) as { value: string } | undefined)?.value === 'true';
 
   if (sectionKey === 'messages' && !messageSearchEnabled) {
+    if (mode !== 'exact') {
+      throw new Error('Fuzzy Search in Messages requires explicit global message-search indexing.');
+    }
     // Section-scoped inspection remains available without placing message
     // text in a persistent global-search index. In this privacy mode, it is
     // an exact, on-demand scan rather than Fuzzy Search over a stored vocab.

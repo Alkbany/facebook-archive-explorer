@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ArchiveReadError, readArchiveBinaryPrefix, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
+import { ArchiveReadError, readArchiveBinaryPrefix, readArchiveBinarySuffix, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
 
 describe('readArchiveUtf8File', () => {
   let root: string;
@@ -33,6 +33,20 @@ describe('readArchiveUtf8File', () => {
     const prefix = await readArchiveBinaryPrefix(root, 'photo.jpg', 12);
     expect(prefix).toEqual(content.subarray(0, 12));
     expect(prefix.byteLength).toBe(12);
+  });
+
+  it('reads only the requested suffix of a larger binary file', async () => {
+    const content = Buffer.from('large-media-payload-and-tail-metadata');
+    await writeFile(join(root, 'clip.mp4'), content);
+
+    const suffix = await readArchiveBinarySuffix(root, 'clip.mp4', 12);
+    expect(suffix).toEqual(content.subarray(content.length - 12));
+    expect(suffix.byteLength).toBe(12);
+  });
+
+  it('rejects unsafe paths when reading binary suffixes', async () => {
+    await expect(readArchiveBinarySuffix(root, '../outside.bin', 16))
+      .rejects.toMatchObject({ code: 'PATH_OUTSIDE_ARCHIVE' });
   });
 
   it('rejects unsafe paths when reading binary prefixes', async () => {

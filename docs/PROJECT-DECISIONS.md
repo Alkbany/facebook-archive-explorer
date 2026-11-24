@@ -121,6 +121,7 @@ Example: a query such as `Alexandrea` can suggest or find `Alexandria`.
 - Indexing must obey each record's sensitivity and the message-search setting.
 - Search-index/embedding failures must be reported separately and recoverably, without discarding imported records or preventing non-AI search.
 - The app must not fetch external URLs from the archive or transmit archive contents as part of import.
+- Marketplace imports may merge matching listing/detail files to fill fields such as description, price, category, and identifiers while retaining all source references. Seller and raw source fields stay in the local provenance payload unless a separately reviewed product decision explicitly approves displaying them; they are not global-search fields.
 
 ## 8. Media library
 

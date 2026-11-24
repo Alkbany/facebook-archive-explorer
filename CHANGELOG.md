@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tests
+
+- Add a cross-section Import All regression fixture for Events, Marketplace, and Saved Items, verifying their SQLite records and source-file completion states in one snapshot.
+
 ### Added
 
 - Normalize the observed Arabic Facebook HTML date format for Posts, Comments, Likes & Reactions, and Messenger only when the same export footer provides a valid explicit UTC offset; preserve the raw date and fail closed for unsupported formats or missing offsets.

@@ -41,7 +41,7 @@ function extractYear(question: string): number | null {
 function extractTerms(question: string): string[] {
   const normalized = normalizeSearchText(question);
   const tokens = normalized.match(/[\p{L}\p{N}_]+/gu) ?? [];
-  return [...new Set(tokens.filter((token) => token.length > 1 && !STOP_WORDS.has(token) && !/^(?:19|20)\\d{2}$/u.test(token)))].slice(0, 10);
+  return [...new Set(tokens.filter((token) => token.length > 1 && !STOP_WORDS.has(token) && !/^(?:19|20)\d{2}$/u.test(token)))].slice(0, 10);
 }
 
 function exactEvidenceFromTable(

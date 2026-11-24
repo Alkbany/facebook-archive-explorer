@@ -2320,7 +2320,7 @@ function App() {
                       <pre>{formatFallbackPayload(record.payloadPreview, record.recordType)}</pre>
                       {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete stored record remains in the local database.</small>}
                     </details>
-                    <small>{formatActivityDate(record.dateRaw, record.eventTimeUtc)} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
+                    <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
                   </article>
                 ))}
               </div>

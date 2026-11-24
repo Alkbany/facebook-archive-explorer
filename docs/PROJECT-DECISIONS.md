@@ -1,0 +1,169 @@
+# Project Decisions — Facebook Archive Explorer
+
+> This is the authoritative product-decision record. It captures decisions explicitly approved by the owner. Implementation status must remain separate from intended scope: a decision in this document is not evidence that the feature is already implemented.
+
+## 1. Product goal
+
+Build a complete, modern Windows desktop application for exploring personal Facebook exports locally. The product has three equal goals:
+
+1. A comprehensive personal archive for preserving and browsing the available export content.
+2. An advanced data explorer for searching, filtering, comparing, and analyzing archive records.
+3. A connected local social-archive experience across people, conversations, posts, media, groups, and activity.
+
+The beta releases are intermediate milestones. The goal is a complete, usable 1.0 product, not merely a successful installer or a code-complete shell.
+
+## 2. Required archive areas
+
+The target product scope includes all of the following areas:
+
+- Friends
+- Messages
+- Posts
+- Comments
+- Photos
+- Videos
+- Groups
+- Events
+- Marketplace
+- Saved Items and Collections
+- Reactions
+
+A section is not complete merely because its files are discovered or preserved by a generic fallback. A section is marked supported only after its actual export structure has been reviewed, its parser preserves source provenance, and representative non-personal fixtures and tests cover the observed structure. Unsupported variants must remain visible as unsupported or fallback-preserved rather than being described as fully parsed.
+
+## 3. Desktop UI and UX
+
+- Windows desktop application using Electron, React, and TypeScript.
+- The interface must be a genuinely modern desktop application. Do not reproduce Facebook's exported HTML appearance or treat a sidebar/color refresh as a complete redesign.
+- Workspaces should be cohesive and interconnected, with consistent navigation, search, filters, pagination, detail views, and source references.
+- Do not remove useful existing functionality merely to simplify a redesign.
+- Beta UI is a review milestone; usability and visual quality remain part of the 1.0 acceptance criteria.
+
+## 4. Accounts, backups, and local data
+
+- Support multiple Facebook accounts.
+- Each account can have multiple independent backup snapshots.
+- Keep snapshots separate; importing a new backup must not silently merge it into or overwrite another snapshot.
+- Original export files and ZIP archives are read-only inputs. Read them from their selected local locations; do not upload, copy wholesale, or commit them to the source repository.
+- Imported records and indexes belong in the application's local SQLite database. Media bytes remain in the original backup and are read/streamed locally.
+- Preserve source paths, file/card positions, raw values, and provenance so results can be traced back to the original archive.
+
+## 5. Four-level search system
+
+Search is a core product feature and has four distinct levels. These levels solve different problems and must not be conflated.
+
+### Level 1 — Exact Search (no AI)
+
+- Reliable literal/text search for words and exact phrases.
+- Search eligible names, record titles and bodies, post/comment text, and supported metadata.
+- Search file names and archive paths where appropriate.
+- Support section, account/snapshot, and date filters where the underlying date is reliable.
+- Preserve the existing fast local SQLite FTS5 search as the baseline.
+- Exact search remains available whether or not optional AI features are installed or enabled.
+
+### Level 2 — Fuzzy Search (no LLM)
+
+- Tolerate likely typing mistakes: missing, extra, substituted, or transposed characters.
+- Include Arabic-aware normalization, including alef variants (أ, إ, آ, ا), removal of diacritics and tatweel, and other carefully tested normalization rules.
+- Allow the user to tune the similarity/strictness threshold.
+- Rank likely matches and distinguish fuzzy matches from exact matches in the results.
+- Do not rely on an LLM or embeddings for typo tolerance.
+- Avoid silently merging distinct words through overly aggressive normalization.
+
+Example: a query such as `Alexandrea` can suggest or find `Alexandria`.
+
+### Level 3 — Semantic Search (optional local embeddings)
+
+- Search by meaning and context, including natural-language queries whose wording differs from the archived text.
+- Use a multilingual embedding model that runs locally. The embedding model is distinct from an LLM.
+- When Semantic Search is enabled, generate and persist embeddings incrementally during the import pipeline as eligible records are saved; do not require a separate full archive re-import or an all-at-once post-import pass.
+- If the user enables Semantic Search after records have already been imported, backfill the semantic index for existing eligible records without re-importing the original archive.
+- Process embeddings in bounded batches and expose index/model progress and failure state.
+- Persist checkpoints so indexing can resume after the app closes or an error occurs.
+- If embedding generation fails, preserve successfully imported archive records and the other search levels. Semantic indexing errors must not turn an otherwise successful source-file import into an archive-import failure.
+- Track the embedding model/version. When it changes, support a controlled rebuild of the semantic index.
+- Semantic indexing is disabled by default and consumes no model resources until enabled. Model files may be downloaded only after the user enables the feature; after installation, embedding generation and search run locally.
+- Do not send archive content to an external embedding service.
+
+### Level 4 — AI Assistant (optional LLM)
+
+- Accept multi-part natural-language questions and tasks over the local archive.
+- Retrieve relevant records, apply appropriate filters, and assemble evidence-grounded summaries or answers.
+- Support tasks such as summarizing a topic over a date range, identifying conversation participants, finding when a subject was discussed, and comparing relevant archive records or snapshots.
+- Every substantive answer must include navigable references to the source records/files and their account/snapshot context.
+- The assistant must say when evidence is incomplete or unavailable; it must not invent conversations, people, dates, or facts.
+- The LLM is a separate component from the embedding model. AI Assistant is optional and disabled by default. Local model execution is the default; archive content must not be transmitted to an external AI provider automatically.
+- If a model is unavailable or disabled, Exact, Fuzzy, and any enabled Semantic Search must continue to function independently.
+
+### Unified search experience
+
+- Provide one coherent search workspace that exposes the four levels without making them appear to be the same algorithm.
+- Let users see why a result matched (exact, fuzzy, or semantic) and inspect the source context.
+- Keep section and snapshot filters consistent across levels wherever technically applicable.
+- Search exports must retain source provenance and match type/rank where available.
+
+## 6. Message-search privacy
+
+- Message content remains excluded from global search by default.
+- Provide a separate, explicit user-controlled setting for including message content in global search.
+- When enabled, messages may be indexed locally and may appear in global Exact, Fuzzy, and enabled Semantic Search according to the selected search level.
+- The message-search setting is independent of the general Semantic Search and AI Assistant settings.
+- Keep the Messages workspace usable for direct conversation browsing and section-scoped filtering without enabling global message search.
+- Never include sensitive message content in the global indexes unless the user has explicitly enabled the message-search setting.
+- Explain the privacy impact clearly in the setting before the user enables it.
+
+## 7. Import and indexing behavior
+
+- Import supported sections sequentially and safely, with per-file progress, diagnostics, retries, and durable checkpoints.
+- Keep per-file database writes atomic; a failed retry must not erase the last successful imported records.
+- Build the standard full-text search index as eligible records are imported.
+- Build fuzzy-search support from eligible normalized searchable text without requiring a cloud service or LLM.
+- If Semantic Search is enabled, generate embeddings during import in bounded batches. Also backfill older imported records when enabled later.
+- Indexing must obey each record's sensitivity and the message-search setting.
+- Search-index/embedding failures must be reported separately and recoverably, without discarding imported records or preventing non-AI search.
+- The app must not fetch external URLs from the archive or transmit archive contents as part of import.
+
+## 8. Media library
+
+- Default to 100 items per page.
+- Let the user choose 50, 100, or 250 items per page.
+- Provide Grid and List views.
+- Filtering and search must happen before pagination. Do not use a fixed first-N query limit that silently hides the rest of the library.
+- Keep media linked to its local original source and supported archive context. Do not copy media bytes unnecessarily.
+
+## 9. Optional AI configuration
+
+- AI features are optional and must not be required for core archive browsing, import, Exact Search, or Fuzzy Search.
+- Semantic Search and AI Assistant can be independently enabled/disabled.
+- Provide clear model state, configuration, local resource controls, and recovery/re-index actions.
+- Do not download large model files without the user's explicit enablement.
+- No automatic cloud processing, analytics, telemetry, remote crash reporting, or archive uploads.
+
+## 10. Development and delivery rules
+
+- Work directly on `main` unless a separate branch is explicitly agreed.
+- Work in coherent batches and complete connected tasks without asking the owner to approve every small technical step.
+- Do not silently change approved product decisions. Discuss material scope or privacy changes first.
+- Keep the decision record, roadmap, README, and implementation status aligned.
+- Add tests and update documentation for meaningful features.
+- Protect existing functionality; do not remove features simply to reduce implementation effort.
+- Avoid repeated installer builds for tiny changes. Batch work, run relevant tests/type checks/builds, then verify the resulting CI run.
+- Stop to ask only when a genuine product-level decision, conflict with an approved decision, or indispensable missing source sample blocks progress.
+- Never ask the owner to upload a personal Facebook backup to GitHub or another external service. Use synthetic, non-personal fixtures in the repository.
+- Code signing is not a substitute for finishing core product functionality and is not the priority ahead of the 1.0 feature and quality gates.
+
+## 11. Completion and evidence rules
+
+A feature is complete only when its implementation, tests, user-facing behavior, and documentation agree. For parser coverage, evidence must come from reviewed export structures and representative fixtures. For search quality, tests must cover Arabic and English, exact phrases, missing/extra/substituted/transposed characters, similarity thresholds, semantic paraphrases, privacy exclusions, indexing recovery, and source references. Performance and privacy checks are required before 1.0.
+
+---
+
+## Implementation status snapshot
+
+This section is deliberately a status snapshot, not a promise that every approved feature exists today.
+
+- Implemented baseline: local SQLite FTS5 exact full-text search over eligible records, with Arabic normalization.
+- Not yet implemented: fuzzy typo-tolerant matching and its adjustable threshold.
+- Not yet implemented: multilingual local embedding generation, persisted semantic index, import-time embedding generation, and backfill/rebuild controls.
+- Not yet implemented: local LLM assistant with evidence-grounded responses and navigable source citations.
+- Existing policy: message records are excluded from global FTS5 by default. The approved independent message-search setting still needs implementation.
+- Media library page-size options and Grid/List selection remain subject to the implementation checklist; target default is 100 with choices of 50/100/250.

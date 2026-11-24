@@ -287,9 +287,16 @@ export function searchArchiveRecords(
   ).get(MESSAGE_SEARCH_SETTING) as { value: string } | undefined)?.value === 'true';
 
   if (sectionKey === 'messages' && !messageSearchEnabled) {
-    // Section-scoped inspection remains available, but sensitive text is not
-    // placed in a global FTS/trigram vocabulary while the opt-in is disabled.
-    return searchMessagesWithoutGlobalIndex(database, snapshotId, query);
+    // Section-scoped inspection remains available without placing message
+    // text in a persistent global-search index. In this privacy mode, it is
+    // an exact, on-demand scan rather than Fuzzy Search over a stored vocab.
+    const messages = searchMessagesWithoutGlobalIndex(database, snapshotId, query);
+    if (mode === 'exact') {
+      messages.push(...searchArchiveMetadata(database, snapshotId, query, 'messages', true));
+    }
+    const scoped = new Map<number, SearchHit>();
+    for (const result of messages) scoped.set(result.id, result);
+    return [...scoped.values()].slice(0, MAX_RESULTS);
   }
 
   const results = searchFtsTable(

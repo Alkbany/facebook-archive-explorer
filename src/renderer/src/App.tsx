@@ -9,6 +9,8 @@ import type {
   CommentsImportSectionResult,
   CommentActivitySummary,
   EventRecordSummary,
+  MarketplaceListingSummary,
+  SavedItemSummary,
   PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
@@ -209,6 +211,12 @@ function App() {
   const [eventRecords, setEventRecords] = useState<EventRecordSummary[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isImportingEvents, setIsImportingEvents] = useState(false);
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListingSummary[]>([]);
+  const [isLoadingMarketplace, setIsLoadingMarketplace] = useState(false);
+  const [isImportingMarketplace, setIsImportingMarketplace] = useState(false);
+  const [savedItems, setSavedItems] = useState<SavedItemSummary[]>([]);
+  const [isLoadingSavedItems, setIsLoadingSavedItems] = useState(false);
+  const [isImportingSavedItems, setIsImportingSavedItems] = useState(false);
   const [activeNavigation, setActiveNavigation] = useState('overview');
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
@@ -518,7 +526,7 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files, fallback, events] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files, fallback, events, marketplace, savedItems] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
@@ -530,7 +538,9 @@ function App() {
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
         window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1),
         window.desktopApi.listFallbackRecordSectionsForSelectedBackup(),
-        window.desktopApi.listEventsForSelectedBackup()
+        window.desktopApi.listEventsForSelectedBackup(),
+        window.desktopApi.listMarketplaceForSelectedBackup(),
+        window.desktopApi.listSavedItemsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -548,6 +558,8 @@ function App() {
       setArchiveFilePage(files.page);
       setFallbackSections(fallback);
       setEventRecords(events);
+      setMarketplaceListings(marketplace);
+      setSavedItems(savedItems);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
@@ -995,6 +1007,46 @@ function App() {
     }
   }
 
+  async function loadMarketplace() {
+    setIsLoadingMarketplace(true);
+    try { setMarketplaceListings(await window.desktopApi.listMarketplaceForSelectedBackup()); }
+    catch { setError('The Marketplace workspace could not be loaded.'); }
+    finally { setIsLoadingMarketplace(false); }
+  }
+
+  async function importMarketplace() {
+    setIsImportingMarketplace(true);
+    setError(null);
+    try {
+      await window.desktopApi.importMarketplaceForSelectedBackup();
+      await loadMarketplace();
+      await refreshImportIssues();
+      await refreshImportCoverage();
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch { setError('Marketplace listings could not be imported. Check the local import report.'); }
+    finally { setIsImportingMarketplace(false); }
+  }
+
+  async function loadSavedItems() {
+    setIsLoadingSavedItems(true);
+    try { setSavedItems(await window.desktopApi.listSavedItemsForSelectedBackup()); }
+    catch { setError('Saved Items could not be loaded.'); }
+    finally { setIsLoadingSavedItems(false); }
+  }
+
+  async function importSavedItems() {
+    setIsImportingSavedItems(true);
+    setError(null);
+    try {
+      await window.desktopApi.importSavedItemsForSelectedBackup();
+      await loadSavedItems();
+      await refreshImportIssues();
+      await refreshImportCoverage();
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch { setError('Saved Items could not be imported. Check the local import report.'); }
+    finally { setIsImportingSavedItems(false); }
+  }
+
   async function loadArchiveFiles(status: ArchiveFileStatus, sectionKey: string, query: string, page: number) {
     setIsLoadingArchiveFiles(true);
     setArchiveFileStatus(status);
@@ -1075,7 +1127,7 @@ function App() {
       setReactionsImport(result.sections.reactions);
       setPhotosImport(result.sections.photosAndVideos);
 
-      const [posts, comments, reactions, foundConversations, albums, friends, fallback, events] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, albums, friends, fallback, events, marketplace, savedItems] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
@@ -1083,7 +1135,9 @@ function App() {
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
         window.desktopApi.listFallbackRecordSectionsForSelectedBackup(),
-        window.desktopApi.listEventsForSelectedBackup()
+        window.desktopApi.listEventsForSelectedBackup(),
+        window.desktopApi.listMarketplaceForSelectedBackup(),
+        window.desktopApi.listSavedItemsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -1096,6 +1150,8 @@ function App() {
       setFriendPage(friends.page);
       setFallbackSections(fallback);
       setEventRecords(events);
+      setMarketplaceListings(marketplace);
+      setSavedItems(savedItems);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       else { setFallbackSectionKey(''); setFallbackRecords(null); }
       if (foundConversations.length > 0) {
@@ -1253,6 +1309,18 @@ function App() {
           <button type="button" className={activeNavigation === 'events' ? 'nav-item nav-item-active' : 'nav-item'}
             onClick={() => { void loadEvents(); navigateToSection('events', 'events-workspace'); }}>
             <span>◉</span> Events
+          </button>
+        )}
+        {((inspection?.sectionFileCounts.marketplace ?? 0) > 0 || marketplaceListings.length > 0) && (
+          <button type="button" className={activeNavigation === 'marketplace' ? 'nav-item nav-item-active' : 'nav-item'}
+            onClick={() => { void loadMarketplace(); navigateToSection('marketplace', 'marketplace-workspace'); }}>
+            <span>◇</span> Marketplace
+          </button>
+        )}
+        {((inspection?.sectionFileCounts.saved_items_and_collections ?? 0) > 0 || savedItems.length > 0) && (
+          <button type="button" className={activeNavigation === 'saved-items' ? 'nav-item nav-item-active' : 'nav-item'}
+            onClick={() => { void loadSavedItems(); navigateToSection('saved-items', 'saved-items-workspace'); }}>
+            <span>▣</span> Saved Items
           </button>
         )}
         <button type="button" className={activeNavigation === 'search' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('search', 'unified-search-panel')}><span>⌕</span> Search</button>
@@ -2867,6 +2935,107 @@ function App() {
             </div>
           )}
         </section>
+
+        {activeNavigation === 'marketplace' && (
+          <section className="archive-data-workspace marketplace-workspace" id="marketplace-workspace">
+            <div className="media-gallery-heading">
+              <div>
+                <p className="eyebrow">PERSONAL ACTIVITY · MARKETPLACE</p>
+                <h3>Marketplace listings</h3>
+                <p>Supported listings from items_sold.json and matching label/value details. Conversations, saved searches, and other files remain in Other data.</p>
+              </div>
+              <div className="archive-data-actions">
+                <span>{marketplaceListings.length.toLocaleString()} unique listings</span>
+                <button className="secondary-button" onClick={() => void importMarketplace()} disabled={isImportingMarketplace || isLoadingMarketplace || isAnyImporting}>
+                  {isImportingMarketplace ? 'Importing listings…' : 'Import / refresh listings'}
+                </button>
+              </div>
+            </div>
+            {isLoadingMarketplace ? <p className="archive-data-empty">Loading Marketplace listings…</p>
+              : marketplaceListings.length === 0 ? <p className="archive-data-empty">No supported listings imported yet. Unknown formats remain available in Other data.</p>
+              : <div className="marketplace-listing-grid">
+                {marketplaceListings.map((listing) => (
+                  <article className="marketplace-listing-card" key={listing.listingKey}>
+                    <div className="marketplace-listing-heading">
+                      <strong>{listing.title}</strong>
+                      {listing.price && <span>{listing.price}</span>}
+                    </div>
+                    <div className="marketplace-listing-meta">
+                      {listing.category && <span>{listing.category}</span>}
+                      {listing.marketplace && <span>{listing.marketplace}</span>}
+                      <small>{listing.listingDateUtc ? new Date(listing.listingDateUtc).toLocaleString() : listing.listingDateRaw || 'Date not recorded'}</small>
+                    </div>
+                    {listing.description && <p>{listing.description}</p>}
+                    {(listing.locationName || listing.address || listing.latitude !== null || listing.longitude !== null) && (
+                      <div className="marketplace-listing-location">
+                        {listing.locationName && <span>{listing.locationName}</span>}
+                        {listing.address && <span>{listing.address}</span>}
+                        {listing.latitude !== null && listing.longitude !== null && <small>{listing.latitude.toFixed(5)}, {listing.longitude.toFixed(5)}</small>}
+                      </div>
+                    )}
+                    {listing.facebookId && <small>Facebook listing ID · {listing.facebookId}</small>}
+                    <div className="event-source-list">
+                      <span>{listing.sources.length} original source {listing.sources.length === 1 ? 'record' : 'records'}</span>
+                      {listing.sources.map((source) => (
+                        <button key={source.recordId} className="text-button" onClick={() => {
+                          void loadArchiveFiles('all', 'all', source.sourcePath, 1);
+                          navigateToSection('files', 'archive-files-workspace');
+                        }}>{source.sourcePath} · item {source.sourceCardIndex + 1}</button>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>}
+          </section>
+        )}
+
+        {activeNavigation === 'saved-items' && (
+          <section className="archive-data-workspace saved-items-workspace" id="saved-items-workspace">
+            <div className="media-gallery-heading">
+              <div>
+                <p className="eyebrow">PERSONAL ACTIVITY · SAVED</p>
+                <h3>Saved Items</h3>
+                <p>Saved entries from the reviewed saves_v2 collection, including linked titles and validated external references. Other collection formats remain in Other data.</p>
+              </div>
+              <div className="archive-data-actions">
+                <span>{savedItems.length.toLocaleString()} saved entries</span>
+                <button className="secondary-button" onClick={() => void importSavedItems()} disabled={isImportingSavedItems || isLoadingSavedItems || isAnyImporting}>
+                  {isImportingSavedItems ? 'Importing saved items…' : 'Import / refresh Saved Items'}
+                </button>
+              </div>
+            </div>
+            {isLoadingSavedItems ? <p className="archive-data-empty">Loading Saved Items…</p>
+              : savedItems.length === 0 ? <p className="archive-data-empty">No supported Saved Items imported yet. Other collection formats remain in Other data.</p>
+              : <div className="saved-item-list">
+                {savedItems.map((item) => (
+                  <article className="saved-item-card" key={item.id}>
+                    <div className="saved-item-heading">
+                      <strong>{item.title}</strong>
+                      <small>{item.savedDateUtc ? new Date(item.savedDateUtc).toLocaleString() : item.savedDateRaw || 'Date not recorded'}</small>
+                    </div>
+                    {item.contexts.length > 0 && (
+                      <div className="saved-item-contexts">
+                        {item.contexts.map((context, index) => (
+                          <div key={item.id + '-' + index}>
+                            {context.name && <strong>{context.name}</strong>}
+                            {context.source && <span>{context.source}</span>}
+                            {context.url && <a href={context.url} target="_blank" rel="noreferrer">Open saved source</a>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="event-source-list">
+                      <span>Original source</span>
+                      <button className="text-button" onClick={() => {
+                        void loadArchiveFiles('all', 'all', item.sourcePath, 1);
+                        navigateToSection('files', 'archive-files-workspace');
+                      }}>{item.sourcePath} · item {item.sourceCardIndex + 1}</button>
+                    </div>
+                  </article>
+                ))}
+              </div>}
+          </section>
+        )}
 
         {activeNavigation === 'events' && (
           <section className="events-workspace" id="events-workspace">

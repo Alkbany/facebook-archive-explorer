@@ -143,3 +143,10 @@ The **Other Data** workspace pages through the stored HTML/JSON/text fallback re
 
 
 For generic JSON records, `event_time_utc` is populated only when the preserved date field is an unambiguous Unix timestamp (seconds or milliseconds within the supported 2000–2100 range) or an ISO timestamp carrying an explicit timezone. The original value remains in `event_time_raw`. Locale-formatted dates and ISO date-only strings without a timezone remain raw and are not assigned an invented UTC time.
+
+
+## Current nested Accounts Center layout
+
+Inventory recognizes the current nested paths before assigning a section: \`connections/friends\`, \`personal_information/profile_information\`, \`logged_information/search\`, \`your_facebook_activity/posts\`, \`comments_and_reactions\`, \`groups\`, \`events\`, and \`messages\`, plus the ads and off-Facebook apps roots. Posts album/media and \`your_videos\` files map to Photos & Videos; comments and reaction JSON files are separated by their filenames. This is path classification only — it does not imply that every one of those JSON schemas has a semantic parser.
+
+The observed \`connections/friends/your_friends.json\` \`friends_v2\` collection is parsed into the existing Friends directory. Only names enter full-text search; raw friend fields are retained locally in the record payload. The five known HTML Friends pages continue to use their existing parser.

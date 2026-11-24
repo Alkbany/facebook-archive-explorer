@@ -1146,7 +1146,9 @@ function App() {
                   <div className="import-coverage-list">
                     {importCoverage.sections.map((section) => {
                       const capability = getArchiveImportCapability(section.sectionKey);
-                      const capabilityLabel = capability === 'known-html'
+                      const capabilityLabel = capability === 'known-html-json'
+                        ? 'Reviewed Friends HTML + TNG JSON parser'
+                        : capability === 'known-html'
                         ? 'Known HTML parser + generic JSON/TXT fallback'
                         : capability === 'sampled-html'
                           ? 'Sampled HTML parser + generic fallback'

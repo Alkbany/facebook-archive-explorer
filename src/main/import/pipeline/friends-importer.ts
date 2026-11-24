@@ -6,7 +6,9 @@ import { reportImportProgress, type ImportProgressReporter } from './import-prog
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import {
   parseFriendsExport,
-  type FriendParseIssue
+  parseFriendsJsonExport,
+  type FriendParseIssue,
+  type FriendParseResult
 } from '../parsers/friends-parser';
 
 interface SourceFileRow {
@@ -46,7 +48,7 @@ function insertIssue(
   );
 }
 
-function mapReadError(error: unknown): { code: string; message: string } {
+function mapReadError(error: unknown, detectedFormat: string): { code: string; message: string } {
   if (error instanceof ArchiveReadError) {
     const messages: Record<string, string> = {
       INVALID_RELATIVE_PATH: 'The stored source path is not a valid archive-relative path.',
@@ -59,10 +61,12 @@ function mapReadError(error: unknown): { code: string; message: string } {
     return { code: error.code, message: messages[error.code] ?? 'The source file could not be read.' };
   }
 
-  return {
-    code: 'FRIENDS_FILE_PARSING_FAILED',
-    message: 'The Friends HTML file could not be parsed.'
-  };
+  if (error instanceof Error && error.message === 'FRIENDS_FORMAT_UNSUPPORTED') {
+    return { code: 'FRIENDS_FORMAT_UNSUPPORTED', message: 'This file does not match a reviewed Friends export structure.' };
+  }
+  return detectedFormat === 'json'
+    ? { code: 'FRIENDS_JSON_PARSE_FAILED', message: 'The Friends JSON file could not be parsed.' }
+    : { code: 'FRIENDS_FILE_PARSING_FAILED', message: 'The Friends HTML file could not be parsed.' };
 }
 
 /**
@@ -102,12 +106,16 @@ export async function importFriendsSourceFile(
   database.exec('SAVEPOINT friends_file_import');
 
   try {
-    if (sourceFile.detected_format !== 'html') {
-      throw new Error('FRIENDS_FILE_NOT_HTML');
+    let parsed: FriendParseResult;
+    if (sourceFile.detected_format === 'html') {
+      const html = await readArchiveUtf8File(archiveRoot, sourceFile.relative_path);
+      parsed = parseFriendsExport(html, sourceFile.relative_path);
+    } else if (sourceFile.detected_format === 'json' && sourceFile.file_name.toLocaleLowerCase() === 'your_friends.json') {
+      const json = (await readArchiveUtf8File(archiveRoot, sourceFile.relative_path)).replace(/^\uFEFF/u, '');
+      parsed = parseFriendsJsonExport(json, sourceFile.relative_path);
+    } else {
+      throw new Error('FRIENDS_FORMAT_UNSUPPORTED');
     }
-
-    const html = await readArchiveUtf8File(archiveRoot, sourceFile.relative_path);
-    const parsed = parseFriendsExport(html, sourceFile.relative_path);
     const timestamp = new Date().toISOString();
 
     const insertRecord = database.prepare(`
@@ -149,7 +157,7 @@ export async function importFriendsSourceFile(
         record.nameRaw,
         normalizeSearchText(record.nameRaw),
         record.dateRaw,
-        JSON.stringify({ contact_info_raw: record.contactInfoRaw }),
+        JSON.stringify(record.rawPayload ?? { contact_info_raw: record.contactInfoRaw }),
         timestamp
       );
     }
@@ -238,13 +246,14 @@ export async function importFriendsSourceFile(
   }
 }
 
-const FRIENDS_EXPORT_FILES = [
+const FRIENDS_HTML_EXPORT_FILES = [
   'friends.html',
   'received_friend_requests.html',
   'sent_friend_requests.html',
   'rejected_friend_requests.html',
   'removed_friends.html'
 ] as const;
+const FRIENDS_JSON_EXPORT_FILE = 'your_friends.json';
 
 export interface FriendsImportSectionResult {
   filesAttempted: number;
@@ -254,7 +263,7 @@ export interface FriendsImportSectionResult {
 }
 
 /**
- * Imports only the five known Friends export HTML files for one snapshot.
+ * Imports the five reviewed Friends HTML files and the observed TNG friends_v2 JSON export for one snapshot.
  * Completed files are left untouched; failed/unsupported files may be retried.
  */
 export async function importFriendsSection(
@@ -263,17 +272,19 @@ export async function importFriendsSection(
   archiveRoot: string,
   onProgress?: ImportProgressReporter
 ): Promise<FriendsImportSectionResult> {
-  const placeholders = FRIENDS_EXPORT_FILES.map(() => '?').join(', ');
+  const placeholders = FRIENDS_HTML_EXPORT_FILES.map(() => '?').join(', ');
   const files = database.prepare(`
     SELECT id, file_name
     FROM source_files
     WHERE snapshot_id = ?
       AND section_key = 'friends'
-      AND detected_format = 'html'
-      AND lower(file_name) IN (${placeholders})
+      AND (
+        (detected_format = 'html' AND lower(file_name) IN (${placeholders}))
+        OR (detected_format = 'json' AND lower(file_name) = ?)
+      )
       AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path
-  `).all(snapshotId, ...FRIENDS_EXPORT_FILES) as Array<{ id: number; file_name: string }>;
+  `).all(snapshotId, ...FRIENDS_HTML_EXPORT_FILES, FRIENDS_JSON_EXPORT_FILE) as Array<{ id: number; file_name: string }>;
 
   const summary: FriendsImportSectionResult = {
     filesAttempted: 0,

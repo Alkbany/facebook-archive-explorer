@@ -10,6 +10,7 @@ export interface FriendRecord {
   contactInfoRaw: string | null;
   sourceFile: string;
   sourceCardIndex: number;
+  rawPayload?: unknown;
 }
 
 export interface FriendParseIssue {
@@ -85,5 +86,52 @@ export function parseFriendsExport(html: string, sourceFile: string): FriendPars
     });
   });
 
+  return result;
+}
+
+/**
+ * Parses the observed Accounts Center JSON friends_v2 collection. Contact
+ * metadata, where present, is preserved only inside the local source payload.
+ */
+export function parseFriendsJsonExport(jsonText: string, sourceFile: string): FriendParseResult {
+  const parsed: unknown = JSON.parse(jsonText);
+  const rootEntries = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+    ? Object.entries(parsed as Record<string, unknown>)
+    : [];
+  const friendsValue = rootEntries.find(([key]) => key.toLocaleLowerCase() === 'friends_v2')?.[1];
+
+  if (!Array.isArray(friendsValue)) {
+    return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
+  }
+
+  const result: FriendParseResult = { records: [], issues: [] };
+  friendsValue.forEach((value, sourceCardIndex) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      result.issues.push({ code: 'missing_name', sourceCardIndex });
+      return;
+    }
+    const friend = value as Record<string, unknown>;
+    const name = typeof friend.name === 'string' ? friend.name.trim() : '';
+    if (!name) {
+      result.issues.push({ code: 'missing_name', sourceCardIndex });
+      return;
+    }
+    const rawTimestamp = friend.timestamp;
+    const dateRaw = typeof rawTimestamp === 'string' && rawTimestamp.trim()
+      ? rawTimestamp.trim()
+      : typeof rawTimestamp === 'number' && Number.isFinite(rawTimestamp)
+        ? String(rawTimestamp)
+        : null;
+
+    result.records.push({
+      recordType: 'friend',
+      nameRaw: name,
+      dateRaw,
+      contactInfoRaw: null,
+      sourceFile,
+      sourceCardIndex,
+      rawPayload: value
+    });
+  });
   return result;
 }

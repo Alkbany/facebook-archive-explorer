@@ -31,6 +31,8 @@
 ## Milestone 2 — First reliable parsers
 
 - [x] Implement and test the five known Friends HTML file structures.
+- [x] Classify the current nested Accounts Center directory layout into the app's archive sections.
+- [x] Parse the observed TNG `connections/friends/your_friends.json` `friends_v2` collection into the searchable Friends directory while keeping raw contact fields out of search.
 - [x] Add synthetic, non-personal HTML fixtures for the Friends parser and importer.
 - [x] Store Friends records with source-card provenance; keep optional contact details outside FTS5.
 - [x] Report missing-name cards and unrecognized Friends page structures.

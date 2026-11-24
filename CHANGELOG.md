@@ -46,6 +46,7 @@ The project uses Semantic Versioning. The `.beta.n` suffix counts repeated candi
 - Persist bounded image/video metadata scan state so unsupported media is not repeatedly rechecked and later batches continue across application restarts.
 - Replace the fixed 1,000-reference media list with database-side filtering and 50-file pagination; each asset appears once with a stable associated record.
 - Read bounded MP4/MOV/M4V suffixes to recover duration metadata when the `moov` atom is stored after the media payload.
+- Add literal file-name/archive-path search to the paginated media library; search and media-kind filters are applied in SQLite before page selection.
 
 ## [1.0.0] - Planned stable release
 

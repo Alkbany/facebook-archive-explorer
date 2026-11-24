@@ -18,6 +18,7 @@ export interface ArchiveSearchResult {
 export interface ArchiveSearchSettings {
   includeMessagesInGlobalSearch: boolean;
   semanticSearchEnabled: boolean;
+  aiAssistantEnabled: boolean;
 }
 
 export type SemanticSearchPhase = 'disabled' | 'idle' | 'downloading' | 'loading' | 'indexing' | 'ready' | 'error';

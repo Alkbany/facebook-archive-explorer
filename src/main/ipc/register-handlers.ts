@@ -5,6 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
 import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
 import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from '../../shared/archive/comparison';
+import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -331,14 +332,21 @@ export function registerIpcHandlers(
     return listMessageMediaGallery(database, selectedSnapshotId);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async () => {
+  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async (_event, filter: unknown, page: unknown) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing media.');
+    const allowedFilters: ArchiveMediaGalleryFilter[] = ['all', 'image', 'sticker', 'video', 'audio'];
+    if (typeof filter !== 'string' || !allowedFilters.includes(filter as ArchiveMediaGalleryFilter)) {
+      throw new Error('Invalid media gallery filter.');
+    }
+    if (!Number.isSafeInteger(page) || (page as number) < 1 || (page as number) > 1_000_000) {
+      throw new Error('Invalid media gallery page.');
+    }
     indexDiscoveredMediaAssets(database, selectedSnapshotId);
     if (selectedBackupDirectory) {
       await indexDiscoveredImageDimensions(database, selectedSnapshotId, selectedBackupDirectory);
       await indexDiscoveredVideoDurations(database, selectedSnapshotId, selectedBackupDirectory);
     }
-    return listArchiveMediaGallery(database, selectedSnapshotId);
+    return listArchiveMediaGallery(database, selectedSnapshotId, filter as ArchiveMediaGalleryFilter, page as number);
   });
 
   ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, (_event, query: unknown, sectionKey: unknown) => {

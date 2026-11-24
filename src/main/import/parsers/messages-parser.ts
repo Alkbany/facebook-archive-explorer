@@ -108,7 +108,7 @@ export function parseMessageConversation(html: string, sourceFile: string): Mess
       .filter(Boolean);
 
     const media: MessageMediaReference[] = [];
-    const seen = new Set<string>();
+    const seen = new Map<string, number>();
     const addMedia = (
       candidate: string | undefined,
       elementType: MessageMediaReference['element']
@@ -116,10 +116,26 @@ export function parseMessageConversation(html: string, sourceFile: string): Mess
       if (!candidate) return;
       const relativePath = resolveLocalMediaPath(sourceFile, baseHref, candidate);
       if (!relativePath) return;
-      const key = `${elementType}:${relativePath}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      media.push({ kind: mediaKind(relativePath, elementType), relativePath, element: elementType });
+
+      const entry: MessageMediaReference = {
+        kind: mediaKind(relativePath, elementType),
+        relativePath,
+        element: elementType
+      };
+      const existingIndex = seen.get(relativePath);
+      if (existingIndex !== undefined) {
+        // Facebook wraps many image/audio attachments in links. Keep one
+        // reference per archive path, preferring the actual media element
+        // over its enclosing <a href> so audio does not become a video
+        // merely because the underlying file uses an .mp4 container.
+        if (media[existingIndex].element === 'link' && elementType !== 'link') {
+          media[existingIndex] = entry;
+        }
+        return;
+      }
+
+      seen.set(relativePath, media.length);
+      media.push(entry);
     };
 
     bodyElement.find('img[src], video[src], audio[src], video source[src], audio source[src], a[href]')

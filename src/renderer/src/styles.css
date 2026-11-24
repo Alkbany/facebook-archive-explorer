@@ -1824,3 +1824,24 @@ h1 {
   .activity-date-filters label { flex: 1 1 125px; }
   .activity-date-filters > span { flex-basis: 100%; }
 }
+
+
+.group-record-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 8px 0 10px;
+}
+
+.group-record-metadata span {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid var(--border-subtle, #dce3ed);
+  border-radius: 999px;
+  color: var(--text-secondary, #526174);
+  background: var(--surface-muted, #f5f7fa);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

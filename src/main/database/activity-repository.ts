@@ -7,7 +7,8 @@ export function listReactionRecords(database: DatabaseSync, snapshotId: string):
       source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex,
       records.title AS reactionType, records.body_text AS descriptionRaw,
-      records.event_time_raw AS dateRaw
+      records.event_time_raw AS dateRaw,
+      records.event_time_utc AS eventTimeUtc
     FROM records
     INNER JOIN source_files AS source ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id

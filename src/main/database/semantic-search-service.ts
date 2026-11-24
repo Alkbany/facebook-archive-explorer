@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { mkdir } from 'node:fs/promises';
 import type { ArchiveSearchResult, SemanticSearchStatus } from '../../shared/archive/search';
+import { getUtcDateRangeBounds } from '../../shared/text/utc-date-range';
 
 export const SEMANTIC_MODEL_ID = 'Xenova/multilingual-e5-small';
 export const SEMANTIC_MODEL_VERSION = 'multilingual-e5-small-v1';
@@ -434,11 +435,14 @@ export function searchSemanticArchiveRecords(
   snapshotId: string,
   queryVector: Float32Array,
   sectionKey: string | null = null,
-  minimumSimilarity = MIN_SEMANTIC_SIMILARITY
+  minimumSimilarity = MIN_SEMANTIC_SIMILARITY,
+  dateFrom: string | null = null,
+  dateTo: string | null = null
 ): ArchiveSearchResult[] {
   if (queryVector.length !== EMBEDDING_DIMENSIONS) {
     throw new Error('The semantic query vector has an unexpected dimension.');
   }
+  const dateRange = getUtcDateRangeBounds(dateFrom, dateTo);
   const semanticEnabled = database.prepare(
     "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'semantic_search_enabled'"
   ).get() as { value: string } | undefined;
@@ -473,11 +477,15 @@ export function searchSemanticArchiveRecords(
         OR (records.section_key = 'messages' AND records.sensitivity = 'sensitive' AND ? = 1)
       )
       AND (? IS NULL OR records.section_key = ?)
+      AND (? IS NULL OR records.event_time_utc >= ?)
+      AND (? IS NULL OR records.event_time_utc < ?)
     ORDER BY records.id ASC
   `);
   const candidates = statement.iterate(
     snapshotId, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION,
-    messageIndexEnabled ? 1 : 0, sectionKey, sectionKey
+    messageIndexEnabled ? 1 : 0, sectionKey, sectionKey,
+    dateRange.fromInclusive, dateRange.fromInclusive,
+    dateRange.toExclusive, dateRange.toExclusive
   ) as unknown as Iterable<Record<string, unknown>>;
 
   const top: ArchiveSearchResult[] = [];

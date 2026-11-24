@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, legacy and current nested Accounts Center directory classification, directory and ZIP discovery, ZIP-backed media streaming, Friends HTML + TNG JSON, Messages legacy HTML + TNG JSON, Likes & Reactions HTML, sampled Posts HTML + TNG timeline JSON, Comments HTML + TNG JSON, and reviewed Groups TNG JSON importers, bounded HTML, JSON, and plain-text fallback importers (UTF-8 and BOM-marked UTF-16), unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
+> **Status: active implementation on `main`.** The main branch includes the redesigned Electron/React desktop workspace, local SQLite storage, account/backup grouping, legacy and current nested Accounts Center directory classification, directory and ZIP discovery, ZIP-backed media streaming, reviewed Friends HTML + TNG JSON, Messages legacy HTML + TNG JSON, Likes & Reactions HTML, sampled Posts HTML + TNG timeline JSON, Comments HTML + TNG JSON, and Groups TNG JSON importers. It also includes bounded HTML/JSON/plain-text fallbacks (UTF-8 and BOM-marked UTF-16), the Other Data browser, unified media inventory, local full-text search, JSON search export, snapshot comparison, import diagnostics/coverage, database backup/restore, and streamed audio/video.
 
 ## Product decisions
 
@@ -82,19 +82,19 @@ Artifacts are retained for 14 days. Builds from `main` are test artifacts and ma
 
 ## Not implemented yet
 
-The following are genuine remaining product tasks; filename discovery alone is not treated as parser support:
+The following work is still required for a complete 1.0 release. A discovered filename or a generic fallback record is **not** counted as a verified section parser:
 
-- Durable checkpoints inside a single source file; current recovery boundaries are atomic per-file commits, and pause/resume takes effect after the active file finishes.
-- Verified field-level parsing for unreviewed HTML and JSON exports; generic fallbacks preserve bounded text and source provenance (including HTML layouts rejected by a reviewed parser and plain-text files) but do not interpret every field or relationship.
-- Additional activity-card importers beyond the currently supported Friends, Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos HTML and TNG JSON album pages.
-- Video duration is read for MP4/MOV/M4V files when the movie header is present in a bounded 2 MiB prefix; other containers and files with later movie metadata remain unsupported. Sampled album-detail imports link recognized photos to local media assets.
-- Verified section-specific importers for Groups, Events, Marketplace, Saved Items, and remaining export sections. Generic fallbacks may preserve visible text but cannot guarantee complete field mapping or relationships without representative export samples and parser fixtures.
-- Evidence-backed raw Facebook date parsing and date-range filters; raw date strings are preserved today.
+- Verified field-level parsers for remaining activity-card sections and export formats. The current reviewed set is Friends, Messages, Posts, Comments, Likes & Reactions, sampled Photos & Videos, and the observed Groups TNG JSON collections.
+- Section-specific parsers and fixtures for Events, Marketplace, Saved Items & Collections, and additional Groups/Pages/other-activity formats. Generic HTML/JSON/TXT fallbacks preserve bounded content and source provenance but do not guarantee correct field mapping, relationships, or complete extraction.
+- Broader Photos & Videos coverage for album layouts and media metadata not currently recognized. Image dimensions are read from bounded PNG/JPEG/GIF/WebP prefixes; video duration is currently limited to MP4/MOV/M4V headers found within a bounded 2 MiB prefix.
+- Evidence-backed parsing of raw Facebook date formats and date-range filters. Original date strings are retained where a reliable normalized date is not available.
+- Durable checkpoints within a single large source file. Current recovery is atomic per file; pause/resume takes effect after the active file transaction finishes.
 - Optional local embeddings and local LLM integration, disabled by default.
-- Large-archive performance benchmarks, complete real-backup end-to-end validation, clean-device Windows install/upgrade/uninstall testing, and final release privacy/security review.
-- A trusted Windows signing identity and Smart App Control validation. Test installers may remain unsigned until signing is configured.
+- Large-archive performance benchmarks and end-to-end validation against a complete real Facebook export.
+- Clean-device Windows install, launch, upgrade, and uninstall smoke tests; final privacy/security review and release checklist.
+- A trusted Windows signing identity, code-signing provider onboarding, and Smart App Control validation. Test installers may remain unsigned until signing is configured.
 
-The detailed comparison browser and CSV/JSON comparison export are already implemented. The Archive Files browser, Friends directory, Photos & Videos import action, and functional navigation are also implemented; see [the roadmap](docs/ROADMAP.md) for the authoritative checklist.
+The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive Files browser, Friends directory, Other Data browser, Photos & Videos import action, Import Diagnostics, Import Coverage, and functional workspace navigation are implemented. See [the roadmap](docs/ROADMAP.md) for the authoritative implementation checklist.
 
 ## Documentation
 

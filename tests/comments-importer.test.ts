@@ -75,10 +75,10 @@ describe('Comments import', () => {
     await mkdir(join(root, 'your_facebook_activity', 'comments_and_reactions'), { recursive: true });
     await writeFile(absolutePath, '\uFEFF' + JSON.stringify(source), 'utf8');
     const now = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
       VALUES (?, ?, 'comments.json', 'comments', 'json', 'discovered', ?)
-    \`).run(snapshotId, relativePath, now);
+    `).run(snapshotId, relativePath, now);
 
     const result = await importCommentsSection(database, snapshotId, root);
     expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, unsupportedFiles: 0, failedFiles: 0 });

@@ -169,11 +169,11 @@ describe('Friends file import', () => {
     database.prepare("UPDATE source_files SET status = 'skipped' WHERE id = ?").run(sourceFileId);
 
     const now = new Date().toISOString();
-    const jsonFileId = Number(database.prepare(\`
+    const jsonFileId = Number(database.prepare(`
       INSERT INTO source_files (
         snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
       ) VALUES (?, ?, 'your_friends.json', 'friends', 'json', 'discovered', ?)
-    \`).run(snapshotId, jsonPath, now).lastInsertRowid);
+    `).run(snapshotId, jsonPath, now).lastInsertRowid);
 
     const result = await importFriendsSection(database, snapshotId, root);
     expect(result).toEqual({
@@ -183,11 +183,11 @@ describe('Friends file import', () => {
       failedFiles: 0
     });
 
-    const records = database.prepare(\`
+    const records = database.prepare(`
       SELECT title, record_type AS recordType, event_time_raw AS dateRaw,
         sensitivity, search_enabled AS searchEnabled, payload_json AS payload
       FROM records WHERE source_file_id = ? ORDER BY source_record_index
-    \`).all(jsonFileId) as Array<{
+    `).all(jsonFileId) as Array<{
       title: string; recordType: string; dateRaw: string; sensitivity: string;
       searchEnabled: number; payload: string;
     }>;

@@ -37,12 +37,38 @@ describe('AI Assistant evidence merge', () => {
     ];
 
     const merged = mergeArchiveAssistantEvidence(lexical, semantic);
-    expect(merged.map((item) => item.recordId)).toEqual([7, 8, 9]);
+    // Record 8 is retrieved by both methods, so its combined RRF score ranks first.
+    expect(merged.map((item) => item.recordId)).toEqual([8, 7, 9]);
     expect(merged.map((item) => item.sourceId)).toEqual(['S1', 'S2', 'S3']);
+    expect(merged[0]).toMatchObject({ recordId: 8, title: 'Synthetic post' });
     expect(merged[2]).toMatchObject({
       sourcePath: 'comments/comments.html',
       excerpt: 'Semantic-only record — A related archived subject'
     });
+  });
+
+  it('breaks equal reciprocal-rank scores by stable record ID', () => {
+    const lexical = [
+      { citation: { ...source('S15'), recordId: 15 }, relevance: -2 },
+      { citation: { ...source('S20'), recordId: 20 }, relevance: -1 }
+    ];
+    const semantic: ArchiveSearchResult[] = [
+      {
+        id: 10, sectionKey: 'posts', recordType: 'post',
+        sourcePath: 'posts/your_posts.html', sourceCardIndex: 10,
+        title: 'Semantic record ten', body: 'Evidence ten',
+        dateRaw: null, relevance: -0.9, matchType: 'semantic', similarity: 0.9
+      },
+      {
+        id: 30, sectionKey: 'comments', recordType: 'comment',
+        sourcePath: 'comments/comments.html', sourceCardIndex: 30,
+        title: 'Semantic record thirty', body: 'Evidence thirty',
+        dateRaw: null, relevance: -0.8, matchType: 'semantic', similarity: 0.8
+      }
+    ];
+
+    const merged = mergeArchiveAssistantEvidence(lexical, semantic);
+    expect(merged.map((item) => item.recordId)).toEqual([10, 15, 20, 30]);
   });
 
   it('uses up to twelve lexical records when semantic retrieval is unavailable', () => {

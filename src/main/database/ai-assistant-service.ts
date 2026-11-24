@@ -17,40 +17,62 @@ const MAX_EVIDENCE = 12;
 const MAX_EVIDENCE_CHARACTERS = 500;
 const MAX_QUESTION_LENGTH = 2_000;
 
+const RRF_RANK_OFFSET = 60;
+
 export function mergeArchiveAssistantEvidence(
   lexicalEvidence: ArchiveAssistantEvidence[],
   semanticResults: ArchiveSearchResult[]
 ): ArchiveAssistantCitation[] {
-  const useHybridEvidence = semanticResults.length > 0;
-  const selected = lexicalEvidence.slice(0, useHybridEvidence ? 6 : MAX_EVIDENCE);
-  const seen = new Set(selected.map((item) => item.citation.recordId));
-  if (useHybridEvidence) {
-    for (const result of semanticResults) {
-      if (selected.length >= MAX_EVIDENCE) break;
-      if (seen.has(result.id)) continue;
-      seen.add(result.id);
-      selected.push({
-        relevance: -result.similarity,
-        citation: {
-          sourceId: '',
-          recordId: result.id,
-          sectionKey: result.sectionKey,
-          recordType: result.recordType,
-          sourcePath: result.sourcePath,
-          sourceCardIndex: result.sourceCardIndex,
-          dateRaw: result.dateRaw,
-          title: result.title,
-          excerpt: [result.title, result.body].filter(Boolean).join(' — ')
-            .slice(0, MAX_EVIDENCE_CHARACTERS)
-        }
-      });
-    }
-  }
+  const ranked = new Map<number, { citation: ArchiveAssistantCitation; score: number }>();
 
-  return selected.slice(0, MAX_EVIDENCE).map((item, index) => ({
-    ...item.citation,
-    sourceId: `S${index + 1}`
-  }));
+  // Reciprocal-rank fusion combines two independently ranked retrieval lists.
+  // A record found by both methods gains evidence from both ranks instead of
+  // forcing an arbitrary fixed split between lexical and semantic results.
+  lexicalEvidence.slice(0, MAX_EVIDENCE * 2).forEach((item, index) => {
+    const recordId = item.citation.recordId;
+    const score = 1 / (RRF_RANK_OFFSET + index + 1);
+    const existing = ranked.get(recordId);
+    if (existing) {
+      existing.score += score;
+    } else {
+      ranked.set(recordId, { citation: item.citation, score });
+    }
+  });
+
+  semanticResults.forEach((result, index) => {
+    const score = 1 / (RRF_RANK_OFFSET + index + 1);
+    const existing = ranked.get(result.id);
+    if (existing) {
+      existing.score += score;
+      return;
+    }
+
+    ranked.set(result.id, {
+      score,
+      citation: {
+        sourceId: '',
+        recordId: result.id,
+        sectionKey: result.sectionKey,
+        recordType: result.recordType,
+        sourcePath: result.sourcePath,
+        sourceCardIndex: result.sourceCardIndex,
+        dateRaw: result.dateRaw,
+        title: result.title,
+        excerpt: [result.title, result.body].filter(Boolean).join(' — ')
+          .slice(0, MAX_EVIDENCE_CHARACTERS)
+      }
+    });
+  });
+
+  return [...ranked.values()]
+    .sort((left, right) =>
+      right.score - left.score || left.citation.recordId - right.citation.recordId
+    )
+    .slice(0, MAX_EVIDENCE)
+    .map((item, index) => ({
+      ...item.citation,
+      sourceId: `S${index + 1}`
+    }));
 }
 
 interface ChatMessage {

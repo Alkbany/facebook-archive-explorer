@@ -5,7 +5,9 @@ import type {
   ArchiveAssistantAnswer,
   ArchiveAssistantCitation
 } from '../../shared/archive/assistant';
-import { retrieveArchiveAssistantEvidence } from './assistant-repository';
+import type { ArchiveSearchResult } from '../../shared/archive/search';
+import { retrieveArchiveAssistantEvidence, type ArchiveAssistantEvidence } from './assistant-repository';
+import { createSemanticQueryEmbedding, searchSemanticArchiveRecords } from './semantic-search-service';
 
 export const AI_ASSISTANT_MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
 export const AI_ASSISTANT_MODEL_VERSION = 'qwen2.5-0.5b-instruct-onnx-q4-v1';
@@ -14,6 +16,42 @@ const MAX_HISTORY_CHARACTERS = 500;
 const MAX_EVIDENCE = 12;
 const MAX_EVIDENCE_CHARACTERS = 500;
 const MAX_QUESTION_LENGTH = 2_000;
+
+export function mergeArchiveAssistantEvidence(
+  lexicalEvidence: ArchiveAssistantEvidence[],
+  semanticResults: ArchiveSearchResult[]
+): ArchiveAssistantCitation[] {
+  const useHybridEvidence = semanticResults.length > 0;
+  const selected = lexicalEvidence.slice(0, useHybridEvidence ? 6 : MAX_EVIDENCE);
+  const seen = new Set(selected.map((item) => item.citation.recordId));
+  if (useHybridEvidence) {
+    for (const result of semanticResults) {
+      if (selected.length >= MAX_EVIDENCE) break;
+      if (seen.has(result.id)) continue;
+      seen.add(result.id);
+      selected.push({
+        relevance: -result.similarity,
+        citation: {
+          sourceId: '',
+          recordId: result.id,
+          sectionKey: result.sectionKey,
+          recordType: result.recordType,
+          sourcePath: result.sourcePath,
+          sourceCardIndex: result.sourceCardIndex,
+          dateRaw: result.dateRaw,
+          title: result.title,
+          excerpt: [result.title, result.body].filter(Boolean).join(' — ')
+            .slice(0, MAX_EVIDENCE_CHARACTERS)
+        }
+      });
+    }
+  }
+
+  return selected.slice(0, MAX_EVIDENCE).map((item, index) => ({
+    ...item.citation,
+    sourceId: `S${index + 1}`
+  }));
+}
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -236,13 +274,33 @@ export async function askLocalArchiveAssistant(
 
   // Add the current question and recent user turns to broaden retrieval for follow-ups.
   const retrievalQuestion = [
-    ...history.filter((item) => item.role === 'user').slice(-2).map((item) => item.content),
+    ...history.filter((item) => item.role === 'user').slice(-2).map((item) => item.content.slice(0, 450)),
     question
-  ].join(' ');
-  const evidence = retrieveArchiveAssistantEvidence(
+  ].join(' ').slice(0, MAX_QUESTION_LENGTH);
+  const lexicalEvidence = retrieveArchiveAssistantEvidence(
     database, snapshotId, retrievalQuestion, sectionKey
-  ).slice(0, MAX_EVIDENCE);
-  const citations = evidence.map((item) => item.citation);
+  );
+  let semanticResults: ArchiveSearchResult[] = [];
+  const semanticEnabled = (database.prepare(
+    "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'semantic_search_enabled'"
+  ).get() as { value: string } | undefined)?.value === 'true';
+
+  if (semanticEnabled) {
+    try {
+      const queryVector = await createSemanticQueryEmbedding(retrievalQuestion, modelCacheDirectory);
+      const years = retrievalQuestion.match(/(?:19|20)\\d{2}/gu);
+      const year = years?.length ? Number(years[years.length - 1]) : null;
+      const dateFrom = year === null ? null : `${year}-01-01`;
+      const dateTo = year === null ? null : `${year}-12-31`;
+      semanticResults = searchSemanticArchiveRecords(
+        database, snapshotId, queryVector, sectionKey, undefined, dateFrom, dateTo
+      );
+    } catch {
+      // Semantic retrieval is optional. A model/index error falls back to lexical evidence.
+    }
+  }
+
+  const citations = mergeArchiveAssistantEvidence(lexicalEvidence, semanticResults);
 
   if (citations.length === 0) {
     return {

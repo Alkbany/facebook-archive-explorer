@@ -128,7 +128,7 @@ export function getMessageConversation(
   }
 
   const normalizedQuery = normalizeSearchText(searchQuery);
-  const terms = [...new Set(normalizedQuery.match(/[\\p{L}\\p{N}_]+/gu) ?? [])];
+  const terms = [...new Set(normalizedQuery.match(/[\p{L}\p{N}_]+/gu) ?? [])];
   const parameters: Array<string | number> = [sourceFileId, snapshotId];
   let searchClause = '';
   let transientIndexReady = false;

@@ -7,6 +7,7 @@ interface MarketplacePayload {
   price?: unknown;
   category?: unknown;
   marketplace?: unknown;
+  description?: unknown;
   location?: unknown;
 }
 
@@ -77,7 +78,7 @@ export function listMarketplaceListings(
       facebookId: nullableString(payload.facebook_id),
       title: row.title,
       price: nullableString(payload.price),
-      description: nullableString((payload as Record<string, unknown>).description),
+      description: nullableString(payload.description),
       category: nullableString(payload.category),
       marketplace: nullableString(payload.marketplace),
       listingDateRaw: row.dateRaw,

@@ -16,3 +16,13 @@ export interface ArchiveMediaGalleryItem {
   height: number | null;
   durationMs: number | null;
 }
+
+
+export type ArchiveMediaGalleryFilter = 'all' | 'image' | 'sticker' | 'video' | 'audio';
+
+export interface ArchiveMediaGalleryPage {
+  items: ArchiveMediaGalleryItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}

@@ -58,6 +58,10 @@ export function setIncludeMessagesInGlobalSearch(
         FROM records
         WHERE section_key = 'messages' AND sensitivity = 'sensitive'
           AND (SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled') = 'true'
+          AND NOT EXISTS (SELECT 1 FROM semantic_embeddings
+            WHERE semantic_embeddings.record_id = records.id
+              AND semantic_embeddings.model_id = 'Xenova/multilingual-e5-small'
+              AND semantic_embeddings.model_version = 'multilingual-e5-small-v1')
         ON CONFLICT(record_id, model_id, model_version) DO UPDATE SET
           status = 'pending', attempts = 0, safe_error_code = NULL, updated_at = excluded.updated_at
       `);

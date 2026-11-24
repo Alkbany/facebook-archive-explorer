@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMessageConversation } from '../src/main/import/parsers/messages-parser';
+import { parseMessageConversation, parseMessageConversationJson } from '../src/main/import/parsers/messages-parser';
 
 const CARD = (body: string, sender = 'Synthetic Sender', timestamp = 'Raw timestamp') => `
   <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">

@@ -20,27 +20,42 @@ export function indexDiscoveredMediaAssets(database: DatabaseSync, snapshotId: s
 
 /**
  * Enriches a small batch of indexed images using only a bounded header prefix.
- * Large image files are supported without loading their full contents.
+ * A per-snapshot cursor ensures unsupported files do not permanently occupy
+ * the first batch and block later images from being inspected.
  */
+const lastImageDimensionScannedPath = new WeakMap<DatabaseSync, Map<string, string>>();
+
 export async function indexDiscoveredImageDimensions(
   database: DatabaseSync,
   snapshotId: string,
   archiveRoot: string
 ): Promise<number> {
+  let snapshots = lastImageDimensionScannedPath.get(database);
+  if (!snapshots) {
+    snapshots = new Map<string, string>();
+    lastImageDimensionScannedPath.set(database, snapshots);
+  }
+  const lastScannedPath = snapshots.get(snapshotId) ?? null;
+
   const candidates = database.prepare(`
     SELECT assets.relative_path AS relativePath
     FROM media_assets AS assets
     WHERE assets.snapshot_id = ? AND assets.media_kind = 'image'
       AND assets.width IS NULL AND assets.height IS NULL
+      AND (? IS NULL OR assets.relative_path > ?)
     ORDER BY relative_path
     LIMIT 50
-  `).all(snapshotId) as Array<{ relativePath: string }>;
+  `).all(snapshotId, lastScannedPath, lastScannedPath) as Array<{ relativePath: string }>;
   const update = database.prepare(`
     UPDATE media_assets SET width = ?, height = ?
     WHERE snapshot_id = ? AND relative_path = ? AND media_kind = 'image'
   `);
+
   let indexed = 0;
   for (const item of candidates) {
+    // Advance even for malformed/unsupported images so they do not block the
+    // next batch. The selected archive is read-only for the lifetime of this snapshot.
+    snapshots.set(snapshotId, item.relativePath);
     try {
       const bytes = await readArchiveBinaryPrefix(archiveRoot, item.relativePath, 256 * 1024);
       const dimensions = readImageDimensions(bytes);

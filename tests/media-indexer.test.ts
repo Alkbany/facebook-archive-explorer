@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
-import { indexDiscoveredVideoDurations } from '../src/main/database/media-indexer';
+import { indexDiscoveredImageDimensions, indexDiscoveredVideoDurations } from '../src/main/database/media-indexer';
 
 function atom(type: string, payload: Buffer): Buffer {
   const header = Buffer.alloc(8);
@@ -46,6 +46,37 @@ describe('bounded video duration indexing', () => {
   afterEach(async () => {
     database.close();
     await rm(root, { recursive: true, force: true });
+  });
+
+  it('advances image metadata batches past unsupported images', async () => {
+    const insert = database.prepare(
+      "INSERT INTO media_assets (snapshot_id, relative_path, media_kind, created_at) VALUES (?, ?, 'image', ?)"
+    );
+    const now = new Date().toISOString();
+    const directory = join(root, 'photos');
+    await mkdir(directory, { recursive: true });
+
+    for (let index = 0; index < 50; index += 1) {
+      const name = String(index).padStart(3, '0') + '-unsupported.jpg';
+      await writeFile(join(directory, name), Buffer.from('not an image header'));
+      insert.run(snapshotId, 'photos/' + name, now);
+    }
+
+    const validName = '050-valid.png';
+    const pngHeader = Buffer.alloc(24);
+    pngHeader.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+    pngHeader.writeUInt32BE(640, 16);
+    pngHeader.writeUInt32BE(480, 20);
+    await writeFile(join(directory, validName), pngHeader);
+    insert.run(snapshotId, 'photos/' + validName, now);
+
+    await expect(indexDiscoveredImageDimensions(database, snapshotId, root)).resolves.toBe(0);
+    await expect(indexDiscoveredImageDimensions(database, snapshotId, root)).resolves.toBe(1);
+
+    const dimensions = database.prepare(
+      'SELECT width, height FROM media_assets WHERE snapshot_id = ? AND relative_path = ?'
+    ).get(snapshotId, 'photos/' + validName) as { width: number | null; height: number | null };
+    expect(dimensions).toEqual({ width: 640, height: 480 });
   });
 
   it('finds duration metadata at the end of a non-fast-start MP4 without reading the full file', async () => {

@@ -39,6 +39,8 @@ The project uses Semantic Versioning. The `.beta.n` suffix counts repeated candi
 ## [0.2.0-beta.1] - Next feature milestone (planned)
 
 - Atomically replace stale source-file records on retry while retaining the last successful records if reading or parsing fails.
+- Use identical nested Facebook export path classification for directory and ZIP archives, so reviewed parsers receive the right files from either source.
+- Calculate saved-backup counts from current stored files and records instead of summing historical import-run totals.
 - Read MP4/MOV duration metadata from bounded prefixes and suffixes, including files whose movie metadata is stored after the media payload.
 
 ## [1.0.0] - Planned stable release

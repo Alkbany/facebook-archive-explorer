@@ -28,11 +28,13 @@
 - [x] Recover interrupted section imports and Import All runs across all snapshots during application startup, with safe Diagnostics and an atomic SQLite savepoint.
 - [x] Persist each source-file result atomically so completed files are durable checkpoints and interrupted files can be retried safely.
 - [x] Replace a source file's previous records atomically on retry, removing obsolete full-text search rows and media links while retaining the last successful data when a retry fails.
+- [x] Keep per-file record counts and saved-backup summary totals aligned with the records currently stored, not historical import attempts.
 - [x] Add user-controlled pause/resume at file boundaries without interrupting an active file transaction.
 - [x] Add archive integrity reporting for record-count mismatches, cross-snapshot records/media links, missing media sources, invalid media metadata, and unfinished import markers.
 - [x] Add ZIP selection and streaming ZIP entry discovery.
 - [x] Read HTML/JSON-sized entries from ZIP archives on demand without extraction.
 - [x] Stream ZIP media from the original archive with byte-range support, including deflated entries.
+- [x] Share the same nested Facebook export section-path classifier between directory and ZIP discovery.
 
 ## Milestone 2 — First reliable parsers
 
@@ -53,7 +55,8 @@
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
 - [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
 - [x] Add a bounded generic HTML fallback for unreviewed sections, preserving visible text and source provenance while keeping sensitive sections out of full-text search.
-- [x] Add a dedicated Groups workspace for the three reviewed TNG activity collections, with group/author fields shown only where present in the observed source objects. Keep it isolated from the generic Other Data section selector.\n- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
+- [x] Add a dedicated Groups workspace for the three reviewed TNG activity collections, with group/author fields shown only where present in the observed source objects. Keep it isolated from the generic Other Data section selector.
+- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
 - [x] Add a bounded plain-text fallback for discovered `.txt` files, preserving original text while limiting full-text indexing and respecting section sensitivity.
 - [ ] Add schema-specific JSON importers and parser fixtures for Events, Marketplace, Saved Items & Collections, additional Groups/Pages formats, and remaining sections.
 

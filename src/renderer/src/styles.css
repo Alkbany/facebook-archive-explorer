@@ -2040,3 +2040,19 @@ h1 {
   .assistant-citation .secondary-button { grid-column:2; justify-self:start; }
 }
 
+.search-date-controls {
+  display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px;
+  margin-top:10px; padding:10px 0; border-top:1px solid #eef0f5;
+}
+.search-date-controls label { display:flex; flex-direction:column; gap:5px; min-width:150px; }
+.search-date-controls label > span { color:#777e93; font-size:9px; font-weight:700; }
+.search-date-controls input[type="date"] {
+  min-width:155px; height:33px; padding:0 8px; border:1px solid #e4e6ef;
+  border-radius:8px; color:#41465d; background:#fff; font:inherit; font-size:10px;
+}
+.search-date-controls > span { flex:1 1 260px; color:#858ba0; font-size:9px; line-height:1.5; }
+@media (max-width: 720px) {
+  .search-date-controls { align-items:stretch; flex-direction:column; }
+  .search-date-controls label, .search-date-controls input[type="date"] { width:100%; }
+}
+

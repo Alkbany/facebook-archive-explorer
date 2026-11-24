@@ -322,7 +322,7 @@ async function drainIndexQueue(database: DatabaseSync, modelCacheDirectory: stri
   }
 
   if (runtimeState.phase !== 'error') {
-    runtimeState.phase = hasPendingJobs(database) ? 'indexing' : 'ready';
+    runtimeState.phase = hasPendingJobs(database) ? 'indexing' : (extractorPromise ? 'ready' : 'idle');
     runtimeState.progressPercent = runtimeState.phase === 'ready' ? 100 : null;
     runtimeState.lastErrorCode = null;
   }

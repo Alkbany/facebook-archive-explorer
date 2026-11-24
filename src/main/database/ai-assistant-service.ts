@@ -226,10 +226,13 @@ export async function askLocalArchiveAssistant(
     throw new Error('Invalid assistant conversation history.');
   }
 
-  const previous = history.slice(-MAX_HISTORY_MESSAGES).map((item) => ({
-    role: item.role,
-    content: item.content.slice(0, MAX_HISTORY_CHARACTERS)
-  })) as ChatMessage[];
+  // Carry forward user turns only. Previous assistant answers contain citation
+  // IDs from an older evidence set and must never be treated as evidence or
+  // reused against the current answer's newly assigned source IDs.
+  const previous = history
+    .filter((item) => item.role === 'user')
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map((item) => ({ role: 'user' as const, content: item.content.slice(0, MAX_HISTORY_CHARACTERS) }));
 
   // Add the current question and recent user turns to broaden retrieval for follow-ups.
   const retrievalQuestion = [

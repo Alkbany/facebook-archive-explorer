@@ -4,7 +4,7 @@ All notable changes to Facebook Archive Explorer are documented here.
 
 The project uses Semantic Versioning. Beta releases are explicitly marked as pre-releases; the first stable release will be 1.0.0.
 
-## [0.1.0-beta.1] - First public beta
+## [0.1.0-beta.1] - 2026-11-24
 
 ### Added
 

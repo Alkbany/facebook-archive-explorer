@@ -92,10 +92,13 @@ export function listMessageConversations(
       participants = [];
     }
     const parts = row.relativePath.split('/');
+    const conversationType = parts[0]?.toLocaleLowerCase() === 'your_facebook_activity'
+      ? parts[2]
+      : parts[1];
     return {
       sourceFileId: row.sourceFileId,
       relativePath: row.relativePath,
-      conversationType: parts[1] ?? 'unknown',
+      conversationType: conversationType ?? 'unknown',
       messageCount: row.messageCount,
       participants
     };

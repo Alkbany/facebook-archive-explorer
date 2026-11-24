@@ -1500,7 +1500,7 @@ function App() {
                     setSearchedQuery(null);
                   }}>
                     <option value="exact">Exact Search</option>
-                    <option value="fuzzy">Fuzzy Search · typo tolerant</option>
+                    <option value="fuzzy" disabled={searchSection === "messages" && !includeMessagesInGlobalSearch}>Fuzzy Search · typo tolerant</option>
                   </select>
                 </label>
                 {searchMode === 'fuzzy' && (

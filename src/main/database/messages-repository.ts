@@ -189,9 +189,10 @@ export function listArchiveMediaGallery(
   snapshotId: string,
   filter: ArchiveMediaGalleryFilter = 'all',
   requestedPage = 1,
-  searchQuery = ''
+  searchQuery = '',
+  requestedPageSize = 100
 ): ArchiveMediaGalleryPage {
-  const pageSize = 50;
+  const pageSize = [50, 100, 250].includes(requestedPageSize) ? requestedPageSize : 100;
   const page = Number.isSafeInteger(requestedPage) ? Math.max(1, Math.min(1_000_000, requestedPage)) : 1;
   const query = searchQuery.trim().slice(0, 180);
   const totalRow = database.prepare(`

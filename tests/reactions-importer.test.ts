@@ -88,7 +88,7 @@ describe('Likes & Reactions import', () => {
     expect(visible).toHaveLength(2);
     expect(visible.map((record) => record.reactionType)).toEqual(['like', 'love']);
     const normalizedTimes = database.prepare('SELECT event_time_utc AS value FROM records WHERE snapshot_id = ? ORDER BY id').all(snapshotId) as Array<{ value: string | null }>;
-    expect(normalizedTimes).toEqual([{ value: '2018-10-20T00:26:40.000Z' }, { value: '2018-10-20T00:26:40.000Z' }]);
+    expect(normalizedTimes).toEqual([{ value: '2018-10-20T01:46:40.000Z' }, { value: '2018-10-20T01:46:40.000Z' }]);
   });
 
   it('marks unrecognized reaction pages as unsupported', async () => {

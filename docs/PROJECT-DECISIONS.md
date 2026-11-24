@@ -58,6 +58,7 @@ Search is a core product feature and has four distinct levels. These levels solv
 - Search eligible names, record titles and bodies, post/comment text, and supported metadata.
 - Search file names and archive paths where appropriate.
 - Support section, account/snapshot, and UTC date-range filters where the underlying date is reliable. Exclude records with missing or ambiguous `event_time_utc` values while a date filter is active; never guess a timezone.
+- For legacy HTML exports, a localized date may be normalized only when the same source file contains an explicit UTC offset in its Facebook export footer and the date matches a reviewed locale format. The original date text must remain unchanged. Unsupported formats, missing/conflicting offsets, and ambiguous dates must keep `event_time_utc` null; do not infer historical daylight-saving rules from the computer's current timezone.
 - Preserve the existing fast local SQLite FTS5 search as the baseline.
 - Exact search remains available whether or not optional AI features are installed or enabled.
 

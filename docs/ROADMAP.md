@@ -106,6 +106,7 @@
 - [x] Show parser capability separately from file processing status.
 - [x] JSON export of current search results through the native save dialog.
 - [x] Detailed diff browsing with before/after values, filters, pagination, and CSV/JSON export.
+- [x] Open saved-item and event source links only on explicit user action through validated main-process HTTP/HTTPS handling; keep arbitrary renderer navigation and new windows blocked.
 
 ## Milestone 5 — Optional local AI
 

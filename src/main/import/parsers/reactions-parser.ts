@@ -105,6 +105,10 @@ export function parseReactionsJsonExport(jsonText: string, sourceFile: string): 
     return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
   }
 
+  if (parsed.length === 0) {
+    return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
+  }
+
   const records: ReactionRecord[] = [];
   const issues: ReactionParseIssue[] = [];
   parsed.forEach((value, sourceCardIndex) => {

@@ -110,6 +110,10 @@ export function parseCommentsJsonExport(jsonText: string, sourceFile: string): C
     return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
   }
 
+  if (items.length === 0) {
+    return { records: [], issues: [{ code: 'no_cards_found', sourceCardIndex: null }] };
+  }
+
   const records: CommentActivityRecord[] = [];
   const issues: CommentsParseIssue[] = [];
   items.forEach((item, sourceCardIndex) => {

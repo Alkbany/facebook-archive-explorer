@@ -74,6 +74,11 @@ describe('Accounts Center comments_v2 JSON parser', () => {
     });
   });
 
+  it('marks an empty comments_v2 collection as having no cards', () => {
+    expect(parseCommentsJsonExport('{"comments_v2":[]}', 'comments.json').issues)
+      .toEqual([{ code: 'no_cards_found', sourceCardIndex: null }]);
+  });
+
   it('rejects unknown JSON shapes for the generic fallback', () => {
     expect(parseCommentsJsonExport('[]', 'comments.json').issues)
       .toEqual([{ code: 'no_cards_found', sourceCardIndex: null }]);

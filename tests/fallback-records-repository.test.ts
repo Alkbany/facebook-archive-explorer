@@ -26,8 +26,8 @@ describe('fallback archive records repository', () => {
     const groupSource = Number(insertSource.run(snapshotId, 'groups/groups.json', 'groups.json', 'groups', 'json', 'completed', now).lastInsertRowid);
     const securitySource = Number(insertSource.run(snapshotId, 'security_and_login_information/login.html', 'login.html', 'security_and_login_information', 'html', 'completed', now).lastInsertRowid);
     const insertRecord = database.prepare('INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type, title, body_text, event_time_raw, sensitivity, search_enabled, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    insertRecord.run(snapshotId, groupSource, 0, 'groups', 'json_item', 'Chess Club', 'Weekly games', 'Raw date', 'personal', 1, '{}', now);
-    insertRecord.run(snapshotId, groupSource, 1, 'groups', 'html_item', 'Book Club', 'Reading group', null, 'personal', 1, '{}', now);
+    insertRecord.run(snapshotId, groupSource, 0, 'groups', 'json_item', 'Chess Club', 'Weekly games 100% guaranteed', 'Raw date', 'personal', 1, '{}', now);
+    insertRecord.run(snapshotId, groupSource, 1, 'groups', 'html_item', 'Book_Club', 'Reading group', null, 'personal', 1, '{}', now);
     insertRecord.run(snapshotId, securitySource, 0, 'security_and_login_information', 'html_item', 'Login record', 'Private session', null, 'sensitive', 0, '{}', now);
   });
 
@@ -46,7 +46,7 @@ describe('fallback archive records repository', () => {
       total: 2, page: 1, pageSize: 40,
       records: [
         { sectionKey: 'groups', title: 'Chess Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 0, payloadPreview: '{}', payloadTruncated: false },
-        { sectionKey: 'groups', title: 'Book Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 1, payloadPreview: '{}', payloadTruncated: false }
+        { sectionKey: 'groups', title: 'Book_Club', sourcePath: 'groups/groups.json', sourceRecordIndex: 1, payloadPreview: '{}', payloadTruncated: false }
       ]
     });
     expect(listFallbackArchiveRecords(database, snapshotId, 'security_and_login_information', 1).records[0])
@@ -55,9 +55,13 @@ describe('fallback archive records repository', () => {
 
   it('searches only within the selected section, including sensitive records locally', () => {
     expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'Weekly'))
-      .toMatchObject({ total: 1, records: [{ title: 'Chess Club', body: 'Weekly games' }] });
+      .toMatchObject({ total: 1, records: [{ title: 'Chess Club', body: 'Weekly games 100% guaranteed' }] });
     expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'groups.json'))
       .toMatchObject({ total: 2 });
+    expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, '%'))
+      .toMatchObject({ total: 1, records: [{ title: 'Chess Club' }] });
+    expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, '_'))
+      .toMatchObject({ total: 1, records: [{ title: 'Book_Club' }] });
     expect(listFallbackArchiveRecords(database, snapshotId, 'groups', 1, 'no matching content'))
       .toMatchObject({ total: 0, records: [] });
     expect(listFallbackArchiveRecords(database, snapshotId, 'security_and_login_information', 1, 'Private'))

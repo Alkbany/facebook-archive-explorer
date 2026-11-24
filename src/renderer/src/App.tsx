@@ -48,9 +48,22 @@ const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, stri
   skipped: 'Skipped'
 };
 
-function formatFallbackPayload(payload: string): string {
+function formatFallbackPayload(
+  payload: string,
+  recordType: 'html_item' | 'json_item' | 'text_item'
+): string {
   try {
-    return JSON.stringify(JSON.parse(payload) as unknown, null, 2);
+    const parsed: unknown = JSON.parse(payload);
+    if (
+      recordType === 'text_item' &&
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'text' in parsed &&
+      typeof parsed.text === 'string'
+    ) {
+      return parsed.text;
+    }
+    return JSON.stringify(parsed, null, 2);
   } catch {
     return payload;
   }
@@ -2231,19 +2244,27 @@ function App() {
                       <span>{record.recordType === 'json_item' ? 'JSON' : record.recordType === 'text_item' ? 'TXT' : 'HTML'} · {record.sensitivity}</span>
                     </div>
                     {record.body && <p>{record.body}</p>}
-                    {record.recordType === 'json_item' && (
-                      <details className="fallback-record-payload">
-                        <summary>View original JSON fields</summary>
-                        <pre>{formatFallbackPayload(record.payloadPreview)}</pre>
-                        {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete original record remains preserved in the local database.</small>}
-                      </details>
-                    )}
+                    <details className="fallback-record-payload">
+                      <summary>
+                        {record.recordType === 'json_item'
+                          ? 'View original JSON fields'
+                          : record.recordType === 'text_item'
+                            ? 'View preserved text'
+                            : 'View extracted HTML item data'}
+                      </summary>
+                      <pre>{formatFallbackPayload(record.payloadPreview, record.recordType)}</pre>
+                      {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete stored record remains in the local database.</small>}
+                    </details>
                     <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
                   </article>
                 ))}
               </div>
             ) : (
-              <p className="fallback-records-empty">There are no preserved records in this section.</p>
+              <p className="fallback-records-empty">
+                {fallbackAppliedQuery
+                  ? 'No records match this section filter. Clear the search to see all preserved records.'
+                  : 'There are no preserved records in this section.'}
+              </p>
             )}
             {fallbackRecords && (
               <div className="fallback-record-pagination">

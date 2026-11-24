@@ -122,4 +122,4 @@ ZIP backups can be selected, inventoried, reopened, and read on demand without e
 The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.
 
 
-Generic HTML, JSON, and text fallback records are browsable in the local **Other data** workspace, grouped by source section and paginated. Sensitive sections can be viewed there but remain excluded from global full-text search.
+Generic HTML, JSON, and text fallback records are browsable in the local **Other data** workspace, grouped by source section and paginated. Sensitive sections can be viewed and filtered locally within their own section, but remain excluded from global full-text search. Stored JSON, TXT, and extracted HTML-item payloads can be inspected with bounded previews.

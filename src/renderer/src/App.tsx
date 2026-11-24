@@ -321,6 +321,7 @@ function App() {
     setComparisonReport(null);
     setMediaGallery([]);
     setMediaTotal(0);
+    setMediaFilter('all');
     setMediaPage(1);
     setPhotoAlbums([]);
     setPhotoAlbumCovers({});
@@ -347,6 +348,7 @@ function App() {
     setConversationMessages([]);
     setMediaGallery([]);
     setMediaTotal(0);
+    setMediaFilter('all');
     setMediaPage(1);
     setSelectedConversationId(null);
     setConversationFilter('');
@@ -403,6 +405,7 @@ function App() {
     setComparisonReport(null);
     setMediaGallery([]);
     setMediaTotal(0);
+    setMediaFilter('all');
     setMediaPage(1);
     setPhotoAlbums([]);
     setPhotoAlbumCovers({});

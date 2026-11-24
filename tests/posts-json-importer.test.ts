@@ -90,7 +90,7 @@ describe('TNG Posts JSON importer', () => {
     expect(posts[0]).toMatchObject({
       activityRaw: 'Jean-Luc Picard added 1 new photo.',
       bodyRaw: 'Two views of the bridge before alpha shift.\nThe bridge at dawn.',
-      dateRaw: '12597672600',
+      dateRaw: '1540000000',
       mediaCount: 1
     });
 

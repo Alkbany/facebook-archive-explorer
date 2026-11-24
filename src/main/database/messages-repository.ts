@@ -129,12 +129,12 @@ export function getMessageConversation(
 
   // Query only the selected conversation; never populate the global message FTS index.
   const normalizedQuery = normalizeSearchText(searchQuery);
-  const terms = [...new Set(normalizedQuery.match(/[\\p{L}\\p{N}_]+/gu) ?? [])];
+  const terms = [...new Set(normalizedQuery.match(/[\p{L}\p{N}_]+/gu) ?? [])];
   const searchClause = searchQuery.trim().length === 0
     ? ''
     : terms.length === 0
       ? 'AND 0 = 1'
-      : terms.map(() => "AND instr(COALESCE(normalized_text, ''), ?) > 0").join('\\n      ');
+      : terms.map(() => "AND instr(COALESCE(normalized_text, ''), ?) > 0").join('\n      ');
   const baseWhere = `
     source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
     ${searchClause}

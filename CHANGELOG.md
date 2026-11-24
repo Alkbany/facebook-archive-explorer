@@ -4,6 +4,20 @@ All notable changes to Facebook Archive Explorer are documented here.
 
 The project uses Semantic Versioning. Beta releases are explicitly marked as pre-releases; the first stable release will be 1.0.0.
 
+## [0.1.0-beta.2] - 2026-11-24
+
+### Changed
+
+- Upgrade the Electron runtime from the unsupported 37.x line to supported Electron 45.4.1.
+- Add a dedicated Groups workspace for the three reviewed Accounts Center JSON collections, keeping unknown formats in Other Data.
+- Add installer SHA-256 verification output to Windows test artifacts and GitHub Releases.
+- Correct the Groups/Other Data navigation so each view filters only its own archive sections.
+
+### Validation
+
+- TypeScript type-check, unit tests, Electron build, Windows NSIS installer build, and packaged-output verification pass in GitHub Actions.
+- Windows binaries remain unsigned unless trusted Authenticode credentials are configured. Smart App Control may block files that Microsoft does not recognize.
+
 ## [0.1.0-beta.1] - 2026-11-24
 
 ### Added

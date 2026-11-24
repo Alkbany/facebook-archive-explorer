@@ -143,8 +143,8 @@ export function validateArchiveAssistantCitations(
 ): { answer: string; citations: ArchiveAssistantCitation[] } {
   const allowed = new Map(sourceCitations.map((source) => [source.sourceId, source]));
   const used = new Set<string>();
-  const cleaned = answer.replace(/\[S(\d+)\]/gu, (marker, number: string) => {
-    const sourceId = 'S' + number;
+  const cleaned = answer.replace(/\[S([A-Za-z0-9]+)\]/gu, (marker, token: string) => {
+    const sourceId = 'S' + token;
     if (!allowed.has(sourceId)) return '';
     used.add(sourceId);
     return marker;

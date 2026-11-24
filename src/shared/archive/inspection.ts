@@ -87,7 +87,7 @@ export interface PhotoAlbumRecordSummary {
 }
 
 export interface PhotoAlbumCommentSummary {
-  authorRaw: string | null;
+  activityRaw: string | null;
   bodyRaw: string | null;
   dateRaw: string | null;
 }

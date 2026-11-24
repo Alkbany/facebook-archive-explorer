@@ -48,7 +48,7 @@ export type SectionImportCapability = 'known-html-json' | 'sampled-html-json' | 
 const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapability>> = {
   friends: 'known-html-json',
   messages: 'sampled-html',
-  posts: 'sampled-html',
+  posts: 'sampled-html-json',
   comments: 'sampled-html-json',
   likes_and_reactions: 'sampled-html-json',
   photos_and_videos: 'sampled-html'

@@ -39,6 +39,7 @@
 - [x] Implement and test the observed message HTML structure and local media references.
 - [x] Add synthetic fixtures for message cards, reactions, call-event text, and attachments.
 - [x] Implement the sampled Posts card parser/importer with local media references and searchable activity browsing.
+- [x] Parse the observed TNG `your_posts__check_ins__photos_and_videos` timeline JSON chunks into the Posts workspace and link only discovered local post media.
 - [x] Implement the sampled Comments activity-card parser/importer with separate activity, group, body, and raw-date fields.
 - [ ] Implement other activity-card sections.
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.

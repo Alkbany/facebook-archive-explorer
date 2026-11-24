@@ -19,6 +19,7 @@ describe('archive section catalogue', () => {
   it('describes parser availability separately from sampled section evidence', () => {
     expect(getArchiveImportCapability('friends')).toBe('known-html-json');
     expect(getArchiveImportCapability('messages')).toBe('sampled-html');
+    expect(getArchiveImportCapability('posts')).toBe('sampled-html-json');
     expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html');
     expect(getArchiveImportCapability('groups')).toBe('generic-fallback');
     expect(getArchiveImportCapability('events')).toBe('generic-fallback');

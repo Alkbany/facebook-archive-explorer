@@ -1481,17 +1481,17 @@ function App() {
                   <div>
                     <p className="eyebrow">YOUR ACTIVITY</p>
                     <h3>Posts</h3>
-                    <p>Original author labels and raw exported dates are preserved. Only local archive media is linked.</p>
+                    <p>Facebook activity headings and raw exported dates are preserved. Only safe local archive media references are linked.</p>
                   </div>
                   <span>{postRecords.length.toLocaleString()} records</span>
                 </div>
                 <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} placeholder="Filter posts…" />
                 <div className="media-gallery-list">
-                  {postRecords.filter((record) => [record.authorRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase())).map((record) => (
+                  {postRecords.filter((record) => [record.activityRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase())).map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">P</div>
                       <div className="media-gallery-copy">
-                        <strong>{record.authorRaw ?? 'Post'}</strong>
+                        <strong>{record.activityRaw ?? 'Post'}</strong>
                         <span>{record.bodyRaw ?? 'No text in export'}{record.mediaCount ? ` · ${record.mediaCount} attachments` : ''}</span>
                         <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
                       </div>

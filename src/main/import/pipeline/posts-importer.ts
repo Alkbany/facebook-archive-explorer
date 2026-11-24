@@ -4,7 +4,7 @@ import { normalizeSearchText } from '../../../shared/text/normalize';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
-import { parsePostsExport } from '../parsers/posts-parser';
+import { parsePostsExport, parsePostsJsonExport } from '../parsers/posts-parser';
 
 export interface PostsImportSectionResult {
   filesAttempted: number;
@@ -13,7 +13,7 @@ export interface PostsImportSectionResult {
   unsupportedFiles: number;
   failedFiles: number;
 }
-interface SourceFileRow { id: number; relative_path: string; }
+interface SourceFileRow { id: number; relative_path: string; file_name: string; detected_format: string; }
 
 function safeFailure(error: unknown): { code: string; message: string } {
   if (error instanceof ArchiveReadError) return { code: error.code, message: 'The source file could not be safely read from the selected backup.' };
@@ -28,11 +28,12 @@ function mediaKind(path: string): 'image' | 'video' | 'audio' | null {
   return null;
 }
 
-/** Imports observed posts cards and links their local media without copying files. */
+/** Imports reviewed Posts HTML cards and observed TNG timeline-post JSON files, linking only local media without copying files. */
 export async function importPostsSection(database: DatabaseSync, snapshotId: string, archiveRoot: string, onProgress?: ImportProgressReporter): Promise<PostsImportSectionResult> {
   const files = database.prepare(`
-    SELECT id, relative_path FROM source_files
-    WHERE snapshot_id = ? AND section_key = 'posts' AND detected_format = 'html'
+    SELECT id, relative_path, file_name, detected_format FROM source_files
+    WHERE snapshot_id = ? AND section_key = 'posts'
+      AND ((detected_format = 'html') OR (detected_format = 'json' AND lower(file_name) GLOB 'your_posts__check_ins__photos_and_videos*.json'))
       AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as SourceFileRow[];
@@ -60,7 +61,10 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
       .run(file.id, snapshotId);
     database.exec('SAVEPOINT posts_file');
     try {
-      const parsed = parsePostsExport(await readArchiveUtf8File(archiveRoot, file.relative_path), file.relative_path);
+      const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path);
+      const parsed = file.detected_format === 'json'
+        ? parsePostsJsonExport(sourceText.replace(/^\\uFEFF/u, ''), file.relative_path)
+        : parsePostsExport(sourceText, file.relative_path);
       const now = new Date().toISOString();
       const insertRecord = database.prepare(`
         INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type,
@@ -84,7 +88,7 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
       `);
       const getRecord = database.prepare('SELECT id FROM records WHERE source_file_id = ? AND source_record_index = ?');
       for (const record of parsed.records) {
-        const title = record.authorRaw;
+        const title = record.activityRaw;
         const normalized = normalizeSearchText([title, record.bodyRaw].filter(Boolean).join(' '));
         insertRecord.run(snapshotId, file.id, record.sourceCardIndex, title, record.bodyRaw, normalized,
           record.dateRaw, JSON.stringify({ permalink_raw: record.permalinkRaw }), now);

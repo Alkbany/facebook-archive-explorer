@@ -49,6 +49,7 @@
 - [x] Implement and test the observed message HTML structure and local media references.
 - [x] Parse the observed Accounts Center Messenger `message_*.json` chunks and link only local photo/sticker media without enabling global message search.
 - [x] Add synthetic fixtures for message cards, reactions, call-event text, and attachments.
+- [x] Deduplicate linked message attachments by archive-relative path and retain the media type from the actual image/audio/video element instead of the enclosing link.
 - [x] Implement the sampled Posts card parser/importer with local media references and searchable activity browsing.
 - [x] Parse the observed TNG `your_posts__check_ins__photos_and_videos` timeline JSON chunks into the Posts workspace and link only discovered local post media.
 - [x] Implement the sampled Comments activity-card parser/importer with separate activity, group, body, and raw-date fields.

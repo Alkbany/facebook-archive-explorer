@@ -49,10 +49,13 @@ const desktopApi: DesktopApi = {
   getMessageMediaPreview: (mediaAssetId) =>
     ipcRenderer.invoke(IPC_CHANNELS.getMessageMediaPreview, mediaAssetId),
   listMediaForSelectedBackup: (filter, page, query) => ipcRenderer.invoke(IPC_CHANNELS.listMediaForSelectedBackup, filter, page, query),
-  searchRecordsForSelectedBackup: (query, sectionKey) =>
-    ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey),
-  exportSearchResultsForSelectedBackup: (query, sectionKey) =>
-    ipcRenderer.invoke(IPC_CHANNELS.exportSearchResultsForSelectedBackup, query, sectionKey),
+  getArchiveSearchSettings: () => ipcRenderer.invoke(IPC_CHANNELS.getArchiveSearchSettings),
+  setIncludeMessagesInGlobalSearch: (enabled) =>
+    ipcRenderer.invoke(IPC_CHANNELS.setIncludeMessagesInGlobalSearch, enabled),
+  searchRecordsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>
+    ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey, mode, similarityThreshold),
+  exportSearchResultsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>
+    ipcRenderer.invoke(IPC_CHANNELS.exportSearchResultsForSelectedBackup, query, sectionKey, mode, similarityThreshold),
   compareArchiveSnapshots: (baselineSnapshotId, comparedSnapshotId) =>
     ipcRenderer.invoke(IPC_CHANNELS.compareArchiveSnapshots, baselineSnapshotId, comparedSnapshotId),
   listArchiveComparisonChanges: (baselineSnapshotId, comparedSnapshotId, filter, sectionKey, query, page) =>

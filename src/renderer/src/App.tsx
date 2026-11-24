@@ -58,6 +58,16 @@ function isUtcDateInRange(value: string | null, from: string, to: string): boole
   return true;
 }
 
+function formatActivityDate(dateRaw: string | null, eventTimeUtc: string | null): string {
+  if (!eventTimeUtc) return dateRaw ?? 'Date not provided';
+  const date = new Date(eventTimeUtc);
+  if (!Number.isFinite(date.getTime())) return dateRaw ?? 'Date not provided';
+  const localDate = date.toLocaleString();
+  return dateRaw
+    ? localDate + ' local · Original: ' + dateRaw
+    : localDate + ' local';
+}
+
 function ActivityDateFilters(props: {
   from: string;
   to: string;
@@ -1536,7 +1546,7 @@ function App() {
                       <div className="media-gallery-copy">
                         <strong>{record.activityRaw ?? 'Post'}</strong>
                         <span>{record.bodyRaw ?? 'No text in export'}{record.mediaCount ? ` · ${record.mediaCount} attachments` : ''}</span>
-                        <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
+                        <small>{formatActivityDate(record.dateRaw, record.eventTimeUtc)} · {record.sourcePath}</small>
                       </div>
                     </article>
                   ))}
@@ -1728,7 +1738,7 @@ function App() {
                       <div className="media-gallery-copy">
                         <strong>{record.activityRaw ?? 'Comment activity'}</strong>
                         <span>{record.bodyRaw ?? 'No comment text in export'}</span>
-                        <small>{record.groupRaw ? `Group: ${record.groupRaw} · ` : ''}{record.dateRaw ?? 'Date not provided'}</small>
+                        <small>{record.groupRaw ? `Group: ${record.groupRaw} · ` : ''}{formatActivityDate(record.dateRaw, record.eventTimeUtc)}</small>
                         <small>{record.sourcePath}</small>
                       </div>
                     </article>
@@ -1774,7 +1784,7 @@ function App() {
                       <div className="media-gallery-copy">
                         <strong>{record.reactionType ?? 'Unclassified reaction'}</strong>
                         <span>{record.descriptionRaw ?? 'No description in export'}</span>
-                        <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath}</small>
+                        <small>{formatActivityDate(record.dateRaw, record.eventTimeUtc)} · {record.sourcePath}</small>
                       </div>
                     </article>
                   ))}
@@ -2310,7 +2320,7 @@ function App() {
                       <pre>{formatFallbackPayload(record.payloadPreview, record.recordType)}</pre>
                       {record.payloadTruncated && <small>Preview limited to the first 20,000 characters. The complete stored record remains in the local database.</small>}
                     </details>
-                    <small>{record.dateRaw ?? 'Date not provided'} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
+                    <small>{formatActivityDate(record.dateRaw, record.eventTimeUtc)} · {record.sourcePath} · Item {record.sourceRecordIndex + 1}</small>
                   </article>
                 ))}
               </div>

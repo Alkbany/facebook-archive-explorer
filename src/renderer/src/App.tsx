@@ -436,6 +436,7 @@ function App() {
     setReactionsImport(null);
     setReactionRecords([]);
     setReactionFilter('');
+    conversationListRequestGate.current.invalidate();
     setConversations([]);
     setConversationsPage(1);
     setConversationsTotal(0);
@@ -449,6 +450,7 @@ function App() {
     setMediaQuery('');
     setMediaQueryInput('');
     setMediaPage(1);
+    conversationListRequestGate.current.invalidate();
     setSelectedConversationId(null);
     setSelectedConversationSummary(null);
     setConversationsPage(1);
@@ -2522,7 +2524,7 @@ function App() {
                 {messagesImport.failedFiles} failed
               </p>
             )}
-            {(messagesImport || conversationsTotal > 0 || conversations.length > 0) && (
+            {(messagesImport || conversationsTotal > 0 || conversations.length > 0 || conversationAppliedFilter !== '') && (
               <section className="conversation-workspace" id="conversation-explorer">
                 <div className="conversation-workspace-heading">
                   <div>

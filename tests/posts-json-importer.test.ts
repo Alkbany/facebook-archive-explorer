@@ -41,7 +41,7 @@ describe('TNG Posts JSON importer', () => {
 
     const postPath = 'your_facebook_activity/posts/your_posts__check_ins__photos_and_videos_1.json';
     const source = [{
-      timestamp: 12597672600,
+      timestamp: 1540000000,
       attachments: [
         { data: [{ media: {
           uri: 'your_facebook_activity/posts/media/your_posts/200000000000003.png',
@@ -105,8 +105,9 @@ describe('TNG Posts JSON importer', () => {
     }]);
 
     const record = database.prepare(
-      'SELECT body_text AS body FROM records WHERE snapshot_id = ? AND section_key = ?'
-    ).get(snapshotId, 'posts') as { body: string };
+      'SELECT body_text AS body, event_time_utc AS eventTimeUtc FROM records WHERE snapshot_id = ? AND section_key = ?'
+    ).get(snapshotId, 'posts') as { body: string; eventTimeUtc: string | null };
+    expect(record.eventTimeUtc).toBe('2018-10-20T00:26:40.000Z');
     expect(record.body).not.toContain('Deck 10');
     expect(record.body).not.toContain('10.0.0.1');
     const indexedPlace = database.prepare(

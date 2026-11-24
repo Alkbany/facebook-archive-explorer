@@ -95,7 +95,7 @@ The following work is still required for a complete 1.0 release. A discovered fi
 - Broader Photos & Videos coverage for album layouts and media metadata not currently recognized. Image dimensions are read from bounded PNG/JPEG/GIF/WebP prefixes; video duration is currently limited to MP4/MOV/M4V headers found within a bounded 2 MiB prefix.
 - Evidence-backed parsing of raw Facebook date formats and date-range filters. Original date strings are retained where a reliable normalized date is not available.
 - Durable checkpoints within a single large source file. Current recovery is atomic per file; pause/resume takes effect after the active file transaction finishes.
-- Optional local embeddings and local LLM integration, disabled by default.
+- Four-level search roadmap: Exact Search (current FTS5 baseline), Fuzzy Search (typo tolerance), optional local Semantic Search (embeddings), and optional evidence-grounded AI Assistant (LLM). Only Exact Search is currently implemented; see [approved project decisions](docs/PROJECT-DECISIONS.md).
 - Large-archive performance benchmarks and end-to-end validation against a complete real Facebook export.
 - Clean-device Windows install, launch, upgrade, and uninstall smoke tests; final privacy/security review and release checklist.
 - A trusted Windows signing identity, code-signing provider onboarding, and Smart App Control validation. Test installers may remain unsigned until signing is configured.
@@ -109,6 +109,7 @@ The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive
 - [Import pipeline](docs/IMPORT-PIPELINE.md)
 - [Data model](docs/DATA-MODEL.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Approved project decisions](docs/PROJECT-DECISIONS.md)
 - [Windows code signing](docs/CODE-SIGNING.md)
 
 

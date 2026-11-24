@@ -7,6 +7,7 @@ import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, I
 import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from '../../shared/archive/comparison';
 import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
 import type { ArchiveSearchMode } from '../../shared/archive/search';
+import type { AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -35,6 +36,8 @@ import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscov
 import { searchArchiveRecords } from '../database/search-repository';
 import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../database/search-settings-repository';
 import { createSemanticQueryEmbedding, getSemanticSearchStatus, processSemanticIndexQueue, retryFailedSemanticJobs, searchSemanticArchiveRecords } from '../database/semantic-search-service';
+import { askLocalArchiveAssistant, getAiAssistantStatus, prepareAiAssistant } from '../database/ai-assistant-service';
+import { setAiAssistantEnabled } from '../database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
@@ -50,6 +53,10 @@ export function getSelectedSnapshotId(): string | null { return selectedSnapshot
 
 function getSemanticModelCacheDirectory(): string {
   return join(app.getPath('userData'), 'models');
+}
+
+function getAiAssistantModelCacheDirectory(): string {
+  return join(app.getPath('userData'), 'models', 'assistant');
 }
 
 export function registerIpcHandlers(
@@ -402,6 +409,52 @@ export function registerIpcHandlers(
     retryFailedSemanticJobs(database);
     void processSemanticIndexQueue(database, getSemanticModelCacheDirectory()).catch(() => undefined);
     return getSemanticSearchStatus(database);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.getAiAssistantStatus, () => getAiAssistantStatus(database));
+
+  ipcMain.handle(IPC_CHANNELS.setAiAssistantEnabled, (_event, enabled: unknown) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid AI Assistant setting.');
+    setAiAssistantEnabled(database, enabled);
+    if (enabled) {
+      void prepareAiAssistant(database, getAiAssistantModelCacheDirectory()).catch(() => undefined);
+    }
+    return getAiAssistantStatus(database);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.askArchiveAssistant, async (
+    _event, question: unknown, sectionKey: unknown, history: unknown
+  ) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before asking the archive assistant.');
+    if (
+      typeof question !== 'string' || question.trim().length < 2 || question.length > 2_000 ||
+      !(sectionKey === null || typeof sectionKey === 'string') ||
+      !Array.isArray(history) || history.length > 12
+    ) {
+      throw new Error('Invalid archive assistant request.');
+    }
+    if (typeof sectionKey === 'string' && !getArchiveSection(sectionKey)) {
+      throw new Error('The requested archive section is not recognized.');
+    }
+    const safeHistory: AiAssistantHistoryMessage[] = history.map((item: unknown) => {
+      if (
+        typeof item !== 'object' || item === null ||
+        !('role' in item) || !('content' in item) ||
+        (item.role !== 'user' && item.role !== 'assistant') ||
+        typeof item.content !== 'string' || item.content.length > 4_000
+      ) {
+        throw new Error('Invalid assistant conversation history.');
+      }
+      return { role: item.role, content: item.content };
+    });
+    return askLocalArchiveAssistant(
+      database,
+      selectedSnapshotId,
+      question,
+      getAiAssistantModelCacheDirectory(),
+      sectionKey,
+      safeHistory
+    );
   });
 
   ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, async (

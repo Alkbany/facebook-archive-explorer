@@ -13,7 +13,8 @@ import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../src/ma
 const migrations = [
   { version: 1, name: 'initial_schema', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8') },
   { version: 2, name: 'unique_account_display_names', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') },
-  { version: 6, name: 'search_preferences', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8') }
+  { version: 6, name: 'search_preferences', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8') },
+  { version: 7, name: 'semantic_search', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/007_semantic_search.sql'), 'utf8') }
 ];
 
 describe('archive-wide media, search, and comparison', () => {

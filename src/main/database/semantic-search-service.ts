@@ -257,6 +257,10 @@ async function drainIndexQueue(database: DatabaseSync, modelCacheDirectory: stri
     WHERE model_id = ? AND model_version = ? AND status = 'processing'
   `).run(new Date().toISOString(), SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
 
+  // Loading/downloading happens only after the user enabled this feature.
+  // Load even for an empty archive so the explicit enable action prepares the model.
+  const extractor = await getFeatureExtractor(modelCacheDirectory);
+
   while (true) {
     const currentEnabled = database.prepare(
       "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'semantic_search_enabled'"
@@ -292,7 +296,6 @@ async function drainIndexQueue(database: DatabaseSync, modelCacheDirectory: stri
     try {
       runtimeState.phase = 'indexing';
       runtimeState.progressPercent = null;
-      const extractor = await getFeatureExtractor(modelCacheDirectory);
       const vectors = await embedTexts(extractor, batch.map(makePassageText));
       saveBatch(database, batch, vectors);
       runtimeState.lastErrorCode = null;

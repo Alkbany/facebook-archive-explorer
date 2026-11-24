@@ -24,7 +24,7 @@ describe('facebookDateToUtc', () => {
     expect(facebookDateToUtc(null)).toBeNull();
     expect(facebookDateToUtc('')).toBeNull();
     expect(facebookDateToUtc('not a date')).toBeNull();
-    expect(facebookDateToUtc('1234567890')).toBeNull();
+    expect(facebookDateToUtc('123456789')).toBeNull();
     expect(facebookDateToUtc('9999999999999')).toBeNull();
   });
 });

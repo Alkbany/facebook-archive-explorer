@@ -27,7 +27,7 @@ import type {
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
-import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
+import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import type { ArchiveSearchResult } from '../../shared/archive/search';
 import type {
   ArchiveComparisonReport,
@@ -208,6 +208,9 @@ function App() {
   const [conversations, setConversations] = useState<MessageConversationSummary[]>([]);
   const [conversationMessages, setConversationMessages] = useState<MessageRecordSummary[]>([]);
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
+  const [mediaTotal, setMediaTotal] = useState(0);
+  const [mediaPage, setMediaPage] = useState(1);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [photoAlbums, setPhotoAlbums] = useState<PhotoAlbumRecordSummary[]>([]);
   const [albumFilter, setAlbumFilter] = useState('');
   const [photoAlbumCovers, setPhotoAlbumCovers] = useState<Record<number, string>>({});
@@ -215,7 +218,7 @@ function App() {
   const [selectedPhotoAlbum, setSelectedPhotoAlbum] = useState<PhotoAlbumRecordSummary | null>(null);
   const [photoAlbumDetail, setPhotoAlbumDetail] = useState<PhotoAlbumDetailView | null>(null);
   const [isLoadingPhotoAlbum, setIsLoadingPhotoAlbum] = useState(false);
-  const [mediaFilter, setMediaFilter] = useState('all');
+  const [mediaFilter, setMediaFilter] = useState<ArchiveMediaGalleryFilter>('all');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
@@ -317,6 +320,8 @@ function App() {
     setSearchedSection('all');
     setComparisonReport(null);
     setMediaGallery([]);
+    setMediaTotal(0);
+    setMediaPage(1);
     setPhotoAlbums([]);
     setPhotoAlbumCovers({});
     setPhotoAlbumCoverFailures({});
@@ -341,6 +346,8 @@ function App() {
     setConversations([]);
     setConversationMessages([]);
     setMediaGallery([]);
+    setMediaTotal(0);
+    setMediaPage(1);
     setSelectedConversationId(null);
     setConversationFilter('');
 
@@ -353,13 +360,15 @@ function App() {
       const report = await window.desktopApi.inspectSelectedBackup();
       setInspection(report);
       const [media, issues, coverage, backups, files] = await Promise.all([
-        window.desktopApi.listMediaForSelectedBackup(),
+        window.desktopApi.listMediaForSelectedBackup('all', 1),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listArchiveSnapshots(),
         window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1)
       ]);
-      setMediaGallery(media);
+      setMediaGallery(media.items);
+      setMediaTotal(media.total);
+      setMediaPage(media.page);
       setImportIssueReport(issues);
       setImportCoverage(coverage);
       setArchiveFileDirectory(files);
@@ -393,6 +402,8 @@ function App() {
     setSearchedSection('all');
     setComparisonReport(null);
     setMediaGallery([]);
+    setMediaTotal(0);
+    setMediaPage(1);
     setPhotoAlbums([]);
     setPhotoAlbumCovers({});
     setPhotoAlbumCoverFailures({});
@@ -435,7 +446,7 @@ function App() {
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
-        window.desktopApi.listMediaForSelectedBackup(),
+        window.desktopApi.listMediaForSelectedBackup('all', 1),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
@@ -447,7 +458,9 @@ function App() {
       setCommentRecords(comments);
       setReactionRecords(reactions);
       setConversations(foundConversations);
-      setMediaGallery(media);
+      setMediaGallery(media.items);
+      setMediaTotal(media.total);
+      setMediaPage(media.page);
       setPhotoAlbums(albums);
       setFriendDirectory(friends);
       setFriendPage(friends.page);
@@ -506,12 +519,26 @@ function App() {
     }
   }
 
-  async function refreshMediaGallery() {
+  async function loadMediaGallery(
+    filter: ArchiveMediaGalleryFilter = mediaFilter,
+    page: number = mediaPage
+  ) {
+    setIsLoadingMedia(true);
     try {
-      setMediaGallery(await window.desktopApi.listMediaForSelectedBackup());
+      const result = await window.desktopApi.listMediaForSelectedBackup(filter, page);
+      setMediaGallery(result.items);
+      setMediaTotal(result.total);
+      setMediaPage(result.page);
+      setMediaFilter(filter);
     } catch {
       setError('The local media index could not be refreshed.');
+    } finally {
+      setIsLoadingMedia(false);
     }
+  }
+
+  async function refreshMediaGallery() {
+    await loadMediaGallery(mediaFilter, mediaPage);
   }
 
   async function refreshImportIssues() {
@@ -951,7 +978,7 @@ function App() {
   }
 
   const selectedConversation = conversations.find((item) => item.sourceFileId === selectedConversationId) ?? null;
-  const visibleMedia = mediaGallery.filter((media) => mediaFilter === 'all' || media.mediaKind === mediaFilter);
+  const visibleMedia = mediaGallery;
   const visibleConversations = conversations.filter((item) => {
     const haystack = [item.relativePath, item.conversationType, ...item.participants].join(' ').toLocaleLowerCase();
     return haystack.includes(conversationFilter.trim().toLocaleLowerCase());
@@ -1934,16 +1961,23 @@ function App() {
                   <h3>Unified media library</h3>
                   <p>Images, videos, and audio files are indexed from the full backup, including files not yet linked to an imported record. Original media stays in place.</p>
                 </div>
-                <span>{mediaGallery.length.toLocaleString()} references{mediaGallery.length === 1000 ? ' · first 1,000 shown' : ''}</span>
+                <span>{mediaTotal.toLocaleString()} files in this backup</span>
               </div>
               <div className="media-gallery-filters">
-                {['all', 'image', 'sticker', 'video', 'audio'].map((kind) => (
-                  <button key={kind} className={mediaFilter === kind ? 'active' : ''} onClick={() => setMediaFilter(kind)}>
+                {(['all', 'image', 'sticker', 'video', 'audio'] as ArchiveMediaGalleryFilter[]).map((kind) => (
+                  <button
+                    key={kind}
+                    className={mediaFilter === kind ? 'active' : ''}
+                    onClick={() => void loadMediaGallery(kind, 1)}
+                    disabled={isLoadingMedia}
+                  >
                     {kind === 'all' ? 'All media' : kind}
                   </button>
                 ))}
               </div>
-              {visibleMedia.length === 0 ? (
+              {isLoadingMedia ? (
+                <div className="conversation-empty">Loading media files…</div>
+              ) : visibleMedia.length === 0 ? (
                 <div className="conversation-empty">No {mediaFilter === 'all' ? '' : mediaFilter + ' '}files of this type were found in the backup inventory.</div>
               ) : (
                 <div className="media-gallery-list">
@@ -1963,6 +1997,30 @@ function App() {
                       <button className="media-gallery-open" onClick={() => void openMedia(media)}>Open</button>
                     </article>
                   ))}
+                </div>
+              )}
+              {mediaTotal > 0 && (
+                <div className="archive-files-pagination">
+                  <span>
+                    Showing {((mediaPage - 1) * 50) + 1}–{Math.min(mediaPage * 50, mediaTotal)} of {mediaTotal.toLocaleString()} files
+                  </span>
+                  <div>
+                    <button
+                      className="secondary-button"
+                      onClick={() => void loadMediaGallery(mediaFilter, mediaPage - 1)}
+                      disabled={isLoadingMedia || mediaPage <= 1}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {mediaPage} / {Math.max(1, Math.ceil(mediaTotal / 50))}</span>
+                    <button
+                      className="secondary-button"
+                      onClick={() => void loadMediaGallery(mediaFilter, mediaPage + 1)}
+                      disabled={isLoadingMedia || mediaPage >= Math.max(1, Math.ceil(mediaTotal / 50))}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </section>

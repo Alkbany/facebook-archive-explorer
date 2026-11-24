@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('renderer Content Security Policy', () => {
   const html = readFileSync(join(process.cwd(), 'src/renderer/index.html'), 'utf8');
-  const policy = html.match(/http-equiv="Content-Security-Policy"\\s+content="([^"]+)"/u)?.[1] ?? '';
+  const policy = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/u)?.[1] ?? '';
 
   it('keeps script execution and active content restricted to the local application', () => {
     expect(policy).toContain("default-src 'self'");

@@ -83,12 +83,12 @@
 - [x] On-demand in-app image/audio/video viewer with native playback controls (24 MB audio/video preview limit).
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).
 - [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
-- [x] Unified local full-text search with section filtering across eligible records (Exact Search baseline only).
-- [ ] **Exact Search completion:** exact phrases, names, archive paths/file names, date filters where reliable, and consistent account/snapshot/section scope.
-- [ ] **Fuzzy Search (no LLM):** typo-tolerant character matching for missing, extra, substituted, and transposed characters; Arabic-aware normalization; adjustable similarity threshold; ranked results with match-type labels.
-- [ ] **Message global-search privacy control:** an independent opt-in setting, off by default, controlling whether message content is eligible for global exact/fuzzy/semantic indexes. Section-scoped Messages browsing remains available while this is off.
-- [ ] **Unified search UI:** expose Exact, Fuzzy, Semantic, and AI Assistant as distinct modes; explain why each result matched and retain navigable source provenance.
-- [ ] **Search quality tests:** Arabic and English cases, exact phrases, common typos, threshold boundaries, false-positive control, sensitive-message exclusions, and large-archive performance.
+- [x] Exact Search: FTS5 literal-term and quoted-phrase search, Arabic-aware normalization, section filters, and JSON export.
+- [x] Exact metadata search for archive paths, file names, and raw/normalized dates where the source date is reliable.
+- [x] Fuzzy Search (no LLM): local token-vocabulary candidate lookup and Damerau-style distance scoring for missing, extra, substituted, and adjacent-transposed characters, with adjustable similarity threshold and per-result match labels.
+- [x] Message global-search privacy control: an independent opt-in setting, off by default, with a separate local FTS5 index; disabling it clears message text from that index. Section-scoped Messages search remains available as an on-demand exact scan.
+- [x] Unified Search UI exposes Exact, Fuzzy, and optional Semantic Search distinctly, with source file/card provenance and match labels.
+- [ ] Broader Search quality and performance validation against large, complete Arabic/English Facebook exports, including false-positive analysis and date-format edge cases.
 - [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.
 - [x] Add date-range controls to Posts, Comments, and Likes & Reactions using stored normalized UTC timestamps. Records with only raw/localized date strings are excluded while a date range is active rather than assigned a guessed timezone.
 - [ ] Add evidence-backed timezone handling for localized Facebook HTML dates where the export supplies enough context; then extend date-range filters to those records and other relevant workspaces.
@@ -104,21 +104,20 @@
 
 ## Milestone 5 — Optional local AI
 
-- [ ] **Semantic Search:** configurable multilingual local embedding model, independent from any LLM; disabled by default.
-- [ ] Generate and persist embeddings incrementally during eligible record import, in bounded batches and under the same file-level durability rules.
-- [ ] Backfill embeddings for already-imported eligible records if Semantic Search is enabled later, without requiring archive re-import.
-- [ ] Persist per-record/model indexing state and checkpoints; resume after restart; retry failed batches independently of archive import success.
-- [ ] Track embedding model/version and support controlled semantic-index rebuilds after model changes.
-- [ ] Show model download, availability, indexing progress, errors, and storage/resource controls. Download model assets only after explicit user enablement.
-- [ ] **AI Assistant:** optional local LLM, independently configurable from Semantic Search and disabled by default.
-- [ ] Ground multi-part natural-language answers in retrieved archive records; include navigable source references (account, snapshot, section, file, record/date where available).
-- [ ] Refuse to invent missing names, dates, relationships, or content; explain when archive evidence is incomplete.
-- [ ] Keep all archive content local; no automatic external embedding/LLM service calls or archive upload.
+- [x] **Semantic Search foundation:** local multilingual `Xenova/multilingual-e5-small` feature-extraction runtime, persisted 384-dimensional vectors, and a separate semantic retrieval mode.
+- [x] Generate embeddings incrementally between Import All sections and after individual section imports, in bounded batches that do not fail the archive import.
+- [x] Backfill eligible existing records when Semantic Search is enabled later; no archive re-import is required.
+- [x] Persist model-versioned jobs and vectors in SQLite; reset interrupted processing jobs on restart and allow failed jobs to be retried.
+- [x] Show model download/loading/indexing state and progress; Semantic Search is disabled by default and starts downloading only after explicit enablement.
+- [ ] Validate actual model download, inference, Arabic/English semantic relevance, storage usage, and performance on a clean Windows device with a representative archive.
+- [x] **AI Assistant foundation:** separate opt-in local Qwen2.5-0.5B-Instruct runtime, independent from Semantic Search.
+- [x] Retrieve local archive evidence, answer through a bounded local conversation context, and validate citation IDs before exposing navigable source cards.
+- [x] Exclude sensitive message content unless the independent message-search setting is enabled; no archive text is sent to a cloud inference provider.
+- [ ] Validate real model inference, Arabic response quality, citation completeness, and grounding against adversarial/instruction-like text inside archived content. The small model may be less reliable than larger local models.
+- [ ] Add a richer evidence-ranking pass (hybrid lexical + semantic retrieval when Semantic Search is enabled), multi-snapshot/compare queries, and stronger citation coverage validation.
 - [ ] AI failure or disabled models must never disable archive browsing, Exact Search, or Fuzzy Search.
 
-- [ ] Configurable local embeddings and local LLM, disabled by default.
-- [ ] Source references for archive-grounded answers.
-- [ ] Resource controls and model status.
+
 
 ## Milestone 6 — Windows release
 

@@ -119,6 +119,35 @@ describe('Marketplace and Saved Items JSON importers', () => {
     expect(listings.map((item) => item.title)).toContain('Unmatched second listing');
   });
 
+  it('fills a missing listing description from the matched label-value details', async () => {
+    await addJsonFile('marketplace', 'facebook_marketplace/items_sold.json', 'items_sold.json', {
+      items_selling_v2: [{
+        title: 'Description supplied by details',
+        price: '$25',
+        created_timestamp: 1_791_220_991
+      }]
+    });
+    await addJsonFile('marketplace', 'your_facebook_activity/facebook_marketplace/your_marketplace_items.json',
+      'your_marketplace_items.json', {
+        fbid: 'synthetic-description-fbid',
+        label_values: [
+          { label: 'Title', value: 'Description supplied by details' },
+          { label: 'Creation time', timestamp_value: 1_791_220_991 },
+          { label: 'Description', value: 'Description recovered from the details file' }
+        ]
+      });
+
+    await importMarketplaceJsonSection(database, snapshotId, root);
+
+    expect(listMarketplaceListings(database, snapshotId)).toMatchObject([
+      {
+        title: 'Description supplied by details',
+        facebookId: 'synthetic-description-fbid',
+        description: 'Description recovered from the details file'
+      }
+    ]);
+  });
+
   it('retains a listing record when the optional details file is absent', async () => {
     await addJsonFile('marketplace', 'facebook_marketplace/items_sold.json', 'items_sold.json', {
       items_selling_v2: [{ title: 'Standalone listing', price: '$10', created_timestamp: 1_791_220_991 }]

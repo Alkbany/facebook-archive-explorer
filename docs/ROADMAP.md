@@ -102,8 +102,8 @@
 - [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup; automated unit/build checks do not replace this validation.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
 - [x] Add secure CI support for a trusted Windows code-signing certificate; require signature verification before version-tag releases and skip main-branch artifact uploads when unsigned.
-- [ ] Configure a trusted signing identity; no certificate is currently available in repository secrets.
-- [ ] Complete code-signing provider onboarding and verify Smart App Control behavior on a clean Windows 11 device.
+- [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not depend on a paid certificate; the main-branch test installer is intentionally unsigned and requires Smart App Control to be off while using it.
+- [ ] (Only if public distribution is planned) Verify signed release behavior on a clean Windows 11 device.
 - [ ] Final privacy/security review and release checklist.
 
 ## Next implementation order

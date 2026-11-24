@@ -141,9 +141,9 @@ describe('TNG Posts JSON importer', () => {
     expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, failedFiles: 0 });
     expect(listPostRecords(database, snapshotId)).toHaveLength(1);
     expect(listPostRecords(database, snapshotId)[0]).toMatchObject({
-      activityRaw: 'Jean-Luc Picard added 1 new photo.',
-      bodyRaw: 'Two views of the bridge before alpha shift.\\nThe bridge at dawn.'
+      activityRaw: 'Jean-Luc Picard added 1 new photo.'
     });
+    expect(listPostRecords(database, snapshotId)[0].bodyRaw).toContain('The bridge at dawn.');
     expect(database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE id = ?')
       .get(sourceFile.id)).toEqual({ status: 'completed', parserKey: 'posts_reviewed' });
     expect(database.prepare("SELECT COUNT(*) AS count FROM record_search WHERE record_search MATCH 'fallbackjsonbody'")

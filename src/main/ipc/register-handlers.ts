@@ -35,10 +35,9 @@ import { getMessageConversation, listMessageConversations, listMessageMediaGalle
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscoveredVideoDurations } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
-import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../database/search-settings-repository';
+import { getArchiveSearchSettings, setAiAssistantEnabled, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../database/search-settings-repository';
 import { createSemanticQueryEmbedding, getSemanticSearchStatus, processSemanticIndexQueue, retryFailedSemanticJobs, searchSemanticArchiveRecords } from '../database/semantic-search-service';
 import { askLocalArchiveAssistant, getAiAssistantStatus, prepareAiAssistant } from '../database/ai-assistant-service';
-import { setAiAssistantEnabled } from '../database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';

@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { ArchiveMediaGalleryItem } from '../../shared/archive/media';
+import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from '../../shared/archive/media';
 
 export interface MessageConversationSummary {
   sourceFileId: number;
@@ -178,9 +178,38 @@ export function listMessageMediaGallery(
 }
 
  
-/** Lists discovered media from all archive sections, including files without a parsed record association. */
-export function listArchiveMediaGallery(database: DatabaseSync, snapshotId: string): ArchiveMediaGalleryItem[] {
-  return database.prepare(`
+/**
+ * Lists one page of distinct discovered media files. Multiple records may
+ * reference the same asset; the gallery shows that file once and selects its
+ * first stable association for context. Filtering and pagination run in SQLite
+ * so large backups do not require loading the entire media inventory in React.
+ */
+export function listArchiveMediaGallery(
+  database: DatabaseSync,
+  snapshotId: string,
+  filter: ArchiveMediaGalleryFilter = 'all',
+  requestedPage = 1
+): ArchiveMediaGalleryPage {
+  const pageSize = 50;
+  const page = Number.isSafeInteger(requestedPage) ? Math.max(1, Math.min(1_000_000, requestedPage)) : 1;
+  const totalRow = database.prepare(`
+    SELECT COUNT(*) AS total
+    FROM media_assets
+    WHERE snapshot_id = ? AND (? = 'all' OR media_kind = ?)
+  `).get(snapshotId, filter, filter) as { total: number };
+  const total = Number(totalRow.total);
+  const maxPage = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, maxPage);
+
+  const items = database.prepare(`
+    WITH primary_links AS (
+      SELECT media_asset_id, record_id, role,
+        ROW_NUMBER() OVER (
+          PARTITION BY media_asset_id
+          ORDER BY display_order ASC, record_id ASC
+        ) AS link_rank
+      FROM record_media
+    )
     SELECT assets.id AS id, records.id AS recordId,
       assets.relative_path AS relativePath, assets.media_kind AS mediaKind,
       links.role AS role, media_source.id AS sourceFileId,
@@ -193,10 +222,17 @@ export function listArchiveMediaGallery(database: DatabaseSync, snapshotId: stri
     FROM media_assets AS assets
     LEFT JOIN source_files AS media_source ON media_source.id = assets.source_file_id
       AND media_source.snapshot_id = assets.snapshot_id
-    LEFT JOIN record_media AS links ON links.media_asset_id = assets.id
+    LEFT JOIN primary_links AS links ON links.media_asset_id = assets.id AND links.link_rank = 1
     LEFT JOIN records ON records.id = links.record_id AND records.snapshot_id = assets.snapshot_id
-    WHERE assets.snapshot_id = ?
-    ORDER BY sourcePath COLLATE NOCASE, records.source_record_index ASC, links.display_order ASC
-    LIMIT 1000
-  `).all(snapshotId) as unknown as ArchiveMediaGalleryItem[];
+    WHERE assets.snapshot_id = ? AND (? = 'all' OR assets.media_kind = ?)
+    ORDER BY sourcePath COLLATE NOCASE, assets.relative_path COLLATE NOCASE, assets.id ASC
+    LIMIT ? OFFSET ?
+  `).all(snapshotId, filter, filter, pageSize, (safePage - 1) * pageSize);
+
+  return {
+    items: items as unknown as ArchiveMediaGalleryPage['items'],
+    page: safePage,
+    pageSize,
+    total
+  };
 }

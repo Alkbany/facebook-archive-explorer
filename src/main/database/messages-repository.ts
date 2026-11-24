@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { normalizeSearchText } from '../../shared/text/normalize';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from '../../shared/archive/media';
 import { MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationPage } from '../../shared/archive/messages';
 
@@ -111,7 +112,8 @@ export function getMessageConversation(
   database: DatabaseSync,
   snapshotId: string,
   sourceFileId: number,
-  requestedPage = 1
+  requestedPage = 1,
+  searchQuery = ''
 ): MessageConversationPage {
   const source = database.prepare(`
     SELECT id FROM source_files
@@ -121,12 +123,26 @@ export function getMessageConversation(
   if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) {
     throw new Error('The requested conversation page is invalid.');
   }
+  if (typeof searchQuery !== 'string' || searchQuery.length > 120) {
+    throw new Error('The conversation search query is invalid.');
+  }
 
+  // Query only the selected conversation; never populate the global message FTS index.
+  const normalizedQuery = normalizeSearchText(searchQuery);
+  const terms = [...new Set(normalizedQuery.match(/[\\p{L}\\p{N}_]+/gu) ?? [])];
+  const searchClause = searchQuery.trim().length === 0
+    ? ''
+    : terms.length === 0
+      ? 'AND 0 = 1'
+      : terms.map(() => "AND instr(COALESCE(normalized_text, ''), ?) > 0").join('\\n      ');
+  const baseWhere = `
+    source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
+    ${searchClause}
+  `;
+  const parameters = [sourceFileId, snapshotId, ...terms];
   const totalRow = database.prepare(`
-    SELECT COUNT(*) AS total
-    FROM records
-    WHERE source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
-  `).get(sourceFileId, snapshotId) as { total: number };
+    SELECT COUNT(*) AS total FROM records WHERE ${baseWhere}
+  `).get(...parameters) as { total: number };
   const total = Number(totalRow.total);
   const maxPage = Math.max(1, Math.ceil(total / MESSAGE_CONVERSATION_PAGE_SIZE));
   const page = Math.min(requestedPage, maxPage);
@@ -135,11 +151,11 @@ export function getMessageConversation(
       body_text AS body, event_time_raw AS timestampRaw, payload_json AS payloadJson,
       record_type AS recordType
     FROM records
-    WHERE source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
+    WHERE ${baseWhere}
     ORDER BY source_record_index ASC, id ASC
     LIMIT ? OFFSET ?
   `).all(
-    sourceFileId, snapshotId, MESSAGE_CONVERSATION_PAGE_SIZE,
+    ...parameters, MESSAGE_CONVERSATION_PAGE_SIZE,
     (page - 1) * MESSAGE_CONVERSATION_PAGE_SIZE
   ) as unknown as MessageRow[];
 

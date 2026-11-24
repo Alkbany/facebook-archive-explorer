@@ -44,6 +44,7 @@ HTML must be parsed with a DOM parser. External URLs found in exports are data o
 ## Search and local AI pipeline
 
 - Exact Search and Fuzzy Search use local SQLite indexes only.
+- Conversation-scoped message search uses a parameterized SQLite query restricted to the selected conversation and paginates at 50 results; it does not populate or depend on the global message FTS5 index.
 - Sensitive Messages content is held in a separate opt-in FTS5 index.
 - Semantic Search uses a separate local embedding pipeline. SQLite stores model-versioned jobs and embedding BLOBs; import code drains the queue between sections and on completion of individual section imports. Startup resumes unfinished work.
 - The AI Assistant has an independent local text-generation model, queries local FTS evidence, and returns bounded source citations. Its model cache is separate from the embedding model cache.

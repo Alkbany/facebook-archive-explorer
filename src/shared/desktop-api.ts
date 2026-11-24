@@ -150,7 +150,7 @@ export interface DesktopApi {
   getPhotoAlbumDetailForSelectedBackup(albumRecordId: number): Promise<PhotoAlbumDetailView>;
   listMessagesForSelectedBackup(): Promise<MessageConversationSummary[]>;
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
-  getMessagesForSelectedConversation(sourceFileId: number, page?: number): Promise<MessageConversationPage>;
+  getMessagesForSelectedConversation(sourceFileId: number, page?: number, searchQuery?: string): Promise<MessageConversationPage>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
   listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number, query: string, pageSize?: number): Promise<ArchiveMediaGalleryPage>;
   getArchiveSearchSettings(): Promise<ArchiveSearchSettings>;

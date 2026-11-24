@@ -110,6 +110,7 @@ Example: a query such as `Alexandrea` can suggest or find `Alexandria`.
 - When enabled, messages may be indexed locally and may appear in global Exact, Fuzzy, and enabled Semantic Search according to the selected search level.
 - The message-search setting is independent of the general Semantic Search and AI Assistant settings.
 - Keep the Messages workspace usable for direct conversation browsing and section-scoped filtering without enabling global message search.
+- Provide all-word text search inside the selected conversation through a bounded local SQL query; this does not persist message text in either global FTS index and remains available when the global message-search preference is off.
 - Never include sensitive message content in the global indexes unless the user has explicitly enabled the message-search setting.
 - Explain the privacy impact clearly in the setting before the user enables it.
 

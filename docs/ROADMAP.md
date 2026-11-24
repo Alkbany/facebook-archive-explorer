@@ -81,7 +81,7 @@
 
 ## Milestone 4 — Browsing and search
 
-- [x] Conversation list, local filter, and source-order message timeline with 50-message database pagination, bounded per-page attachment previews, and stale-request protection when switching conversations or backups.
+- [x] Conversation list, local filter, and source-order message timeline with 50-message database pagination, bounded per-page attachment previews, stale-request protection, and conversation-scoped exact message search.
 - [x] Paginated Friends directory with category filters, name/date/path search, and functional workspace navigation.
 - [x] Read-only Archive Files browser with status/section filters, path and error-code search, and pagination.
 - [x] Standalone Photos & Videos import action reusing the album-index and referenced album-detail import pipeline.
@@ -92,7 +92,7 @@
 - [x] Exact Search: FTS5 literal-term and quoted-phrase search, Arabic-aware normalization, section filters, exact metadata/path search, and JSON export.
 - [x] Exact metadata search for archive paths, file names, and raw/normalized dates where the source date is reliable.
 - [x] Fuzzy Search (no LLM): local token-vocabulary candidate lookup and Damerau-style distance scoring for missing, extra, substituted, and adjacent-transposed characters, with adjustable similarity threshold and per-result match labels.
-- [x] Message global-search privacy control: an independent opt-in setting, off by default, with a separate local FTS5 index; disabling it clears message text from that index. Section-scoped Messages search remains available as an on-demand exact scan.
+- [x] Message global-search privacy control: an independent opt-in setting, off by default, with a separate local FTS5 index; disabling it clears message text from that index. Direct conversation search remains available as an on-demand SQL query and does not populate the global index.
 - [x] Unified Search UI exposes Exact, Fuzzy, and optional Semantic Search distinctly, with source file/card provenance, match labels, and 250-result offset pagination for large result sets.
 - [x] Bound Semantic Search result ranking to the requested page window with deterministic record-ID tie-breaking, avoiding repeated sorted-array insertion for large indexed snapshots.
 - [x] Apply inclusive UTC calendar-date filters in Exact, Fuzzy, and Semantic Search; exclude records without a reliable normalized `event_time_utc` while a date filter is active.

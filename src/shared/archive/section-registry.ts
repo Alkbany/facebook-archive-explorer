@@ -19,7 +19,7 @@ export const ARCHIVE_SECTIONS: readonly ArchiveSectionDefinition[] = [
   { key: 'apps_and_websites', title: 'Apps and websites', evidence: 'filename-only', sensitivity: 'personal' },
   { key: 'calls_and_messages', title: 'Calls and messages', evidence: 'sampled', sensitivity: 'sensitive' },
   { key: 'comments', title: 'Comments', evidence: 'sampled', sensitivity: 'personal' },
-  { key: 'events', title: 'Events', evidence: 'filename-only', sensitivity: 'personal' },
+  { key: 'events', title: 'Events', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'following_and_followers', title: 'Following and followers', evidence: 'filename-only', sensitivity: 'personal' },
   { key: 'friends', title: 'Friends', evidence: 'sampled', sensitivity: 'sensitive' },
   { key: 'groups', title: 'Groups', evidence: 'sampled', sensitivity: 'personal' },
@@ -52,7 +52,8 @@ const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapabili
   comments: 'sampled-html-json',
   likes_and_reactions: 'sampled-html-json',
   photos_and_videos: 'sampled-html-json',
-  groups: 'sampled-json'
+  groups: 'sampled-json',
+  events: 'sampled-json'
 };
 
 /** Describes actual importer scope; filename evidence alone never implies parser support. */

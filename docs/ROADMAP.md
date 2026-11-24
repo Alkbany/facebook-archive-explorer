@@ -59,7 +59,7 @@
 - [x] Add a dedicated Groups workspace for the three reviewed TNG activity collections, with group/author fields shown only where present in the observed source objects. Keep it isolated from the generic Other Data section selector.
 - [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
 - [x] Add a bounded plain-text fallback for discovered `.txt` files, preserving original text while limiting full-text indexing and respecting section sensitivity.
-- [ ] Add schema-specific JSON importers and parser fixtures for Marketplace, Saved Items & Collections, additional Groups/Pages formats, and remaining sections.
+- [ ] Add schema-specific JSON importers and parser fixtures for additional Marketplace listing formats, collections beyond saves_v2, additional Groups/Pages formats, and remaining sections.
 
 ## Milestone 3 — Media and remaining activity
 
@@ -72,7 +72,9 @@
 - [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
 - [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [x] Events: reviewed TNG JSON variants for responses (`event_responses_v2`), invitations (`events_invited_v2`), and hosted event lists (`your_events_v2` / label-value event blocks), with RSVP preservation, duplicate merging, source provenance, and fallback for unknown shapes.
-- [ ] Marketplace, Saved Items & Collections, additional Groups export formats, and remaining activity sections. The observed Groups TNG collections (`group_posts_v2`, `group_comments_v2`, `groups_joined_v2`) already have a reviewed importer.
+- [x] Marketplace listing support: import `items_selling_v2` from `items_sold.json` and join `your_marketplace_items.json` label/value details by normalized title + UTC creation time. Unknown Marketplace files and conversation/search-history formats remain generic fallback.
+- [x] Saved Items support: import `saves_v2` from `your_saved_items.json`, preserving external-context names, source domains, and validated HTTP(S) links. Other collection formats remain generic fallback.
+- [ ] Expand coverage for additional Marketplace listing variants, Saved Items collections beyond `saves_v2`, and additional Groups export formats. The observed Groups TNG collections (`group_posts_v2`, `group_comments_v2`, `groups_joined_v2`) already have a reviewed importer.
 
 ## Milestone 4 — Browsing and search
 

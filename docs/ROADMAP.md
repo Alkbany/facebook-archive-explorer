@@ -68,7 +68,7 @@
 - [x] Read image dimensions from PNG, JPEG, GIF, and WebP headers using bounded 256 KiB prefix reads in batches of 50 when the media gallery opens; large image files are not loaded in full.
 - [x] Persist image/video metadata scan attempts in SQLite so invalid or unsupported files do not block later batches across application restarts.
 - [x] Read MP4/MOV/M4V duration from bounded 2 MiB prefixes and suffixes (up to 10 unscanned videos per gallery opening); this handles fast-start and common end-positioned `moov` metadata without loading whole videos.
-- [x] Paginate the unified media gallery in SQLite (50 distinct files per page), with media-kind filtering and literal file-name/archive-path search performed in the database rather than loading a fixed first 1,000 results into React.
+- [x] Paginate the unified media gallery in SQLite (target: 100 distinct files by default, with selectable 50/100/250 page sizes and Grid/List views), with media-kind filtering and literal file-name/archive-path search performed in the database rather than loading a fixed first 1,000 results into React.
 - [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
 - [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [ ] Events, Marketplace, Saved Items & Collections, additional Groups export formats, and remaining activity sections. The observed Groups TNG collections (`group_posts_v2`, `group_comments_v2`, `groups_joined_v2`) already have a reviewed importer.
@@ -83,7 +83,12 @@
 - [x] On-demand in-app image/audio/video viewer with native playback controls (24 MB audio/video preview limit).
 - [x] Message attachment library with media-kind filters and conversation/sender context (first 300 references).
 - [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
-- [x] Unified local full-text search with section filtering across eligible records.
+- [x] Unified local full-text search with section filtering across eligible records (Exact Search baseline only).
+- [ ] **Exact Search completion:** exact phrases, names, archive paths/file names, date filters where reliable, and consistent account/snapshot/section scope.
+- [ ] **Fuzzy Search (no LLM):** typo-tolerant character matching for missing, extra, substituted, and transposed characters; Arabic-aware normalization; adjustable similarity threshold; ranked results with match-type labels.
+- [ ] **Message global-search privacy control:** an independent opt-in setting, off by default, controlling whether message content is eligible for global exact/fuzzy/semantic indexes. Section-scoped Messages browsing remains available while this is off.
+- [ ] **Unified search UI:** expose Exact, Fuzzy, Semantic, and AI Assistant as distinct modes; explain why each result matched and retain navigable source provenance.
+- [ ] **Search quality tests:** Arabic and English cases, exact phrases, common typos, threshold boundaries, false-positive control, sensitive-message exclusions, and large-archive performance.
 - [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.
 - [x] Add date-range controls to Posts, Comments, and Likes & Reactions using stored normalized UTC timestamps. Records with only raw/localized date strings are excluded while a date range is active rather than assigned a guessed timezone.
 - [ ] Add evidence-backed timezone handling for localized Facebook HTML dates where the export supplies enough context; then extend date-range filters to those records and other relevant workspaces.
@@ -98,6 +103,18 @@
 - [x] Detailed diff browsing with before/after values, filters, pagination, and CSV/JSON export.
 
 ## Milestone 5 — Optional local AI
+
+- [ ] **Semantic Search:** configurable multilingual local embedding model, independent from any LLM; disabled by default.
+- [ ] Generate and persist embeddings incrementally during eligible record import, in bounded batches and under the same file-level durability rules.
+- [ ] Backfill embeddings for already-imported eligible records if Semantic Search is enabled later, without requiring archive re-import.
+- [ ] Persist per-record/model indexing state and checkpoints; resume after restart; retry failed batches independently of archive import success.
+- [ ] Track embedding model/version and support controlled semantic-index rebuilds after model changes.
+- [ ] Show model download, availability, indexing progress, errors, and storage/resource controls. Download model assets only after explicit user enablement.
+- [ ] **AI Assistant:** optional local LLM, independently configurable from Semantic Search and disabled by default.
+- [ ] Ground multi-part natural-language answers in retrieved archive records; include navigable source references (account, snapshot, section, file, record/date where available).
+- [ ] Refuse to invent missing names, dates, relationships, or content; explain when archive evidence is incomplete.
+- [ ] Keep all archive content local; no automatic external embedding/LLM service calls or archive upload.
+- [ ] AI failure or disabled models must never disable archive browsing, Exact Search, or Fuzzy Search.
 
 - [ ] Configurable local embeddings and local LLM, disabled by default.
 - [ ] Source references for archive-grounded answers.

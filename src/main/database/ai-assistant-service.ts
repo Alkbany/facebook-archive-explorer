@@ -355,7 +355,7 @@ export async function askLocalArchiveAssistant(
   const semanticEnabled = (database.prepare(
     "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'semantic_search_enabled'"
   ).get() as { value: string } | undefined)?.value === 'true';
-  const years = retrievalQuestion.match(/(?:19|20)\\d{2}/gu);
+  const years = retrievalQuestion.match(/(?:19|20)\d{2}/gu);
   const year = years?.length ? Number(years[years.length - 1]) : null;
   const dateFrom = year === null ? null : `${year}-01-01`;
   const dateTo = year === null ? null : `${year}-12-31`;
@@ -462,7 +462,7 @@ export async function askLocalArchiveAssistant(
         : 'The local model returned one or more statements without a valid source citation, so the generated response was withheld. Try a narrower question.',
       citations: [],
       evidenceCount: citations.length,
-      retrievalScope: { snapshotId, sectionKey, year: null }
+      retrievalScope: { snapshotId, ...(comparedSnapshotId ? { comparedSnapshotId } : {}), sectionKey, year: null }
     };
   }
 

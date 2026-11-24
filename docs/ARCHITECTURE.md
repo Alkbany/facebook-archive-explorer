@@ -40,3 +40,13 @@ src/
 The importer is planned to support HTML and JSON. A discovery pass inventories files before parsing. Parser selection considers both section and observed structure, not filename alone.
 
 HTML must be parsed with a DOM parser. External URLs found in exports are data only and must not be fetched during import.
+
+## Search and local AI pipeline
+
+- Exact Search and Fuzzy Search use local SQLite indexes only.
+- Sensitive Messages content is held in a separate opt-in FTS5 index.
+- Semantic Search uses a separate local embedding pipeline. SQLite stores model-versioned jobs and embedding BLOBs; import code drains the queue between sections and on completion of individual section imports. Startup resumes unfinished work.
+- The AI Assistant has an independent local text-generation model, queries local FTS evidence, and returns bounded source citations. Its model cache is separate from the embedding model cache.
+- Neither model processes archive content through a cloud inference endpoint. Model assets are downloaded only after the corresponding user setting is enabled.
+- See [Local AI Features](LOCAL-AI.md) for model details, message privacy, and beta limitations.
+

@@ -731,6 +731,7 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 }
 .import-capability-known-html { color: #47836c; border-color: #dceee5; background: #f4fbf7; }
 .import-capability-sampled-html { color: #587da4; border-color: #e1ebf5; background: #f7fbff; }
+.import-capability-generic-fallback { color: #727b92; border-color: #e7eaf0; background: #f8f9fc; }
 .import-capability-media-index-only { color: #7568b1; border-color: #e9e5f7; background: #faf9ff; }
 .import-capability-not-implemented { color: #9297a8; border-color: #eceef3; background: #f9fafc; }
 

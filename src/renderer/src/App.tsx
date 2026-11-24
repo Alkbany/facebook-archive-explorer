@@ -1121,16 +1121,12 @@ function App() {
                   <div className="import-coverage-list">
                     {importCoverage.sections.map((section) => {
                       const capability = getArchiveImportCapability(section.sectionKey);
-                      const capabilityLabel = section.jsonFiles > 0 && section.htmlFiles > 0
-                        ? (capability === 'not-implemented' ? 'Generic HTML + JSON fallback' : 'Generic JSON + reviewed HTML')
-                        : section.jsonFiles > 0
-                          ? 'Generic JSON importer'
-                          : capability === 'known-html'
-                            ? 'Known HTML exports'
-                            : capability === 'sampled-html'
-                              ? 'Sample-based HTML parser'
-                              : section.htmlFiles > 0 && capability === 'not-implemented'
-                            ? 'Generic HTML fallback'
+                      const capabilityLabel = capability === 'known-html'
+                        ? 'Known HTML parser + generic JSON/TXT fallback'
+                        : capability === 'sampled-html'
+                          ? 'Sampled HTML parser + generic fallback'
+                          : capability === 'generic-fallback'
+                            ? 'Generic HTML/JSON/TXT fallback'
                             : capability === 'media-index-only'
                               ? 'Media inventory only'
                               : 'No importer yet';
@@ -1139,7 +1135,7 @@ function App() {
                         <div className="import-coverage-section">
                           <strong>{SECTION_TITLES.get(section.sectionKey) ?? section.sectionKey}</strong>
                           <span>
-                            {section.totalFiles.toLocaleString()} files · {section.htmlFiles} HTML · {section.jsonFiles} JSON · {section.mediaFiles} media
+                            {section.totalFiles.toLocaleString()} files · {section.htmlFiles} HTML · {section.jsonFiles} JSON · {section.textFiles} TXT · {section.mediaFiles} media
                           </span>
                           <small className={'import-capability-badge import-capability-' + capability}>{capabilityLabel}</small>
                         </div>

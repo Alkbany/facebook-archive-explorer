@@ -20,8 +20,9 @@ describe('archive section catalogue', () => {
     expect(getArchiveImportCapability('friends')).toBe('known-html');
     expect(getArchiveImportCapability('messages')).toBe('sampled-html');
     expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html');
-    expect(getArchiveImportCapability('groups')).toBe('not-implemented');
-    expect(getArchiveImportCapability('unknown-section')).toBe('not-implemented');
+    expect(getArchiveImportCapability('groups')).toBe('generic-fallback');
+    expect(getArchiveImportCapability('events')).toBe('generic-fallback');
+    expect(getArchiveImportCapability('unknown-section')).toBe('generic-fallback');
   });
 
   it('classifies account security and payment data as sensitive', () => {

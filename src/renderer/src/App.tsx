@@ -1736,7 +1736,7 @@ function App() {
                     type="checkbox"
                     checked={aiAssistantStatus?.enabled ?? false}
                     onChange={(event) => void updateAiAssistantSetting(event.target.checked)}
-                    disabled={isUpdatingAiAssistant || !aiAssistantStatus}
+                    disabled={isUpdatingAiAssistant || isAskingAssistant || !aiAssistantStatus}
                   />
                   <span>
                     <strong>Enable AI Assistant · download local LLM</strong>

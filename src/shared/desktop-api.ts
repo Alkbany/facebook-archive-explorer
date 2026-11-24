@@ -58,6 +58,7 @@ export type DatabaseBackupRestoreResult = { status: 'cancelled' | 'restarting' }
 
 export const IPC_CHANNELS = {
   getAppInfo: 'app:get-info',
+  openExternalUrl: 'app:open-external-url',
   exportLocalDatabaseBackup: 'database:export-backup',
   restoreLocalDatabaseBackup: 'database:restore-backup',
   selectBackupDirectory: 'archive:select-directory',
@@ -113,6 +114,7 @@ export const IPC_CHANNELS = {
 
 export interface DesktopApi {
   getAppInfo(): Promise<AppInfo>;
+  openExternalUrl(url: string): Promise<void>;
   exportLocalDatabaseBackup(): Promise<DatabaseBackupExportResult>;
   restoreLocalDatabaseBackup(): Promise<DatabaseBackupRestoreResult>;
   selectBackupDirectory(accountName: string): Promise<DirectorySelectionResult>;

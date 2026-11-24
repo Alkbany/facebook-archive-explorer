@@ -28,7 +28,7 @@ import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archi
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
-import type { ArchiveSearchResult } from '../../shared/archive/search';
+import type { ArchiveSearchMode, ArchiveSearchResult } from '../../shared/archive/search';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -159,6 +159,12 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
+  const [searchMode, setSearchMode] = useState<ArchiveSearchMode>('exact');
+  const [searchThreshold, setSearchThreshold] = useState(0.8);
+  const [includeMessagesInGlobalSearch, setIncludeMessagesInGlobalSearch] = useState(false);
+  const [isUpdatingMessageSearch, setIsUpdatingMessageSearch] = useState(false);
+  const [searchedMode, setSearchedMode] = useState<ArchiveSearchMode>('exact');
+  const [searchedThreshold, setSearchedThreshold] = useState(0.8);
   const [isSearching, setIsSearching] = useState(false);
   const [searchExportStatus, setSearchExportStatus] = useState('');
   const [searchedQuery, setSearchedQuery] = useState<string | null>(null);
@@ -297,6 +303,10 @@ function App() {
     void window.desktopApi.listArchiveSnapshots()
       .then(setSavedBackups)
       .catch(() => setError('Could not load saved backups from the local database.'));
+
+    void window.desktopApi.getArchiveSearchSettings()
+      .then((settings) => setIncludeMessagesInGlobalSearch(settings.includeMessagesInGlobalSearch))
+      .catch(() => setError('Could not load local search privacy settings.'));
   }, []);
 
   async function chooseFolder() {
@@ -598,15 +608,33 @@ function App() {
     setSearchedQuery(null);
     setError(null);
     try {
-      const results = await window.desktopApi.searchRecordsForSelectedBackup(query, section);
+      const results = await window.desktopApi.searchRecordsForSelectedBackup(query, section, searchMode, searchThreshold);
       setSearchResults(results);
       setSearchedQuery(query);
       setSearchedSection(searchSection);
+      setSearchedMode(searchMode);
+      setSearchedThreshold(searchThreshold);
     } catch {
       setSearchResults([]);
       setError('Search could not be completed. Try a shorter search phrase.');
     } finally {
       setIsSearching(false);
+    }
+  }
+
+  async function updateMessageSearchSetting(enabled: boolean) {
+    setIsUpdatingMessageSearch(true);
+    setError(null);
+    try {
+      const settings = await window.desktopApi.setIncludeMessagesInGlobalSearch(enabled);
+      setIncludeMessagesInGlobalSearch(settings.includeMessagesInGlobalSearch);
+      setSearchResults([]);
+      setSearchedQuery(null);
+      setSearchExportStatus('');
+    } catch {
+      setError('The message-search privacy setting could not be updated.');
+    } finally {
+      setIsUpdatingMessageSearch(false);
     }
   }
 
@@ -616,7 +644,7 @@ function App() {
     setError(null);
     try {
       const result = await window.desktopApi.exportSearchResultsForSelectedBackup(
-        searchedQuery, searchedSection === 'all' ? null : searchedSection
+        searchedQuery, searchedSection === 'all' ? null : searchedSection, searchedMode, searchedThreshold
       );
       setSearchExportStatus(result.status === 'saved'
         ? `Saved ${result.recordsExported} records to ${result.fileName}.`
@@ -1415,11 +1443,26 @@ function App() {
             <section className="unified-search-panel" id="unified-search-panel">
               <div className="media-gallery-heading">
                 <div>
-                  <p className="eyebrow">LOCAL FULL-TEXT SEARCH</p>
+                  <p className="eyebrow">LOCAL SEARCH · EXACT + FUZZY</p>
                   <h3>Search this backup</h3>
-                  <p>Searches indexed Friends, Posts, Comments, and Likes &amp; Reactions. Private message text remains excluded.</p>
+                  <p>Exact Search finds literal words and phrases. Fuzzy Search tolerates likely typing mistakes without using an AI model.</p>
                 </div>
                 <span>{searchResults.length.toLocaleString()} results</span>
+              </div>
+              <div className="search-privacy-setting">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={includeMessagesInGlobalSearch}
+                    onChange={(event) => void updateMessageSearchSetting(event.target.checked)}
+                    disabled={isUpdatingMessageSearch}
+                  />
+                  <span>
+                    <strong>Include message text in global search</strong>
+                    <small>Off by default. When enabled, message text is added to a separate local search index. Turning this off removes it from that index.</small>
+                  </span>
+                </label>
+                {isUpdatingMessageSearch && <span>Updating private message index…</span>}
               </div>
               <div className="unified-search-controls">
                 <input value={searchQuery} onChange={(event) => {
@@ -1437,6 +1480,7 @@ function App() {
                   setSearchExportStatus('');
                 }} aria-label="Filter search by section">
                   <option value="all">All searchable sections</option>
+                  <option value="messages">Messages (section only unless enabled above)</option>
                   {ARCHIVE_SECTIONS.filter((section) => ['friends', 'posts', 'comments', 'likes_and_reactions', 'photos_and_videos'].includes(section.key)).map((section) => (
                     <option key={section.key} value={section.key}>{section.title}</option>
                   ))}
@@ -1445,12 +1489,43 @@ function App() {
                   {isSearching ? 'Searching…' : 'Search'}
                 </button>
               </div>
+              <div className="search-mode-controls">
+                <label>
+                  <span>Search level</span>
+                  <select value={searchMode} onChange={(event) => {
+                    setSearchMode(event.target.value as ArchiveSearchMode);
+                    setSearchResults([]);
+                    setSearchedQuery(null);
+                  }}>
+                    <option value="exact">Exact Search</option>
+                    <option value="fuzzy">Fuzzy Search · typo tolerant</option>
+                  </select>
+                </label>
+                {searchMode === 'fuzzy' && (
+                  <label>
+                    <span>Similarity strictness</span>
+                    <select value={searchThreshold} onChange={(event) => {
+                      setSearchThreshold(Number(event.target.value));
+                      setSearchResults([]);
+                      setSearchedQuery(null);
+                    }}>
+                      <option value={0.65}>More flexible · 65%</option>
+                      <option value={0.75}>Flexible · 75%</option>
+                      <option value={0.8}>Balanced · 80%</option>
+                      <option value={0.85}>Strict · 85%</option>
+                      <option value={0.9}>Very strict · 90%</option>
+                      <option value={0.95}>Highly strict · 95%</option>
+                    </select>
+                  </label>
+                )}
+                <span className="search-mode-note">Exact and Fuzzy work offline and do not require an LLM. Semantic Search and AI Assistant are separate optional levels planned next.</span>
+              </div>
               <div className="search-results-list">
                 {searchResults.map((result) => (
                   <article className="search-result-item" key={result.id}>
                     <div className="search-result-heading">
                       <strong>{SECTION_TITLES.get(result.sectionKey) ?? result.sectionKey}</strong>
-                      <span>{result.recordType.replaceAll('_', ' ')}</span>
+                      <span>{result.matchType === 'fuzzy' ? 'Fuzzy match' : 'Exact match'} · {result.recordType.replaceAll('_', ' ')}</span>
                     </div>
                     {result.title && <strong>{result.title}</strong>}
                     {result.body && <p>{result.body}</p>}
@@ -1458,7 +1533,7 @@ function App() {
                   </article>
                 ))}
                 {searchResults.length === 0 && searchQuery.trim() && !isSearching && (
-                  <p className="conversation-empty">No matching indexed records. Import the relevant section first.</p>
+                  <p className="conversation-empty">No matching records. Import the relevant section first, or try a less strict Fuzzy Search setting.</p>
                 )}
               </div>
               <div className="search-export-row">

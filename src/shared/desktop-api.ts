@@ -1,5 +1,5 @@
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
-import type { ArchiveMediaGalleryItem } from './archive/media';
+import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
 import type { ArchiveSearchResult, SearchExportResult } from './archive/search';
 import type {
   ArchiveComparisonReport,
@@ -125,7 +125,7 @@ export interface DesktopApi {
   listMessageMediaForSelectedBackup(): Promise<MessageMediaGalleryItem[]>;
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
-  listMediaForSelectedBackup(): Promise<ArchiveMediaGalleryItem[]>;
+  listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number): Promise<ArchiveMediaGalleryPage>;
   searchRecordsForSelectedBackup(query: string, sectionKey: string | null): Promise<ArchiveSearchResult[]>;
   exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;

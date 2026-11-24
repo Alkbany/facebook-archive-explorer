@@ -288,7 +288,7 @@ export async function askLocalArchiveAssistant(
   if (semanticEnabled) {
     try {
       const queryVector = await createSemanticQueryEmbedding(retrievalQuestion, modelCacheDirectory);
-      const years = retrievalQuestion.match(/(?:19|20)\\d{2}/gu);
+      const years = retrievalQuestion.match(/(?:19|20)\d{2}/gu);
       const year = years?.length ? Number(years[years.length - 1]) : null;
       const dateFrom = year === null ? null : `${year}-01-01`;
       const dateTo = year === null ? null : `${year}-12-31`;
@@ -326,7 +326,7 @@ export async function askLocalArchiveAssistant(
         buildEvidenceContext(citations),
         '',
         'Write an answer grounded only in these sources. Cite each factual claim with [S1], [S2], etc. If the selected records do not fully answer the question, state that limitation.'
-      ].join('\\n')
+      ].join('\n')
     }
   ];
 

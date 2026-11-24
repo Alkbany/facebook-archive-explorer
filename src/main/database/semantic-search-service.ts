@@ -52,16 +52,6 @@ interface PendingSemanticRecord {
   normalizedText: string | null;
 }
 
-interface SemanticSearchRow extends PendingSemanticRecord {
-  sourcePath: string;
-  sourceCardIndex: number;
-  recordType: string;
-  sectionKey: string;
-  dateRaw: string | null;
-  embedding: Uint8Array;
-  dimensions: number;
-}
-
 const runtimeState: RuntimeState = {
   phase: 'idle',
   progressPercent: null,

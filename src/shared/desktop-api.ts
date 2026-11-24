@@ -1,4 +1,4 @@
-import type { MessageConversationListPage, MessageConversationPage, MessageConversationSummary, MessageMediaGalleryItem } from './archive/messages';
+import type { MessageConversationListPage, MessageConversationPage, MessageMediaGalleryItem } from './archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
 import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult, SemanticSearchStatus } from './archive/search';
 import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from './archive/assistant';

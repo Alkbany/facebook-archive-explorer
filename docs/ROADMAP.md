@@ -23,6 +23,7 @@
 - [x] Validate each file-open path component and reject symbolic links.
 - [x] Add SQLite driver, migration runner, and repositories.
 - [x] Add one-click sequential import orchestration for the reviewed Friends, Messages, Posts, Comments, Likes & Reactions, and sampled Photos & Videos importers.
+- [x] Add a cross-section Import All integration test that runs the reviewed Events, Marketplace, and Saved Items JSON importers together and verifies stored records plus completed source-file states.
 - [x] Report live per-file progress from all supported section importers over a narrow IPC event channel.
 - [x] Serialize import requests and prevent backup switching while an import is active.
 - [x] Recover interrupted section imports and Import All runs across all snapshots during application startup, with safe Diagnostics and an atomic SQLite savepoint.

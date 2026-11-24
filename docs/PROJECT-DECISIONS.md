@@ -144,6 +144,8 @@ Example: a query such as `Alexandrea` can suggest or find `Alexandria`.
 
 ## 10. Development and delivery rules
 
+- The combined **Import All** orchestration must have regression coverage that exercises supported section importers together against one synthetic snapshot, checks the resulting database records, and verifies source-file processing states. Individual importer tests remain necessary and do not replace cross-section integration coverage.
+
 - Work directly on `main` unless a separate branch is explicitly agreed.
 - Work in coherent batches and complete connected tasks without asking the owner to approve every small technical step.
 - Do not silently change approved product decisions. Discuss material scope or privacy changes first.

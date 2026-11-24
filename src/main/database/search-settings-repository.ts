@@ -113,13 +113,16 @@ export function setSemanticSearchEnabled(
         SELECT id, snapshot_id, ?, ?, 'pending', 0, CURRENT_TIMESTAMP
         FROM records
         WHERE search_enabled = 1 AND sensitivity <> 'sensitive'
+          AND NOT EXISTS (SELECT 1 FROM semantic_embeddings
+            WHERE semantic_embeddings.record_id = records.id
+              AND semantic_embeddings.model_id = ? AND semantic_embeddings.model_version = ?)
         ON CONFLICT(record_id, model_id, model_version) DO UPDATE SET
           snapshot_id = excluded.snapshot_id,
           status = 'pending',
           attempts = 0,
           safe_error_code = NULL,
           updated_at = excluded.updated_at
-      `).run(SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
+      `).run(SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
 
       const messagesEnabled = (database.prepare(
         "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'include_messages_in_global_search'"
@@ -133,13 +136,16 @@ export function setSemanticSearchEnabled(
           SELECT id, snapshot_id, ?, ?, 'pending', 0, CURRENT_TIMESTAMP
           FROM records
           WHERE section_key = 'messages' AND sensitivity = 'sensitive'
+            AND NOT EXISTS (SELECT 1 FROM semantic_embeddings
+              WHERE semantic_embeddings.record_id = records.id
+                AND semantic_embeddings.model_id = ? AND semantic_embeddings.model_version = ?)
           ON CONFLICT(record_id, model_id, model_version) DO UPDATE SET
             snapshot_id = excluded.snapshot_id,
             status = 'pending',
             attempts = 0,
             safe_error_code = NULL,
             updated_at = excluded.updated_at
-        `).run(SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
+        `).run(SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_VERSION);
       }
     }
 

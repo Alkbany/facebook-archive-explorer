@@ -118,18 +118,23 @@ The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive
 
 ## Current import support
 
-ZIP backups can be selected, inventoried, reopened, and read on demand without extracting the original archive. The same reviewed HTML importers are used with ZIP entries and directory files.
+Directory and ZIP backups can be selected, inventoried, reopened, and read on demand without extracting the original archive. Reviewed parsers share the same archive-relative reader for directory and ZIP sources.
 
-- Friends: five recognized HTML exports.
-- Messages: observed conversation HTML, local attachments, and a browsable conversation explorer.\n- Groups: a dedicated workspace for the reviewed group posts, comments, and membership activity collections. Comment author/group and membership group names appear only when present in the source payload; the raw JSON remains inspectable.
-- Posts: sampled post-card HTML with source-provenanced records and verified local media links.
-- Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
-- Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.
-- Media: all discovered image/video/audio paths are indexed, with associated record context where a supported parser has linked them.
-- Photos & Videos: the root album index is parsed into searchable album summaries. Referenced album pages are parsed into photo cards with local image links, captions, raw photo dates, and comment author/text/raw-date entries. Photos are browsable in-app; image bytes remain in the original backup. Album cards show bounded local cover previews (up to eight visible covers at a time); no image is fetched from the network.
-- Audio/video: supported local files stream from directory or ZIP backups with byte-range seeking; deflated ZIP entries are decompressed as a stream when seeking.
+- **Friends:** five known HTML export files, plus the reviewed Accounts Center TNG `friends_v2` JSON collection.
+- **Messages:** observed conversation HTML and Accounts Center `message_*.json` chunks. Local photo/sticker/audio/video references are linked only when their source files exist in the same backup. Repeated link-plus-media references collapse to one attachment, and the media element determines its type. Message text remains excluded from global search by default.
+- **Posts:** sampled legacy post-card HTML and observed TNG timeline JSON chunks, with source provenance and links to verified local media.
+- **Comments:** sampled activity-card HTML and the observed TNG `comments_v2` collection.
+- **Likes & Reactions:** sampled HTML cards and the observed TNG reaction JSON variants.
+- **Groups:** reviewed `group_posts_v2`, `group_comments_v2`, and `groups_joined_v2` JSON collections in a dedicated workspace.
+- **Events:** partial JSON support for `event_responses_v2`, `events_invited_v2`, and reviewed hosted-event list/label-value forms. RSVP status and original source references are preserved.
+- **Marketplace:** partial support for `items_selling_v2` in `items_sold.json`, joined with matching `your_marketplace_items.json` label/value details. Missing listing descriptions can be filled from the matched details file. Seller/raw payload fields remain local provenance and are not exposed as listing search fields.
+- **Saved Items:** partial support for the `saves_v2` collection, including safe HTTP(S) source links. Other collection formats remain fallback-preserved.
+- **Photos & Videos:** the root album index and explicitly referenced album-detail pages are parsed into searchable albums and photo cards with local image links, captions, raw dates, and photo comment metadata. The observed TNG `posts/album/{id}.json` files are also supported. Media bytes remain in the original backup.
+- **Unified media library:** all discovered image, video, and audio files are indexed, including unlinked media. Common image dimensions and MP4/MOV/M4V durations are scanned with bounded reads; audio/video can stream from directory or ZIP backups with byte-range seeking.
+- **Other Data:** bounded HTML, JSON, and text fallbacks preserve unsupported records and source provenance for local browsing. A generic fallback is not treated as verified field-level parsing.
 
-The Posts and Comments card parsers are based on supplied samples; they still need validation against complete real export files and backups.
+For the observed Arabic legacy HTML date form, Posts, Comments, Likes & Reactions, and Messages are normalized to UTC only when that same source file has one valid explicit UTC offset in its Facebook export footer. Raw dates are preserved. Missing/conflicting offsets and unsupported formats remain unnormalized and are excluded from UTC date filters. This does not infer historical daylight-saving rules.
 
+Events and Saved Items source links open only after an explicit user click through validated HTTP/HTTPS handling in the Electron main process. Import never fetches external links automatically.
 
-Generic HTML, JSON, and text fallback records are browsable in the local **Other data** workspace, grouped by source section and paginated. Sensitive sections can be viewed and filtered locally within their own section, but remain excluded from global full-text search. Stored JSON, TXT, and extracted HTML-item payloads can be inspected with bounded previews.
+The Posts and Comments card parsers remain sample-based and all reviewed parser variants still need a complete real-backup end-to-end pass. Unreviewed Marketplace listing variants, Saved Items collections, Groups/Pages structures, other activity sections, and additional media layouts remain unsupported or fallback-preserved until their actual structures are reviewed and tested.

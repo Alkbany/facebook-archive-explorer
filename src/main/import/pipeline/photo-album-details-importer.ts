@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parsePhotoAlbumDetail } from '../parsers/photo-album-detail-parser';
@@ -82,6 +83,7 @@ export async function importPhotoAlbumDetailsSection(
         await readArchiveUtf8File(archiveRoot, file.relative_path),
         file.relative_path
       );
+      clearSourceFileRecords(database, file.id);
       const timestamp = new Date().toISOString();
       let warningCount = parsed.issues.length;
       const albumTitle = albumByPath.get(file.relative_path) ?? parsed.albumTitle ?? 'Photo album';

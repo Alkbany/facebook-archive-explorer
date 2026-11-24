@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
 import { parsePhotoAlbumsIndex } from '../parsers/photo-albums-parser';
@@ -71,6 +72,7 @@ async function importLegacyPhotoAlbumsSection(
     database.exec('SAVEPOINT photo_albums_file');
     try {
       const parsed = parsePhotoAlbumsIndex(await readArchiveUtf8File(archiveRoot, file.relative_path), file.relative_path);
+      clearSourceFileRecords(database, file.id);
       const timestamp = new Date().toISOString();
       const insertRecord = database.prepare(`
         INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type,

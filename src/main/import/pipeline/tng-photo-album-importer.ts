@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { clearSourceFileRecords } from './source-file-records';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -132,6 +133,7 @@ export async function importTngPhotoAlbumJsonSection(
         archiveRoot, file.relative_path, MAX_ALBUM_FILE_BYTES
       )).replace(/^\uFEFF/u, '');
       const parsed = parseTngPhotoAlbumJson(jsonText, file.relative_path);
+      clearSourceFileRecords(database, file.id);
       const timestamp = new Date().toISOString();
 
       if (!parsed) {

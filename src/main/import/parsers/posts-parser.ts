@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { basename } from 'node:path';
 import type { Element } from 'domhandler';
+import { facebookExportUtcOffsetMinutes } from '../../../shared/time/facebook-date';
 
 export interface PostMediaReference {
   relativePath: string;
@@ -18,7 +19,7 @@ export interface PostRecord {
   sourceCardIndex: number;
 }
 export interface PostsParseIssue { code: 'no_cards_found' | 'card_without_content'; sourceCardIndex: number | null; }
-export interface PostsParseResult { records: PostRecord[]; issues: PostsParseIssue[]; }
+export interface PostsParseResult { records: PostRecord[]; issues: PostsParseIssue[]; timezoneOffsetMinutes?: number; }
 
 const CARD_SELECTOR = 'div.pam._3-95._2pi0._2lej.uiBoxWhite.noborder';
 const AUTHOR_SELECTOR = 'div._3-96._2pio._2lek._2lel';
@@ -85,8 +86,13 @@ export function parsePostsExport(html: string, sourceFile: string): PostsParseRe
     throw new Error(`Unsupported posts source: ${basename(sourceFile)}`);
   }
   const $ = cheerio.load(html);
+  const timezoneOffsetMinutes = facebookExportUtcOffsetMinutes($('div._4t5o').last().text() || null);
   const cards = $(CARD_SELECTOR);
-  const result: PostsParseResult = { records: [], issues: [] };
+  const result: PostsParseResult = {
+    records: [],
+    issues: [],
+    ...(timezoneOffsetMinutes !== null ? { timezoneOffsetMinutes } : {})
+  };
   if (cards.length === 0) {
     result.issues.push({ code: 'no_cards_found', sourceCardIndex: null });
     return result;

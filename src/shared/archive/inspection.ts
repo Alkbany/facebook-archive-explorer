@@ -342,7 +342,7 @@ export interface FallbackArchiveSectionSummary {
 export interface FallbackArchiveRecord {
   id: number;
   sectionKey: string;
-  recordType: 'html_item' | 'json_item';
+  recordType: 'html_item' | 'json_item' | 'text_item';
   title: string | null;
   body: string | null;
   dateRaw: string | null;

@@ -127,8 +127,7 @@ function searchFtsTable(
   vocabulary: 'record_search_vocab' | 'message_search_vocab'
 ): SearchHit[] {
   let matchExpression: string | null;
-  let termSimilarity = 1;
-
+  let fuzzyQueryTerms: string[] = [];
   if (mode === 'fuzzy') {
     const queryTerms = normalizeSearchText(query).match(/[\p{L}\p{N}_]+/gu)?.slice(0, 12) ?? [];
     if (queryTerms.length === 0) return [];
@@ -139,10 +138,6 @@ function searchFtsTable(
     matchExpression = candidateGroups.map((group) =>
       '(' + group.map((candidate) => quoteFtsTerm(candidate.term)).join(' OR ') + ')'
     ).join(' AND ');
-    termSimilarity = candidateGroups.reduce(
-      (sum, group) => sum + Math.max(...group.map((candidate) => candidate.similarity)),
-      0
-    ) / candidateGroups.length;
   } else {
     matchExpression = makeExactMatchExpression(query);
   }
@@ -166,11 +161,30 @@ function searchFtsTable(
     LIMIT ?
   `).all(matchExpression, snapshotId, sectionKey, sectionKey, MAX_RESULTS) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;
 
-  return rows.map((row) => ({
-    ...row,
-    matchType: mode === 'fuzzy' && termSimilarity < 1 ? 'fuzzy' : 'exact',
-    similarity: termSimilarity
-  }));
+  const hits: SearchHit[] = [];
+  for (const row of rows) {
+    let similarity = 1;
+    if (mode === 'fuzzy') {
+      const searchableTokens = normalizeSearchText([
+        row.title ?? '',
+        row.body ?? '',
+        (row as typeof row & { normalizedText?: string | null }).normalizedText ?? ''
+      ].join(' ')).match(/[\\p{L}\\p{N}_]+/gu) ?? [];
+      const tokenScores = fuzzyQueryTerms.map((queryTerm) =>
+        searchableTokens.length === 0
+          ? 0
+          : Math.max(...searchableTokens.map((token) => tokenSimilarity(queryTerm, token)))
+      );
+      if (tokenScores.some((score) => score < threshold)) continue;
+      similarity = tokenScores.reduce((sum, score) => sum + score, 0) / tokenScores.length;
+    }
+    hits.push({
+      ...row,
+      matchType: mode === 'fuzzy' && similarity < 1 ? 'fuzzy' : 'exact',
+      similarity
+    });
+  }
+  return hits;
 }
 
 function searchMessagesWithoutGlobalIndex(

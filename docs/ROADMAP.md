@@ -68,7 +68,7 @@
 - [x] Read image dimensions from PNG, JPEG, GIF, and WebP headers using bounded 256 KiB prefix reads in batches of 50 when the media gallery opens; large image files are not loaded in full.
 - [x] Persist image/video metadata scan attempts in SQLite so invalid or unsupported files do not block later batches across application restarts.
 - [x] Read MP4/MOV/M4V duration from bounded 2 MiB prefixes and suffixes (up to 10 unscanned videos per gallery opening); this handles fast-start and common end-positioned `moov` metadata without loading whole videos.
-- [x] Paginate the unified media gallery in SQLite (50 distinct files per page), with media-kind filtering performed in the database rather than loading a fixed first 1,000 results into React.
+- [x] Paginate the unified media gallery in SQLite (50 distinct files per page), with media-kind filtering and literal file-name/archive-path search performed in the database rather than loading a fixed first 1,000 results into React.
 - [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
 - [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [ ] Events, Marketplace, Saved Items & Collections, additional Groups export formats, and remaining activity sections. The observed Groups TNG collections (`group_posts_v2`, `group_comments_v2`, `groups_joined_v2`) already have a reviewed importer.

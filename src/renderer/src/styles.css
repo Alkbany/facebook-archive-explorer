@@ -2074,7 +2074,7 @@ h1 {
 .event-record-heading small, .event-record-card > small { color:#8a90a2; font-size:9px; }
 .event-record-card > p { margin:8px 0; color:#62687d; font-size:10px; line-height:1.65; white-space:pre-wrap; }
 .event-record-location { display:flex; flex-direction:column; gap:3px; margin:7px 0; color:#767d91; font-size:9px; }
-.event-record-card > a { display:inline-block; margin:5px 0; color:#665cc0; font-size:9px; text-decoration:none; }
+.event-record-card > .text-button { display:inline-block; margin:5px 0; padding:0; border:0; color:#665cc0; background:transparent; cursor:pointer; font:inherit; font-size:9px; text-align:left; }
 .event-source-list { display:flex; align-items:flex-start; flex-direction:column; gap:4px; margin-top:10px; padding-top:9px; border-top:1px solid #eff0f5; }
 .event-source-list > span { color:#9a9faf; font-size:8px; }
 .event-source-list .text-button {
@@ -2124,7 +2124,7 @@ h1 {
 }
 .saved-item-contexts strong { color:#575d72; font-size:9px; }
 .saved-item-contexts span { color:#898fa1; font-size:8px; }
-.saved-item-contexts a { color:#665cc0; font-size:8px; text-decoration:none; overflow-wrap:anywhere; }
+.saved-item-contexts .text-button { padding:0; border:0; color:#665cc0; background:transparent; cursor:pointer; font:inherit; font-size:8px; text-align:left; overflow-wrap:anywhere; }
 @media (max-width: 860px) {
   .marketplace-listing-grid { grid-template-columns:minmax(0,1fr); }
   .archive-data-actions { flex-direction:column; align-items:flex-start; }

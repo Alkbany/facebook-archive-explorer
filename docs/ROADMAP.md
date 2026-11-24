@@ -2,6 +2,8 @@
 
 > **Current integration baseline:** the reviewed beta implementation has been merged into `main`. This checklist describes the code now present on `main`; completed parser items mean reviewed implementation plus automated fixtures, not validation against every real Facebook export variant.
 
+> **Versioning:** `v0.1.0-beta.1` and `v0.1.0-beta.2` are candidates for the same `0.1.0` milestone. The next feature milestone begins at `v0.2.0-beta.1`; later feature milestones advance the minor number. `.beta.n` counts repeated candidates for one target version. `v1.0.0` remains gated on the stable-release checklist.
+
 ## Milestone 0 — Foundation
 
 - [x] Confirm Electron + React + TypeScript architecture.
@@ -25,6 +27,7 @@
 - [x] Serialize import requests and prevent backup switching while an import is active.
 - [x] Recover interrupted section imports and Import All runs across all snapshots during application startup, with safe Diagnostics and an atomic SQLite savepoint.
 - [x] Persist each source-file result atomically so completed files are durable checkpoints and interrupted files can be retried safely.
+- [x] Replace a source file's previous records atomically on retry, removing obsolete full-text search rows and media links while retaining the last successful data when a retry fails.
 - [x] Add user-controlled pause/resume at file boundaries without interrupting an active file transaction.
 - [x] Add archive integrity reporting for record-count mismatches, cross-snapshot records/media links, missing media sources, invalid media metadata, and unfinished import markers.
 - [x] Add ZIP selection and streaming ZIP entry discovery.

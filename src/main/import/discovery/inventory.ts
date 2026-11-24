@@ -6,6 +6,7 @@ import type {
   DetectedArchiveFormat,
   DiscoveredArchiveFile
 } from '../../../shared/archive/inspection';
+import { getSectionKeyForArchivePath } from './section-path';
 
 const MAX_ENTRIES = 100_000;
 const BATCH_SIZE = 500;

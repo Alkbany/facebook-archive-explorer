@@ -96,15 +96,17 @@
 
 ## Milestone 6 — Windows release
 
-- [x] Build a Windows NSIS test-installer package from `main` after type-checking and unit tests; do not publish the package unless its executables have valid trusted signatures.
+- [x] Build and publish a clearly labelled unsigned personal-use Windows NSIS test installer from `main` after type-checking and unit tests; signing is not required for personal testing, but Smart App Control may block unrecognised unsigned binaries.
 - [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
 - [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup; automated unit/build checks do not replace this validation.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
-- [x] Add secure CI support for a trusted Windows code-signing certificate; require signature verification before version-tag releases and skip main-branch artifact uploads when unsigned.
-- [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not depend on a paid certificate; the main-branch test installer is intentionally unsigned and requires Smart App Control to be off while using it.
+- [x] Support optional trusted Authenticode signing and verify all packaged Windows executable binaries when signing credentials are configured; publish clearly labelled unsigned personal-use builds and beta releases otherwise.
+- [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not require a paid certificate, but unsigned binaries may be blocked by Smart App Control.
 - [ ] (Only if public distribution is planned) Verify signed release behavior on a clean Windows 11 device.
+- [x] Attach a Windows installer SHA-256 verification record to main-branch test artifacts and versioned GitHub Releases.
+- [x] Publish early-access pre-releases [v0.1.0-beta.1](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.1) and [v0.1.0-beta.2](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.2); reserve v1.0.0 for the stable release gate.
 - [ ] Final privacy/security review and release checklist.
 
 ## Stable 1.0.0 release gate

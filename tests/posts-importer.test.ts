@@ -112,6 +112,39 @@ describe('Posts import', () => {
       .toMatchObject({ count: 1 });
   });
 
+
+  it('promotes a completed HTML fallback record when the reviewed Posts parser recognizes it', async () => {
+    const html = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic reviewed post</div>
+      <div class="_3-96 _2let"><div><div class="_2pin"><div>PromotedPostNeedle</div></div></div></div>
+      <div class="_3-94 _2lem"><a>Raw promotion date</a></div>
+    </div>`;
+    const filePath = join(root, 'posts', 'your_posts.html');
+    await writeFile(filePath, html, 'utf8');
+    const now = new Date().toISOString();
+    const fileId = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, parser_key, discovered_at
+      ) VALUES (?, 'posts/your_posts.html', 'your_posts.html', 'posts', 'html', 'completed', 'html_fallback', ?)
+    `).run(snapshotId, now).lastInsertRowid);
+    database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, 0, 'posts', 'html_item', 'Old fallback title', 'OldFallbackNeedle', 'OldFallbackNeedle', 'personal', 1, '{}', ?)
+    `).run(snapshotId, fileId, now);
+
+    const result = await importPostsSection(database, snapshotId, root);
+    expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, failedFiles: 0 });
+    expect(database.prepare('SELECT record_type AS recordType, body_text AS body FROM records WHERE source_file_id = ?')
+      .get(fileId)).toEqual({ recordType: 'post', body: 'PromotedPostNeedle' });
+    expect(database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE id = ?')
+      .get(fileId)).toEqual({ status: 'completed', parserKey: 'posts_reviewed' });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM record_search WHERE record_search MATCH 'oldfallbackneedle'")
+      .get()).toMatchObject({ count: 0 });
+  });
+
+
   it('marks an unknown posts HTML layout as unsupported', async () => {
     await writeFile(join(root, 'posts', 'unknown.html'), '<html><body>Unknown</body></html>', 'utf8');
     const now = new Date().toISOString();

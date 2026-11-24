@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { clearSourceFileRecords } from './source-file-records';
+import { getFallbackParserKey } from './fallback-parser-key';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
 import { normalizeSearchText } from '../../../shared/text/normalize';
@@ -13,6 +14,7 @@ interface TextSourceFile {
   relative_path: string;
   file_size_bytes: number | null;
   section_key: string;
+  parser_key: string | null;
 }
 
 export interface TextFallbackImportSectionResult {
@@ -143,12 +145,13 @@ async function importTextFile(
       imported = 1;
     }
 
+    const fallbackParserKey = getFallbackParserKey(file.parser_key, 'text_fallback');
     database.prepare(`
       UPDATE source_files
-      SET status = ?, parser_key = 'text_fallback', record_count = ?,
+      SET status = ?, parser_key = ?, record_count = ?,
         safe_error_code = NULL, processed_at = ?
       WHERE id = ? AND snapshot_id = ?
-    `).run(imported === 0 ? 'empty' : 'completed', imported, timestamp, file.id, snapshotId);
+    `).run(imported === 0 ? 'empty' : 'completed', fallbackParserKey, imported, timestamp, file.id, snapshotId);
 
     if (normalizedText.length > MAX_INDEXED_TEXT_LENGTH) {
       insertIssue(database, runId, file.id, 'warning', 'TEXT_SEARCH_PREVIEW_TRUNCATED',
@@ -190,7 +193,7 @@ export async function importTextFallbackFilesSection(
   onProgress?: ImportProgressReporter
 ): Promise<TextFallbackImportSectionResult> {
   const files = database.prepare(`
-    SELECT id, relative_path, file_size_bytes, section_key
+    SELECT id, relative_path, file_size_bytes, section_key, parser_key
     FROM source_files
     WHERE snapshot_id = ? AND detected_format = 'text'
       AND status IN ('discovered', 'failed', 'unsupported')

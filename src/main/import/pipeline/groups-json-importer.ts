@@ -143,7 +143,9 @@ export async function importGroupsJsonSection(
     "WHERE snapshot_id = ? AND section_key = 'groups' AND detected_format = 'json' " +
     'AND lower(file_name) IN (?, ?, ?) ' +
     "AND lower(relative_path) LIKE 'your_facebook_activity/groups/%' " +
-    "AND status IN ('discovered', 'failed', 'unsupported') ORDER BY relative_path COLLATE NOCASE"
+    "AND (status IN ('discovered', 'failed', 'unsupported') OR " +
+    "(status IN ('completed', 'empty') AND parser_key = 'json_fallback')) " +
+    'ORDER BY relative_path COLLATE NOCASE'
   ).all(
     snapshotId,
     'group_posts_and_comments.json',
@@ -225,7 +227,7 @@ export async function importGroupsJsonSection(
 
       const unsupported = imported === 0;
       database.prepare(
-        'UPDATE source_files SET status = ?, record_count = ?, safe_error_code = ?, processed_at = ? ' +
+        "UPDATE source_files SET status = ?, parser_key = 'groups_tng_json', record_count = ?, safe_error_code = ?, processed_at = ? " +
         'WHERE id = ? AND snapshot_id = ?'
       ).run(
         unsupported ? 'unsupported' : 'completed',

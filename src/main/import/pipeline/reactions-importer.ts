@@ -34,7 +34,13 @@ export async function importReactionsSection(
     FROM source_files
     WHERE snapshot_id = ? AND section_key = 'likes_and_reactions'
       AND ((detected_format = 'html') OR (detected_format = 'json' AND lower(file_name) GLOB 'likes_and_reactions*.json'))
-      AND status IN ('discovered', 'failed', 'unsupported')
+      AND (
+        status IN ('discovered', 'failed', 'unsupported')
+        OR (status IN ('completed', 'empty') AND (
+          (detected_format = 'html' AND parser_key = 'html_fallback')
+          OR (detected_format = 'json' AND parser_key = 'json_fallback')
+        ))
+      )
     ORDER BY relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as SourceFileRow[];
   const summary: ReactionsImportSectionResult = { filesAttempted: 0, recordsImported: 0, unsupportedFiles: 0, failedFiles: 0 };
@@ -89,7 +95,7 @@ export async function importReactionsSection(
           VALUES (?, ?, 'warning', ?, ?, ?, ?)
         `).run(runId, file.id, issue.code.toUpperCase(), 'A reaction card could not be fully interpreted.', JSON.stringify({ sourceCardIndex: issue.sourceCardIndex }), timestamp);
       }
-      database.prepare('UPDATE source_files SET status = ?, record_count = ?, safe_error_code = ?, processed_at = ? WHERE id = ? AND snapshot_id = ?')
+      database.prepare("UPDATE source_files SET status = ?, parser_key = 'reactions_reviewed', record_count = ?, safe_error_code = ?, processed_at = ? WHERE id = ? AND snapshot_id = ?")
         .run(unsupported ? 'unsupported' : 'completed', parsed.records.length, unsupported ? 'REACTION_CARDS_NOT_FOUND' : null, timestamp, file.id, snapshotId);
       database.prepare("UPDATE import_runs SET status='completed', finished_at=?, files_processed=1, records_imported=?, errors_count=? WHERE id=?")
         .run(timestamp, parsed.records.length, unsupported ? 1 : 0, runId);

@@ -121,6 +121,36 @@ describe('TNG Posts JSON importer', () => {
     expect(indexedIp).toHaveLength(0);
   });
 
+
+  it('promotes a completed generic JSON fallback file to the reviewed Posts parser', async () => {
+    const sourceFile = database.prepare(
+      "SELECT id, relative_path FROM source_files WHERE snapshot_id = ? AND section_key = 'posts'"
+    ).get(snapshotId) as { id: number; relative_path: string };
+    const now = new Date().toISOString();
+    database.prepare(
+      "UPDATE source_files SET status = 'completed', parser_key = 'json_fallback' WHERE id = ?"
+    ).run(sourceFile.id);
+    database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, 0, 'posts', 'json_item', 'Fallback JSON title', 'Fallback JSON body', 'Fallback JSON body', 'personal', 1, '{}', ?)
+    `).run(snapshotId, sourceFile.id, now);
+
+    const result = await importPostsSection(database, snapshotId, root);
+    expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, failedFiles: 0 });
+    expect(listPostRecords(database, snapshotId)).toHaveLength(1);
+    expect(listPostRecords(database, snapshotId)[0]).toMatchObject({
+      activityRaw: 'Jean-Luc Picard added 1 new photo.',
+      bodyRaw: 'Two views of the bridge before alpha shift.\\nThe bridge at dawn.'
+    });
+    expect(database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE id = ?')
+      .get(sourceFile.id)).toEqual({ status: 'completed', parserKey: 'posts_reviewed' });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM record_search WHERE record_search MATCH 'fallbackjsonbody'")
+      .get()).toMatchObject({ count: 0 });
+  });
+
+
   it('marks an unfamiliar JSON layout unsupported so the generic JSON fallback can preserve it', async () => {
     const sourceFile = database.prepare(
       "SELECT id, relative_path FROM source_files WHERE snapshot_id = ? AND section_key = 'posts'"

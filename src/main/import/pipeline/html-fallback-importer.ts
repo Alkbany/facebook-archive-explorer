@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { clearSourceFileRecords } from './source-file-records';
+import { getFallbackParserKey } from './fallback-parser-key';
 import { load } from 'cheerio';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
@@ -14,6 +15,7 @@ interface HtmlSourceFile {
   relative_path: string;
   file_size_bytes: number | null;
   section_key: string;
+  parser_key: string | null;
 }
 
 export interface HtmlFallbackImportSectionResult {
@@ -189,12 +191,13 @@ async function importHtmlFile(
     }
 
     const timestamp = new Date().toISOString();
+    const fallbackParserKey = getFallbackParserKey(file.parser_key, 'html_fallback');
     database.prepare(`
       UPDATE source_files
-      SET status = ?, parser_key = 'html_fallback', record_count = ?,
+      SET status = ?, parser_key = ?, record_count = ?,
         safe_error_code = NULL, processed_at = ?
       WHERE id = ? AND snapshot_id = ?
-    `).run(items.length === 0 ? 'empty' : 'completed', items.length, timestamp, file.id, snapshotId);
+    `).run(items.length === 0 ? 'empty' : 'completed', fallbackParserKey, items.length, timestamp, file.id, snapshotId);
 
     if (items.length >= MAX_HTML_RECORDS_PER_FILE) {
       insertIssue(database, runId, file.id, 'warning', 'HTML_RECORD_LIMIT_REACHED',
@@ -237,7 +240,7 @@ export async function importHtmlFallbackFilesSection(
   onProgress?: ImportProgressReporter
 ): Promise<HtmlFallbackImportSectionResult> {
   const files = database.prepare(`
-    SELECT id, relative_path, file_size_bytes, section_key
+    SELECT id, relative_path, file_size_bytes, section_key, parser_key
     FROM source_files
     WHERE snapshot_id = ? AND detected_format = 'html'
       AND status IN ('discovered', 'failed', 'unsupported')

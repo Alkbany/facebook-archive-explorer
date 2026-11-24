@@ -185,7 +185,7 @@ export async function importFriendsSourceFile(
 
     database.prepare(`
       UPDATE source_files
-      SET status = ?, record_count = ?, safe_error_code = ?, processed_at = ?
+      SET status = ?, parser_key = 'friends_reviewed', record_count = ?, safe_error_code = ?, processed_at = ?
       WHERE id = ? AND snapshot_id = ?
     `).run(fileStatus, parsed.records.length, safeErrorCode, timestamp, sourceFileId, snapshotId);
 
@@ -284,7 +284,13 @@ export async function importFriendsSection(
         (detected_format = 'html' AND lower(file_name) IN (${placeholders}))
         OR (detected_format = 'json' AND lower(file_name) = ?)
       )
-      AND status IN ('discovered', 'failed', 'unsupported')
+      AND (
+        status IN ('discovered', 'failed', 'unsupported')
+        OR (status IN ('completed', 'empty') AND (
+          (detected_format = 'html' AND parser_key = 'html_fallback')
+          OR (detected_format = 'json' AND parser_key = 'json_fallback')
+        ))
+      )
     ORDER BY relative_path
   `).all(snapshotId, ...FRIENDS_HTML_EXPORT_FILES, FRIENDS_JSON_EXPORT_FILE) as Array<{ id: number; file_name: string }>;
 

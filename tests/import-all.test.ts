@@ -161,8 +161,8 @@ describe('Import all supported data', () => {
     expect(result.sections.groups.unsupportedFiles).toBe(1);
     expect(result.sections.json.recordsImported).toBe(1);
     expect(database.prepare(
-      "SELECT status FROM source_files WHERE snapshot_id = ? AND relative_path = ?"
-    ).get(snapshotId, relativePath)).toMatchObject({ status: 'completed' });
+      "SELECT status, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? AND relative_path = ?"
+    ).get(snapshotId, relativePath)).toMatchObject({ status: 'completed', parserKey: 'groups_tng_json_json_fallback' });
     expect(database.prepare(
       "SELECT title FROM records WHERE snapshot_id = ? AND section_key = 'groups'"
     ).get(snapshotId)).toMatchObject({ title: 'Preserved unfamiliar group record' });
@@ -199,7 +199,7 @@ describe('Import all supported data', () => {
 
     const statuses = database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? ORDER BY relative_path')
       .all(snapshotId) as Array<{ status: string; parserKey: string | null }>;
-    expect(statuses.every((row) => row.status === 'completed' && row.parserKey === 'html_fallback')).toBe(true);
+    expect(statuses.every((row) => row.status === 'completed' && row.parserKey?.endsWith('_html_fallback'))).toBe(true);
     const snapshot = database.prepare('SELECT status FROM archive_snapshots WHERE id = ?')
       .get(snapshotId) as { status: string };
     expect(snapshot.status).toBe('partial');
@@ -588,7 +588,7 @@ describe('Import all supported data', () => {
     expect(result.totals.filesAttempted).toBe(12);
     const recoveredFiles = database.prepare("SELECT status, safe_error_code, parser_key AS parserKey FROM source_files WHERE snapshot_id = ? ORDER BY relative_path")
       .all(snapshotId) as Array<{ status: string; safe_error_code: string | null; parserKey: string | null }>;
-    expect(recoveredFiles.every((file) => file.status === 'completed' && file.safe_error_code === null && file.parserKey === 'html_fallback')).toBe(true);
+    expect(recoveredFiles.every((file) => file.status === 'completed' && file.safe_error_code === null && file.parserKey?.endsWith('_html_fallback'))).toBe(true);
     expect(recoveredFiles.map((file) => file.safe_error_code)).toEqual([
       null, null, null, null, null, null
     ]);

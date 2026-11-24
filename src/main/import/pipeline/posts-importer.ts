@@ -36,7 +36,13 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
     SELECT id, relative_path, file_name, detected_format FROM source_files
     WHERE snapshot_id = ? AND section_key = 'posts'
       AND ((detected_format = 'html') OR (detected_format = 'json' AND lower(file_name) GLOB 'your_posts__check_ins__photos_and_videos*.json'))
-      AND status IN ('discovered', 'failed', 'unsupported')
+      AND (
+        status IN ('discovered', 'failed', 'unsupported')
+        OR (status IN ('completed', 'empty') AND (
+          (detected_format = 'html' AND parser_key = 'html_fallback')
+          OR (detected_format = 'json' AND parser_key = 'json_fallback')
+        ))
+      )
     ORDER BY relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as SourceFileRow[];
   const summary: PostsImportSectionResult = { filesAttempted: 0, recordsImported: 0, mediaReferences: 0, unsupportedFiles: 0, failedFiles: 0 };
@@ -120,7 +126,7 @@ export async function importPostsSection(database: DatabaseSync, snapshotId: str
         `).run(runId, file.id, issue.code.toUpperCase(), 'A post card could not be fully interpreted.', JSON.stringify({ sourceCardIndex: issue.sourceCardIndex }), now);
       }
       const unsupported = parsed.records.length === 0;
-      database.prepare('UPDATE source_files SET status=?, record_count=?, safe_error_code=?, processed_at=? WHERE id=? AND snapshot_id=?')
+      database.prepare("UPDATE source_files SET status=?, parser_key='posts_reviewed', record_count=?, safe_error_code=?, processed_at=? WHERE id=? AND snapshot_id=?")
         .run(unsupported ? 'unsupported' : 'completed', parsed.records.length, unsupported ? 'POST_CARDS_NOT_FOUND' : null, now, file.id, snapshotId);
       database.prepare("UPDATE import_runs SET status='completed', finished_at=?, files_processed=1, records_imported=?, errors_count=? WHERE id=?")
         .run(now, parsed.records.length, unsupported ? 1 : 0, runId);

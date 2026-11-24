@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { clearSourceFileRecords } from './source-file-records';
+import { getFallbackParserKey } from './fallback-parser-key';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
 import { normalizeSearchText } from '../../../shared/text/normalize';
@@ -13,6 +14,7 @@ interface JsonSourceFile {
   relative_path: string;
   file_size_bytes: number | null;
   section_key: string;
+  parser_key: string | null;
 }
 
 interface JsonItem {
@@ -272,16 +274,17 @@ async function importJsonFile(
         'The JSON file exceeded the maximum number of entries indexed from one file.',
         { maximumRecords: MAX_JSON_RECORDS_PER_FILE });
     }
+    const fallbackParserKey = getFallbackParserKey(file.parser_key, 'json_fallback');
     if (items.length === 0) {
       database.prepare(`
-        UPDATE source_files SET status = 'empty', record_count = 0, safe_error_code = NULL, processed_at = ?
+        UPDATE source_files SET status = 'empty', parser_key = ?, record_count = 0, safe_error_code = NULL, processed_at = ?
         WHERE id = ? AND snapshot_id = ?
-      `).run(timestamp, file.id, snapshotId);
+      `).run(fallbackParserKey, timestamp, file.id, snapshotId);
     } else {
       database.prepare(`
-        UPDATE source_files SET status = ?, record_count = ?, safe_error_code = ?, processed_at = ?
+        UPDATE source_files SET status = ?, parser_key = ?, record_count = ?, safe_error_code = ?, processed_at = ?
         WHERE id = ? AND snapshot_id = ?
-      `).run(unsupported ? 'unsupported' : 'completed', imported,
+      `).run(unsupported ? 'unsupported' : 'completed', fallbackParserKey, imported,
         unsupported ? 'JSON_ITEMS_TOO_LARGE' : null, timestamp, file.id, snapshotId);
     }
     database.prepare(`
@@ -316,7 +319,7 @@ export async function importJsonFilesSection(
   onProgress?: ImportProgressReporter
 ): Promise<JsonImportSectionResult> {
   const files = database.prepare(`
-    SELECT id, relative_path, file_size_bytes, section_key
+    SELECT id, relative_path, file_size_bytes, section_key, parser_key
     FROM source_files
     WHERE snapshot_id = ? AND detected_format = 'json'
       AND status IN ('discovered', 'failed', 'unsupported')

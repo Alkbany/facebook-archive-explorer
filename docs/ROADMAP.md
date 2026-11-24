@@ -27,6 +27,7 @@
 - [x] Serialize import requests and prevent backup switching while an import is active.
 - [x] Recover interrupted section imports and Import All runs across all snapshots during application startup, with safe Diagnostics and an atomic SQLite savepoint.
 - [x] Persist each source-file result atomically so completed files are durable checkpoints and interrupted files can be retried safely.
+- [x] Tag generic JSON/HTML/text fallback results and migrate existing fallback records so future reviewed parsers can promote them once without repeatedly retrying unsupported layouts.
 - [x] Replace a source file's previous records atomically on retry, removing obsolete full-text search rows and media links while retaining the last successful data when a retry fails.
 - [x] Keep per-file record counts and saved-backup summary totals aligned with the records currently stored, not historical import attempts.
 - [x] Add user-controlled pause/resume at file boundaries without interrupting an active file transaction.

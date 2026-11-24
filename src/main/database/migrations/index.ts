@@ -1,6 +1,7 @@
 import initialSchema from './001_initial_schema.sql?raw';
 import accountNames from './002_account_names.sql?raw';
 import verifiedEventTimes from './003_backfill_verified_event_times.sql?raw';
+import fallbackParserKeys from './004_backfill_fallback_parser_keys.sql?raw';
 import type { SqlMigration } from '../connection';
 
 export const DATABASE_MIGRATIONS: readonly SqlMigration[] = [
@@ -18,5 +19,10 @@ export const DATABASE_MIGRATIONS: readonly SqlMigration[] = [
     version: 3,
     name: 'backfill_verified_event_times',
     sql: verifiedEventTimes
+  },
+  {
+    version: 4,
+    name: 'backfill_fallback_parser_keys',
+    sql: fallbackParserKeys
   }
 ];

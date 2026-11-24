@@ -27,6 +27,11 @@ const migrations = [
     version: 3,
     name: 'backfill_verified_event_times',
     sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/003_backfill_verified_event_times.sql'), 'utf8')
+  },
+  {
+    version: 4,
+    name: 'backfill_fallback_parser_keys',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/004_backfill_fallback_parser_keys.sql'), 'utf8')
   }
 ] as const;
 
@@ -46,7 +51,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(initialCount.count).toBe(3);
+    expect(initialCount.count).toBe(4);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
     applyMigrations(database, migrations);
@@ -55,7 +60,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(finalCount.count).toBe(3);
+    expect(finalCount.count).toBe(4);
   });
 
   it('backfills only verified Unix timestamps for records imported by older versions', () => {
@@ -92,6 +97,58 @@ describe('local SQLite storage', () => {
       expect(rows).toEqual([
         { eventTimeUtc: '2018-10-20T01:46:40.000Z' },
         { eventTimeUtc: null }
+      ]);
+    } finally {
+      legacyDatabase.close();
+    }
+  });
+
+
+  it('marks existing generic fallback files so new reviewed parsers can promote them', () => {
+    const legacyDatabase = openAppDatabase(':memory:', migrations.slice(0, 3));
+    try {
+      const timestamp = new Date().toISOString();
+      legacyDatabase.prepare(
+        'INSERT INTO accounts (id, display_name, created_at, updated_at) VALUES (?, ?, ?, ?)'
+      ).run('fallback-account', 'Fallback account', timestamp, timestamp);
+      legacyDatabase.prepare(`
+        INSERT INTO archive_snapshots (
+          id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+        ) VALUES ('fallback-snapshot', 'fallback-account', 'Fallback export', 'directory', '/tmp/fallback', 'completed', ?, ?)
+      `).run(timestamp, timestamp);
+      const insertSource = legacyDatabase.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+        ) VALUES ('fallback-snapshot', ?, ?, ?, ?, 'completed', ?)
+      `);
+      const jsonId = Number(insertSource.run('groups/group_posts.json', 'group_posts.json', 'groups', 'json', timestamp).lastInsertRowid);
+      const htmlId = Number(insertSource.run('future/index.html', 'index.html', 'future', 'html', timestamp).lastInsertRowid);
+      const textId = Number(insertSource.run('future/readme.txt', 'readme.txt', 'future', 'text', timestamp).lastInsertRowid);
+      const emptyId = Number(legacyDatabase.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+        ) VALUES ('fallback-snapshot', 'future/empty.json', 'empty.json', 'future', 'json', 'empty', ?)
+      `).run(timestamp).lastInsertRowid);
+
+      const insertRecord = legacyDatabase.prepare(`
+        INSERT INTO records (
+          snapshot_id, source_file_id, source_record_index, section_key, record_type,
+          title, sensitivity, search_enabled, payload_json, created_at
+        ) VALUES ('fallback-snapshot', ?, 0, ?, ?, 'Synthetic', 'personal', 1, '{}', ?)
+      `);
+      insertRecord.run(jsonId, 'groups', 'json_item', timestamp);
+      insertRecord.run(htmlId, 'future', 'html_item', timestamp);
+      insertRecord.run(textId, 'future', 'text_item', timestamp);
+
+      applyMigrations(legacyDatabase, [migrations[3]]);
+      const rows = legacyDatabase.prepare(
+        'SELECT id, parser_key AS parserKey FROM source_files ORDER BY id'
+      ).all() as Array<{ id: number; parserKey: string | null }>;
+      expect(rows).toEqual([
+        { id: jsonId, parserKey: 'json_fallback' },
+        { id: htmlId, parserKey: 'html_fallback' },
+        { id: textId, parserKey: 'text_fallback' },
+        { id: emptyId, parserKey: 'json_fallback' }
       ]);
     } finally {
       legacyDatabase.close();

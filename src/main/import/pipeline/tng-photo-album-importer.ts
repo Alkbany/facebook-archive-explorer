@@ -67,7 +67,9 @@ export async function importTngPhotoAlbumJsonSection(
     'SELECT id, relative_path, file_name, file_size_bytes FROM source_files ' +
     "WHERE snapshot_id = ? AND section_key = 'photos_and_videos' AND detected_format = 'json' " +
     "AND lower(relative_path) LIKE 'your_facebook_activity/posts/album/%' " +
-    "AND status IN ('discovered', 'failed', 'unsupported') ORDER BY relative_path COLLATE NOCASE"
+    "AND (status IN ('discovered', 'failed', 'unsupported') OR " +
+    "(status IN ('completed', 'empty') AND parser_key = 'json_fallback')) " +
+    'ORDER BY relative_path COLLATE NOCASE'
   ).all(snapshotId) as unknown as SourceFileRow[];
   const files = candidates.filter((file) => /^your_facebook_activity\/posts\/album\/[^/]+\.json$/iu.test(
     file.relative_path.replace(/\\/gu, '/')

@@ -177,7 +177,7 @@ async function importOneConversation(
 
     const unsupported = parsed.issues.some((issue) => issue.code === 'no_message_cards_found');
     database.prepare(`
-      UPDATE source_files SET status = ?, record_count = ?, safe_error_code = ?, processed_at = ?
+      UPDATE source_files SET status = ?, parser_key = 'messages_reviewed', record_count = ?, safe_error_code = ?, processed_at = ?
       WHERE id = ? AND snapshot_id = ?
     `).run(unsupported ? 'unsupported' : 'completed', parsed.messages.length,
       unsupported ? 'MESSAGE_CARDS_NOT_FOUND' : null, timestamp, source.id, snapshotId);
@@ -241,7 +241,13 @@ export async function importMessagesSection(
           AND lower(file_name) GLOB 'message_*.json'
         )
       )
-      AND status IN ('discovered', 'failed', 'unsupported')
+      AND (
+        status IN ('discovered', 'failed', 'unsupported')
+        OR (status IN ('completed', 'empty') AND (
+          (detected_format = 'html' AND parser_key = 'html_fallback')
+          OR (detected_format = 'json' AND parser_key = 'json_fallback')
+        ))
+      )
     ORDER BY relative_path
   `).all(snapshotId) as unknown as MessageSourceFileRow[];
 

@@ -38,7 +38,10 @@ async function importLegacyPhotoAlbumsSection(
   const candidates = database.prepare(`
     SELECT id, relative_path FROM source_files
     WHERE snapshot_id = ? AND section_key = 'photos_and_videos'
-      AND detected_format = 'html' AND status IN ('discovered', 'failed', 'unsupported')
+      AND (
+        status IN ('discovered', 'failed', 'unsupported')
+        OR (status IN ('completed', 'empty') AND parser_key = 'html_fallback')
+      )
     ORDER BY relative_path COLLATE NOCASE
   `).all(snapshotId) as unknown as SourceFileRow[];
   const files = candidates.filter((file) => {
@@ -157,7 +160,7 @@ async function importLegacyPhotoAlbumsSection(
           VALUES (?, ?, 'warning', 'PHOTO_ALBUM_INDEX_NOT_RECOGNIZED', 'This HTML file is not a recognized Photos & Videos album index. Album detail pages are not imported yet.', '{}', ?)
         `).run(runId, file.id, timestamp);
       }
-      database.prepare('UPDATE source_files SET status=?, record_count=?, safe_error_code=?, processed_at=? WHERE id=? AND snapshot_id=?')
+      database.prepare("UPDATE source_files SET status=?, parser_key='photo_albums_html', record_count=?, safe_error_code=?, processed_at=? WHERE id=? AND snapshot_id=?")
         .run(unsupported ? 'unsupported' : 'completed', parsed.records.length,
           unsupported ? 'PHOTO_ALBUM_INDEX_NOT_RECOGNIZED' : null, timestamp, file.id, snapshotId);
       database.prepare("UPDATE import_runs SET status='completed', finished_at=?, files_processed=1, records_imported=?, errors_count=? WHERE id=?")

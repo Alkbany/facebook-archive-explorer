@@ -1872,3 +1872,32 @@ h1 {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+/* Four-level search foundation: Exact and Fuzzy are usable without any AI model. */
+.search-privacy-setting {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:12px 0; padding:11px 13px; border:1px solid #e8eaf2; border-radius:10px;
+  background:#fafaff;
+}
+.search-privacy-setting label { display:flex; align-items:flex-start; gap:9px; min-width:0; cursor:pointer; }
+.search-privacy-setting input { width:15px; height:15px; margin:2px 0 0; accent-color:#6c5ce7; flex:0 0 auto; }
+.search-privacy-setting label span { display:flex; flex-direction:column; gap:3px; }
+.search-privacy-setting strong { color:#34394e; font-size:10px; }
+.search-privacy-setting small, .search-privacy-setting > span { color:#858ba0; font-size:9px; line-height:1.5; }
+.search-mode-controls {
+  display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px;
+  margin-top:10px; padding:10px 0 2px; border-top:1px solid #eef0f5;
+}
+.search-mode-controls label { display:flex; flex-direction:column; gap:5px; min-width:150px; }
+.search-mode-controls label > span { color:#777e93; font-size:9px; font-weight:700; }
+.search-mode-controls select {
+  min-width:170px; height:33px; padding:0 9px; border:1px solid #e4e6ef;
+  border-radius:8px; color:#41465d; background:#fff; font:inherit; font-size:10px;
+}
+.search-mode-note { flex:1 1 260px; color:#858ba0; font-size:9px; line-height:1.5; }
+.search-result-heading span { text-transform:none; }
+@media (max-width: 720px) {
+  .search-privacy-setting { align-items:flex-start; flex-direction:column; }
+  .search-mode-controls { align-items:stretch; flex-direction:column; }
+  .search-mode-controls label, .search-mode-controls select { width:100%; }
+}
+

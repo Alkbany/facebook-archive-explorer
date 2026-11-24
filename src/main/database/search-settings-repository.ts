@@ -11,9 +11,13 @@ export function getArchiveSearchSettings(database: DatabaseSync): ArchiveSearchS
   const semantic = database.prepare(
     'SELECT setting_value AS value FROM app_settings WHERE setting_key = ?'
   ).get('semantic_search_enabled') as { value: string } | undefined;
+  const assistant = database.prepare(
+    'SELECT setting_value AS value FROM app_settings WHERE setting_key = ?'
+  ).get('ai_assistant_enabled') as { value: string } | undefined;
   return {
     includeMessagesInGlobalSearch: row?.value === 'true',
-    semanticSearchEnabled: semantic?.value === 'true'
+    semanticSearchEnabled: semantic?.value === 'true',
+    aiAssistantEnabled: assistant?.value === 'true'
   };
 }
 
@@ -158,6 +162,26 @@ export function setSemanticSearchEnabled(
     database.exec('ROLLBACK');
     throw error;
   }
+
+  return getArchiveSearchSettings(database);
+}
+
+
+export function setAiAssistantEnabled(
+  database: DatabaseSync,
+  enabled: boolean
+): ArchiveSearchSettings {
+  if (typeof enabled !== 'boolean') {
+    throw new TypeError('The AI Assistant setting must be a boolean.');
+  }
+
+  database.prepare(`
+    INSERT INTO app_settings (setting_key, setting_value, updated_at)
+    VALUES ('ai_assistant_enabled', ?, ?)
+    ON CONFLICT(setting_key) DO UPDATE SET
+      setting_value = excluded.setting_value,
+      updated_at = excluded.updated_at
+  `).run(enabled ? 'true' : 'false', new Date().toISOString());
 
   return getArchiveSearchSettings(database);
 }

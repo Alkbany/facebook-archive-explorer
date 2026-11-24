@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation on `main`.** The main branch includes the redesigned Electron/React desktop workspace, local SQLite storage, account/backup grouping, legacy and current nested Accounts Center directory classification, directory and ZIP discovery, ZIP-backed media streaming, reviewed Friends HTML + TNG JSON, Messages legacy HTML + TNG JSON, Likes & Reactions HTML, sampled Posts HTML + TNG timeline JSON, Comments HTML + TNG JSON, and Groups TNG JSON importers. It also includes bounded HTML/JSON/plain-text fallbacks (UTF-8 and BOM-marked UTF-16), the Other Data browser, unified media inventory, local full-text search, JSON search export, snapshot comparison, import diagnostics/coverage, database backup/restore, and streamed audio/video.
+> **Status: active implementation on `main`.** The main branch includes the redesigned Electron/React desktop workspace, local SQLite storage, account/backup grouping, legacy and current nested Accounts Center directory classification, directory and ZIP discovery, ZIP-backed media streaming, reviewed Friends HTML + TNG JSON, Messages legacy HTML + TNG JSON, Likes & Reactions HTML, sampled Posts HTML + TNG timeline JSON, Comments HTML + TNG JSON, and Groups TNG JSON importers with a dedicated Groups workspace. It also includes bounded HTML/JSON/plain-text fallbacks (UTF-8 and BOM-marked UTF-16), the Other Data browser, unified media inventory, local full-text search, JSON search export, snapshot comparison, import diagnostics/coverage, database backup/restore, and streamed audio/video.
 
 ## Product decisions
 
@@ -99,7 +99,7 @@ The following work is still required for a complete 1.0 release. A discovered fi
 - Clean-device Windows install, launch, upgrade, and uninstall smoke tests; final privacy/security review and release checklist.
 - A trusted Windows signing identity, code-signing provider onboarding, and Smart App Control validation. Test installers may remain unsigned until signing is configured.
 
-The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive Files browser, Friends directory, Other Data browser, Photos & Videos import action, Import Diagnostics, Import Coverage, and functional workspace navigation are implemented. See [the roadmap](docs/ROADMAP.md) for the authoritative implementation checklist.
+The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive Files browser, Friends directory, Groups workspace, Other Data browser, Photos & Videos import action, Import Diagnostics, Import Coverage, and functional workspace navigation are implemented. See [the roadmap](docs/ROADMAP.md) for the authoritative implementation checklist.
 
 ## Documentation
 
@@ -116,7 +116,7 @@ The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive
 ZIP backups can be selected, inventoried, reopened, and read on demand without extracting the original archive. The same reviewed HTML importers are used with ZIP entries and directory files.
 
 - Friends: five recognized HTML exports.
-- Messages: observed conversation HTML, local attachments, and a browsable conversation explorer.
+- Messages: observed conversation HTML, local attachments, and a browsable conversation explorer.\n- Groups: a dedicated workspace for the reviewed group posts, comments, and membership activity collections. Comment author/group and membership group names appear only when present in the source payload; the raw JSON remains inspectable.
 - Posts: sampled post-card HTML with source-provenanced records and verified local media links.
 - Comments: sampled comment/reply activity cards with the original activity description, group label, text, and raw date separated.
 - Likes & Reactions: observed card structure with raw descriptions and dates preserved; unknown reaction images remain unclassified.

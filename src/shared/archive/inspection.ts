@@ -72,6 +72,31 @@ export interface PhotoAlbumsImportSectionResult {
   failedFiles: number;
 }
 
+
+export interface EventSourceReference {
+  sourcePath: string;
+  sourceCardIndex: number;
+  recordId: number;
+}
+
+export interface EventRecordSummary {
+  id: number;
+  eventKey: string;
+  title: string;
+  description: string | null;
+  startDateRaw: string | null;
+  startDateUtc: string | null;
+  endDateRaw: string | null;
+  responseTimeRaw: string | null;
+  rsvp: string;
+  locationName: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  url: string | null;
+  sources: EventSourceReference[];
+}
+
 export interface PhotoAlbumRecordSummary {
   id: number;
   sourcePath: string;
@@ -189,7 +214,7 @@ export interface ImportIssueReport {
 
 
 
-export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'groups' | 'html_fallback' | 'text_fallback' | 'json';
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'groups' | 'events' | 'html_fallback' | 'text_fallback' | 'json';
 
 export interface ImportProgressEvent {
   sectionKey: ImportProgressSectionKey;
@@ -260,6 +285,7 @@ export interface ImportAllSupportedDataResult {
     reactions: ReactionsImportSectionResult;
     photosAndVideos: PhotoAlbumsImportSectionResult;
     groups: JsonImportSectionResult;
+    events: JsonImportSectionResult;
     htmlFallback: JsonImportSectionResult;
     textFallback: JsonImportSectionResult;
     json: JsonImportSectionResult;

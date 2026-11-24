@@ -179,6 +179,11 @@ describe('archive-wide media, search, and comparison', () => {
     );
     expect(inYear.map((record) => record.sourceCardIndex)).toEqual([0, 1]);
 
+    const fuzzyInYear = searchArchiveRecords(
+      database, baselineId, 'Alexandria trip', null, 'fuzzy', 0.95, '2022-01-01', '2022-12-31'
+    );
+    expect(fuzzyInYear.map((record) => record.sourceCardIndex)).toEqual([0, 1]);
+
     const finalDay = searchArchiveRecords(
       database, baselineId, 'Alexandria trip', null, 'exact', 0.8, '2022-12-31', '2022-12-31'
     );

@@ -106,19 +106,25 @@ jobs:
         run: npm run typecheck
       - name: Run unit tests
         run: npm test
-      - name: Validate release signature script syntax
+      - name: Validate PowerShell release scripts
         shell: pwsh
         run: |
-          $tokens = $null
-          $parseErrors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path './scripts/verify-windows-signatures.ps1'),
-            [ref]$tokens,
-            [ref]$parseErrors
-          ) | Out-Null
-          if ($parseErrors.Count -gt 0) {
-            $parseErrors | ForEach-Object { Write-Error $_ }
-            throw 'Windows signature verification script has PowerShell syntax errors.'
+          $scriptPaths = @(
+            './scripts/verify-windows-package.ps1',
+            './scripts/verify-windows-signatures.ps1'
+          )
+          foreach ($scriptPath in $scriptPaths) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $scriptPath),
+              [ref]$tokens,
+              [ref]$parseErrors
+            ) | Out-Null
+            if ($parseErrors.Count -gt 0) {
+              $parseErrors | ForEach-Object { Write-Error $_ }
+              throw "PowerShell syntax validation failed: $scriptPath"
+            }
           }
       - name: Build Windows NSIS installer
         run: npm run package:win

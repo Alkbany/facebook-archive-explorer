@@ -22,9 +22,10 @@ import { inspectArchiveDirectory } from '../import/discovery/inventory';
 import { inspectArchiveZip } from '../import/discovery/zip-inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importAllSupportedData, importPhotosAndVideosSection } from '../import/pipeline/import-all';
+import { importEventsJsonSection } from '../import/pipeline/events-json-importer';
 import { importPostsSection } from '../import/pipeline/posts-importer';
 import { importCommentsSection } from '../import/pipeline/comments-importer';
-import { listPostRecords, listCommentActivities, listPhotoAlbums, getPhotoAlbumDetail } from '../database/activity-repository';
+import { listPostRecords, listCommentActivities, listPhotoAlbums, getPhotoAlbumDetail, listEventRecords } from '../database/activity-repository';
 import { importMessagesSection } from '../import/pipeline/messages-importer';
 import { importReactionsSection } from '../import/pipeline/reactions-importer';
 import { listReactionRecords } from '../database/activity-repository';
@@ -710,6 +711,24 @@ export function registerIpcHandlers(
       throw new Error('Invalid photo album selection.');
     }
     return getPhotoAlbumDetail(database, selectedSnapshotId, requestedAlbumRecordId as number);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listEventsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before opening Events.');
+    return listEventRecords(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importEventsForSelectedBackup, async (event) => {
+    if (!selectedSnapshotId || !selectedBackupDirectory) {
+      throw new Error('Select a local backup before importing Events.');
+    }
+    const snapshotId = selectedSnapshotId;
+    const archiveRoot = selectedBackupDirectory;
+    return runExclusiveImport('Events', () =>
+      importEventsJsonSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
+      })
+    );
   });
 
   ipcMain.handle(IPC_CHANNELS.listPostsForSelectedBackup, () => {

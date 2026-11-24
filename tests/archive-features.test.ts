@@ -100,7 +100,9 @@ describe('archive-wide media, search, and comparison', () => {
     ]);
     expect(searchArchiveRecords(database, baselineId, 'Phoenix', 'comments')).toHaveLength(1);
     expect(searchArchiveRecords(database, baselineId, 'Phoenix', null)).toHaveLength(2);
-    expect(searchArchiveRecords(database, baselineId, 'Phoenix', 'messages')).toHaveLength(0);
+    expect(searchArchiveRecords(database, baselineId, 'Phoenix', 'messages')).toMatchObject([
+      { sectionKey: 'messages', body: 'Phoenix private message' }
+    ]);
   });
 
   it('uses a separate opt-in index for sensitive message text and removes it when disabled', () => {

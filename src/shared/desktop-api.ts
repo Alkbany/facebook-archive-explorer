@@ -34,6 +34,8 @@ import type {
   ImportProgressEvent,
   JsonImportSectionResult,
   EventRecordSummary,
+  MarketplaceListingSummary,
+  SavedItemSummary,
   FallbackArchiveSectionSummary,
   FallbackArchiveRecordsPage
 } from './archive/inspection';
@@ -80,6 +82,10 @@ export const IPC_CHANNELS = {
   listPostsForSelectedBackup: 'archive:list-posts',
   listEventsForSelectedBackup: 'archive:list-events',
   importEventsForSelectedBackup: 'archive:import-events',
+  listMarketplaceForSelectedBackup: 'archive:list-marketplace',
+  importMarketplaceForSelectedBackup: 'archive:import-marketplace',
+  listSavedItemsForSelectedBackup: 'archive:list-saved-items',
+  importSavedItemsForSelectedBackup: 'archive:import-saved-items',
   importMessagesForSelectedBackup: 'archive:import-messages',
   importReactionsForSelectedBackup: 'archive:import-reactions',
   listReactionsForSelectedBackup: 'archive:list-reactions',
@@ -129,6 +135,10 @@ export interface DesktopApi {
   listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
   listEventsForSelectedBackup(): Promise<EventRecordSummary[]>;
   importEventsForSelectedBackup(): Promise<JsonImportSectionResult>;
+  listMarketplaceForSelectedBackup(): Promise<MarketplaceListingSummary[]>;
+  importMarketplaceForSelectedBackup(): Promise<JsonImportSectionResult>;
+  listSavedItemsForSelectedBackup(): Promise<SavedItemSummary[]>;
+  importSavedItemsForSelectedBackup(): Promise<JsonImportSectionResult>;
   importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;
   listCommentsForSelectedBackup(): Promise<CommentActivitySummary[]>;
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;

@@ -17,7 +17,9 @@ describe('paged archive media gallery', () => {
       '002_account_names.sql',
       '003_backfill_verified_event_times.sql',
       '004_backfill_fallback_parser_keys.sql',
-      '005_media_metadata_scan_state.sql'
+      '005_media_metadata_scan_state.sql',
+      '006_search_preferences.sql',
+      '007_semantic_search.sql'
     ];
     const migrations = await Promise.all(migrationNames.map(async (fileName, index) => ({
       version: index + 1,

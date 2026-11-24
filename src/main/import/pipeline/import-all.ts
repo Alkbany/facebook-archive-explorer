@@ -11,6 +11,7 @@ import { importPhotoAlbumDetailsSection } from './photo-album-details-importer';
 import { importJsonFilesSection } from './json-importer';
 import { importHtmlFallbackFilesSection } from './html-fallback-importer';
 import { importTextFallbackFilesSection } from './text-fallback-importer';
+import { importGroupsJsonSection } from './groups-json-importer';
 import type { ImportProgressReporter } from './import-progress';
 
 /**
@@ -170,11 +171,12 @@ export async function importAllSupportedData(
     const comments = await importCommentsSection(database, snapshotId, archiveRoot, onProgress);
     const reactions = await importReactionsSection(database, snapshotId, archiveRoot, onProgress);
     const photosAndVideos = await importPhotosAndVideosSection(database, snapshotId, archiveRoot, onProgress);
+    const groups = await importGroupsJsonSection(database, snapshotId, archiveRoot, onProgress);
     const htmlFallback = await importHtmlFallbackFilesSection(database, snapshotId, archiveRoot, onProgress);
     const textFallback = await importTextFallbackFilesSection(database, snapshotId, archiveRoot, onProgress);
     const json = await importJsonFilesSection(database, snapshotId, archiveRoot, onProgress);
 
-    const sections = { friends, messages, posts, comments, reactions, photosAndVideos, htmlFallback, textFallback, json };
+    const sections = { friends, messages, posts, comments, reactions, photosAndVideos, groups, htmlFallback, textFallback, json };
     const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {
       const mediaReferences = 'mediaReferences' in section ? section.mediaReferences : 0;
       return {

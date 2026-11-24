@@ -186,7 +186,7 @@ export interface ImportIssueReport {
 
 
 
-export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'html_fallback' | 'text_fallback' | 'json';
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'groups' | 'html_fallback' | 'text_fallback' | 'json';
 
 export interface ImportProgressEvent {
   sectionKey: ImportProgressSectionKey;
@@ -256,6 +256,7 @@ export interface ImportAllSupportedDataResult {
     comments: CommentsImportSectionResult;
     reactions: ReactionsImportSectionResult;
     photosAndVideos: PhotoAlbumsImportSectionResult;
+    groups: JsonImportSectionResult;
     htmlFallback: JsonImportSectionResult;
     textFallback: JsonImportSectionResult;
     json: JsonImportSectionResult;

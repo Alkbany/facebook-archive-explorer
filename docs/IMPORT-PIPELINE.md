@@ -153,3 +153,6 @@ The observed \`connections/friends/your_friends.json\` \`friends_v2\` collection
 
 
 The Posts importer also recognizes \`your_facebook_activity/posts/your_posts__check_ins__photos_and_videos*.json\` when it contains the observed timeline array. It imports the Facebook activity heading, post text, raw timestamp, and media URIs only from the selected archive's \`posts/media\` folder. Place addresses/coordinates, EXIF, IP metadata, and external URLs are deliberately not copied into searchable fields. Album JSON and posts-on-other-pages \`label_values\` records remain on the generic fallback until their dedicated views are implemented.
+
+
+The Groups-specific JSON importer recognizes the TNG \`group_posts_v2\`, \`group_comments_v2\`, and \`groups_joined_v2\` collections in their three reviewed filenames under \`your_facebook_activity/groups/\`. It indexes only the activity title and visible post/comment/group-name text; external links, identifiers, member/contact fields, places, and attachment metadata are excluded from searchable fields. Unsupported structures remain eligible for the generic JSON fallback.

@@ -39,3 +39,13 @@ The name and normalized name are searchable. Contact information remains in `pay
 The conversation importer stores sender text, body text, raw timestamp, source file, and original card index. Reaction text and media references are retained separately in `payload_json`; linked local media references use `media_assets` and `record_media`. Message records are classified as sensitive and are excluded from FTS5 by default. Media bytes remain in the original export folder.
 
 Other section-specific record models and parsers are still pending.
+
+## Search preferences and optional AI
+
+- `app_settings` stores `include_messages_in_global_search`, `semantic_search_enabled`, and `ai_assistant_enabled`. All default to `false`.
+- `message_search` and its vocabulary table hold sensitive message text only after the explicit message-search opt-in.
+- `semantic_index_jobs` stores resumable record/model/version indexing state, attempts, and safe error codes.
+- `semantic_embeddings` stores normalized local float vectors as SQLite BLOBs together with their dimensions and model version.
+- Embedding vectors are keyed to a record and model version; record updates invalidate the old vector and enqueue fresh work when the feature is enabled.
+- Message embeddings obey the independent message-search opt-in and are removed when that setting is turned off.
+

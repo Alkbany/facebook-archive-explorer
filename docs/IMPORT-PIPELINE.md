@@ -9,7 +9,7 @@
 5. **Parsing** — use a DOM parser for HTML and a JSON parser for JSON.
 6. **Normalization** — preserve original values and generate separate normalized search values.
 7. **Persistence** — save records and source references transactionally.
-8. **Indexing** — add eligible text to FTS5 according to sensitivity policy.
+8. **Indexing** — add eligible text to the exact FTS5 index according to sensitivity policy; build typo-tolerant token lookup from that local index; if Semantic Search is explicitly enabled, generate and persist embeddings in bounded batches while importing eligible records. Embedding failures are tracked separately and must never roll back imported archive records.
 9. **Reporting** — summarize processed, unsupported, empty, skipped, and failed files. A snapshot-scoped Import Diagnostics view lists safe issue messages by severity, source file, and card index (latest 250 shown; counts cover the full report).
 
 ## ZIP discovery and reads
@@ -162,3 +162,13 @@ The Messages importer recognizes current Accounts Center \`message_*.json\` chun
 
 
 The Photos & Videos importer also recognizes self-contained Accounts Center album JSON files at \`your_facebook_activity/posts/album/{id}.json\`. It imports the album title, description, raw last-modified timestamp, photo captions and raw creation timestamps into the existing album/photo workspace. Cover and photo links are created only for image paths that match discovered local image files. Original JSON metadata remains in the local record payload but is not copied into full-text fields; EXIF, upload IPs, locations, and other metadata are therefore not part of global search. Unrecognized album JSON layouts remain eligible for the generic JSON fallback.
+
+
+## Search indexes and privacy
+
+- Exact Search uses the local SQLite FTS5 index and preserves original source values alongside normalized search text.
+- Fuzzy Search uses a local token vocabulary and typo-distance scoring (insertions, deletions, substitutions, and adjacent transpositions). It does not require an LLM or an embedding model.
+- Sensitive Messages content is excluded from the default global search index. An explicit, independent opt-in setting builds a separate local FTS5 message index; disabling it clears the message index.
+- While the global Messages setting is off, the Messages workspace can still perform an exact, on-demand scoped text search without retaining a persistent message-content index. Fuzzy matching in Messages requires the explicit indexing opt-in.
+- If Semantic Search is enabled, embeddings are generated incrementally during import. Existing imported records must be backfilled when a user enables the feature later. Embedding jobs are bounded, resumable, versioned, and isolated from archive import success.
+- The AI Assistant is a separate optional LLM layer that retrieves local records and must provide navigable source references. It must not invent information or transmit archive content to an external provider.

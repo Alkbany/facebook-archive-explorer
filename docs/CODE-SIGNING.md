@@ -1,12 +1,16 @@
 # Windows code signing
 
-## Why signing is required
+## Personal-use test builds
 
-The NSIS artifacts produced by pushes to `main` are development/test builds. Smart App Control has no per-app bypass: if its cloud intelligence cannot classify an app as safe, an unsigned or invalidly signed app is blocked. A valid signature from a CA in Microsoft's Trusted Root Program is the reliable developer-side requirement for that case. See [Microsoft's Smart App Control FAQ](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions) and [signing guidance](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control).
+A trusted code-signing certificate is not required just to build and use this application personally. The `main` workflow publishes an unsigned test installer for the project owner's own device. Smart App Control does not support a per-app allow-list; the supported personal-use workaround is to turn Smart App Control off in Windows Security while using this app. Keep Microsoft Defender Antivirus enabled. Recent Windows updates allow Smart App Control to be re-enabled in Windows Security; when enforcement is on again, an unsigned app can be blocked on its next launch.
+
+See [Microsoft's Smart App Control FAQ](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions) for the current user controls.
 
 A version tag (`v*`) is treated as a release. The Windows workflow configures electron-builder to sign `.dll`, `.node`, `.sys`, and `.ocx` files in addition to its default executable signing. Before it uploads a version release, a PowerShell verification step checks every packaged `.exe`, `.dll`, `.node`, `.sys`, and `.ocx` binary for a valid Authenticode signature with the Code Signing EKU. The GitHub Release job only runs after this verification succeeds.
 
-## Configure a trusted certificate
+## Configure a trusted certificate for redistribution
+
+This section is only needed before distributing signed builds to other people or publishing a version-tag release. It is not a prerequisite for the owner's personal-use test builds.
 
 The repository owner must obtain a code-signing certificate from a provider trusted by the Microsoft Trusted Root Program. Then configure these repository Actions secrets:
 

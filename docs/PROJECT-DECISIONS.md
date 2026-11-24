@@ -159,11 +159,12 @@ A feature is complete only when its implementation, tests, user-facing behavior,
 
 ## Implementation status snapshot
 
-This section is deliberately a status snapshot, not a promise that every approved feature exists today.
+This section is deliberately a status snapshot, not a promise that every feature has passed real-archive validation.
 
-- Implemented baseline: local SQLite FTS5 exact full-text search over eligible records, with Arabic normalization.
-- Not yet implemented: fuzzy typo-tolerant matching and its adjustable threshold.
-- Not yet implemented: multilingual local embedding generation, persisted semantic index, import-time embedding generation, and backfill/rebuild controls.
-- Not yet implemented: local LLM assistant with evidence-grounded responses and navigable source citations.
-- Existing policy: message records are excluded from global FTS5 by default. The approved independent message-search setting still needs implementation.
-- Media library page-size options and Grid/List selection remain subject to the implementation checklist; target default is 100 with choices of 50/100/250.
+- Implemented Exact Search: local SQLite FTS5, quoted phrase matching, Arabic normalization, section filters, and metadata lookup for file paths, file names, and source dates.
+- Implemented Fuzzy Search: typo-tolerant token expansion and edit-distance scoring for insertion, deletion, substitution, and adjacent transposition, with a configurable threshold.
+- Implemented message privacy control: message content is excluded from global search by default, stored in a separate index only after explicit opt-in, and removed from that index when disabled. Direct Messages-section exact scan remains available without persistent indexing.
+- Implemented Semantic Search foundation: optional multilingual local embeddings, persisted versioned vectors, incremental import-time jobs, backfill, restart recovery, and retry. Actual model inference and semantic relevance still require clean-device validation.
+- Implemented AI Assistant foundation: independently optional local Qwen2.5-0.5B-Instruct, local evidence retrieval, citation-ID validation, conversation context, and source-file navigation. Real model output quality and citation completeness remain validation tasks.
+- Implemented media library pagination: 100 items by default, selectable 50/100/250, Grid/List views, and filtering before pagination.
+- Message content is eligible for assistant evidence only when the independent message-search privacy setting is enabled; neither AI feature uploads archive content to an external inference endpoint.

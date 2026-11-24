@@ -4,6 +4,7 @@ import type { ImportProgressEvent } from '../shared/archive/inspection';
 
 const desktopApi: DesktopApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.getAppInfo),
+  openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNELS.openExternalUrl, url),
   exportLocalDatabaseBackup: () => ipcRenderer.invoke(IPC_CHANNELS.exportLocalDatabaseBackup),
   restoreLocalDatabaseBackup: () => ipcRenderer.invoke(IPC_CHANNELS.restoreLocalDatabaseBackup),
   selectBackupDirectory: (accountName) =>

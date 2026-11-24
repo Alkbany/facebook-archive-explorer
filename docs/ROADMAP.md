@@ -73,6 +73,7 @@
 - [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [x] Events: reviewed TNG JSON variants for responses (`event_responses_v2`), invitations (`events_invited_v2`), and hosted event lists (`your_events_v2` / label-value event blocks), with RSVP preservation, duplicate merging, source provenance, and fallback for unknown shapes.
 - [x] Marketplace listing support: import `items_selling_v2` from `items_sold.json` and join `your_marketplace_items.json` label/value details by normalized title + UTC creation time. Unknown Marketplace files and conversation/search-history formats remain generic fallback.
+- [x] Fill missing Marketplace description fields from the matched label/value details record when the primary listing record omits them; preserve the combined source provenance and keep seller data out of the rendered/searchable listing fields.
 - [x] Saved Items support: import `saves_v2` from `your_saved_items.json`, preserving external-context names, source domains, and validated HTTP(S) links. Other collection formats remain generic fallback.
 - [ ] Expand coverage for additional Marketplace listing variants, Saved Items collections beyond `saves_v2`, and additional Groups export formats. The observed Groups TNG collections (`group_posts_v2`, `group_comments_v2`, `groups_joined_v2`) already have a reviewed importer.
 
@@ -105,6 +106,7 @@
 - [x] Show parser capability separately from file processing status.
 - [x] JSON export of current search results through the native save dialog.
 - [x] Detailed diff browsing with before/after values, filters, pagination, and CSV/JSON export.
+- [x] Open saved-item and event source links only on explicit user action through validated main-process HTTP/HTTPS handling; keep arbitrary renderer navigation and new windows blocked.
 
 ## Milestone 5 — Optional local AI
 

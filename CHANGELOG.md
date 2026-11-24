@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve a Marketplace description supplied by the matched label/value details file when the primary `items_selling_v2` record has no description; add a regression test and document the seller-data privacy boundary.
+- Make saved-item and event links functional through validated, user-initiated HTTP/HTTPS opening in the system browser; reject unsafe URL schemes and embedded credentials.
+
+
 All notable changes to Facebook Archive Explorer are documented here.
 
 The project uses Semantic Versioning. The `.beta.n` suffix counts repeated candidates for one target version; a new feature milestone advances the minor version (for example, `0.1.0-beta.2` to `0.2.0-beta.1`). The first stable release remains 1.0.0.

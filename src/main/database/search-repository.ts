@@ -129,9 +129,9 @@ function searchFtsTable(
   let matchExpression: string | null;
   let fuzzyQueryTerms: string[] = [];
   if (mode === 'fuzzy') {
-    const queryTerms = normalizeSearchText(query).match(/[\p{L}\p{N}_]+/gu)?.slice(0, 12) ?? [];
-    if (queryTerms.length === 0) return [];
-    const candidateGroups = queryTerms.map((term) =>
+    fuzzyQueryTerms = normalizeSearchText(query).match(/[\p{L}\p{N}_]+/gu)?.slice(0, 12) ?? [];
+    if (fuzzyQueryTerms.length === 0) return [];
+    const candidateGroups = fuzzyQueryTerms.map((term) =>
       findFuzzyTermCandidates(database, vocabulary, term, threshold)
     );
     if (candidateGroups.some((group) => group.length === 0)) return [];
@@ -197,7 +197,9 @@ function searchMessagesWithoutGlobalIndex(
   const normalized = trimmed.startsWith('"') && trimmed.endsWith('"')
     ? normalizeSearchText(trimmed.slice(1, -1))
     : normalizeSearchText(trimmed);
-  const terms = normalized.match(/[\p{L}\p{N}_]+/gu)?.slice(0, 12) ?? [];
+  const terms = trimmed.startsWith('"') && trimmed.endsWith('"')
+    ? [normalized]
+    : normalized.match(/[\p{L}\p{N}_]+/gu)?.slice(0, 12) ?? [];
   if (terms.length === 0) return [];
 
   const clauses = terms.map(() => 'instr(COALESCE(records.normalized_text, \'\'), ?) > 0').join(' AND ');

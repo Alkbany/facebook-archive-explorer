@@ -141,3 +141,66 @@ export async function readArchiveBinaryFile(archiveRoot: string, relativePath: s
   const filePath = await resolveSafeArchiveFile(archiveRoot, relativePath, maxBytes);
   return readFile(filePath);
 }
+
+/**
+ * Reads only the final bytes of a media file. This is useful for ISO-BMFF
+ * files whose moov metadata is stored after the media payload. ZIP entries
+ * remain streamed and are never extracted.
+ */
+export async function readArchiveBinarySuffix(
+  archiveRoot: string,
+  relativePath: string,
+  maxBytes = 1024 * 1024
+): Promise<Buffer> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 16 * 1024 * 1024) {
+    throw new RangeError('The archive binary suffix limit must be between 1 byte and 16 MiB.');
+  }
+
+  let sourceStats;
+  try { sourceStats = await stat(archiveRoot); } catch { sourceStats = null; }
+  if (sourceStats?.isFile() && extname(archiveRoot).toLocaleLowerCase() === '.zip') {
+    try {
+      const size = await getZipEntrySize(archiveRoot, relativePath);
+      if (size === 0) return Buffer.alloc(0);
+      const start = Math.max(0, size - maxBytes);
+      const range = await openZipEntryReadStream(archiveRoot, relativePath, start, size - 1);
+      const chunks: Buffer[] = [];
+      let total = 0;
+      try {
+        for await (const chunk of range.stream) {
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          total += buffer.length;
+          if (total > maxBytes) throw new ArchiveReadError('FILE_TOO_LARGE');
+          chunks.push(buffer);
+        }
+      } finally {
+        range.close();
+      }
+      return Buffer.concat(chunks, total);
+    } catch (error) {
+      if (error instanceof ZipArchiveError) throw new ArchiveReadError(error.code);
+      throw error;
+    }
+  }
+
+  const filePath = await resolveSafeArchiveFile(archiveRoot, relativePath, Number.POSITIVE_INFINITY);
+  const fileStats = await stat(filePath);
+  if (!fileStats.isFile()) throw new ArchiveReadError('NOT_A_FILE');
+  const bytesToRead = Math.min(fileStats.size, maxBytes);
+  if (bytesToRead === 0) return Buffer.alloc(0);
+  const start = fileStats.size - bytesToRead;
+  const chunks: Buffer[] = [];
+  let total = 0;
+  const stream = createReadStream(filePath, { start, end: fileStats.size - 1 });
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buffer.length;
+    if (total > maxBytes) {
+      stream.destroy();
+      throw new ArchiveReadError('FILE_TOO_LARGE');
+    }
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks, total);
+}
+

@@ -7,6 +7,7 @@ import { getAiAssistantStatus } from '../src/main/database/ai-assistant-service'
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getArchiveSearchSettings, setAiAssistantEnabled, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../src/main/database/search-settings-repository';
+import { searchArchiveRecords } from '../src/main/database/search-repository';
 
 const migrationFiles = [
   '001_initial_schema.sql',
@@ -101,6 +102,24 @@ describe('archive assistant evidence retrieval', () => {
       aiAssistantEnabled: false,
       semanticSearchEnabled: true
     });
+  });
+
+  it('keeps Exact and Fuzzy Search available regardless of the AI Assistant toggle', () => {
+    const recordId = addPost(0, 'Software interview', 'We discussed software engineering interviews', 2022);
+
+    setAiAssistantEnabled(database, false);
+    const exactWhileDisabled = searchArchiveRecords(database, snapshotId, 'software', 'posts', 'exact');
+    const fuzzyWhileDisabled = searchArchiveRecords(database, snapshotId, 'softwar', 'posts', 'fuzzy', 0.65);
+
+    setAiAssistantEnabled(database, true);
+    const exactWhileEnabled = searchArchiveRecords(database, snapshotId, 'software', 'posts', 'exact');
+    const fuzzyWhileEnabled = searchArchiveRecords(database, snapshotId, 'softwar', 'posts', 'fuzzy', 0.65);
+
+    expect(exactWhileDisabled.map((item) => item.id)).toContain(recordId);
+    expect(fuzzyWhileDisabled.map((item) => item.id)).toContain(recordId);
+    expect(exactWhileEnabled.map((item) => item.id)).toEqual(exactWhileDisabled.map((item) => item.id));
+    expect(fuzzyWhileEnabled.map((item) => item.id)).toEqual(fuzzyWhileDisabled.map((item) => item.id));
+    expect(getAiAssistantStatus(database).enabled).toBe(true);
   });
 
   it('retrieves lexical evidence with the exact source path, card number, and record id', () => {

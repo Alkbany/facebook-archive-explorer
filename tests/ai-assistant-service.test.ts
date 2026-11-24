@@ -84,32 +84,44 @@ describe('AI Assistant evidence merge', () => {
 });
 
 describe('AI Assistant citation validation', () => {
-  it('keeps only citations that were supplied by local evidence retrieval', () => {
+  it('rejects the whole answer when any sentence contains no valid source citation', () => {
     const result = validateArchiveAssistantCitations(
-      'The archive mentions a work discussion [S1]. This unsupported marker [S99] is not valid.',
+      'The archive mentions a work discussion [S1]. This unsupported statement has no valid source [S99].',
       [source('S1'), source('S2')]
     );
 
-    expect(result.answer).toBe('The archive mentions a work discussion [S1]. This unsupported marker  is not valid.');
     expect(result.citations).toEqual([source('S1')]);
+    expect(result.hasCompleteCoverage).toBe(false);
+    expect(result.answer).not.toContain('[S99]');
   });
 
-  it('withholds source navigation when no valid citation marker exists', () => {
+  it('withholds source navigation and reports incomplete coverage when no valid marker exists', () => {
     const result = validateArchiveAssistantCitations(
       'A model-generated claim without a source marker.',
       [source('S1')]
     );
     expect(result.citations).toEqual([]);
+    expect(result.hasCompleteCoverage).toBe(false);
   });
 
-  it('recognizes multiple valid source IDs without accepting malformed markers', () => {
+  it('requires coverage for every sentence and accepts only source IDs in the evidence set', () => {
     const result = validateArchiveAssistantCitations(
-      'First point [S1], second point [S2], invalid [S0] and malformed [SX].',
+      'First point [S1]. Second point [S2]. Third point [S1] includes invalid [S0] and malformed [SX].',
       [source('S1'), source('S2')]
     );
 
     expect(result.citations.map((item) => item.sourceId)).toEqual(['S1', 'S2']);
+    expect(result.hasCompleteCoverage).toBe(true);
     expect(result.answer).not.toContain('[S0]');
     expect(result.answer).not.toContain('[SX]');
+  });
+
+  it('associates a citation placed after sentence punctuation with the preceding claim', () => {
+    const result = validateArchiveAssistantCitations(
+      'The archive contains a work discussion. [S1]',
+      [source('S1')]
+    );
+    expect(result.hasCompleteCoverage).toBe(true);
+    expect(result.citations).toEqual([source('S1')]);
   });
 });

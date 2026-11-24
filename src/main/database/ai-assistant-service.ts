@@ -200,17 +200,30 @@ function extractGeneratedText(output: TextGenerationOutput | undefined): string 
 export function validateArchiveAssistantCitations(
   answer: string,
   sourceCitations: ArchiveAssistantCitation[]
-): { answer: string; citations: ArchiveAssistantCitation[] } {
+): { answer: string; citations: ArchiveAssistantCitation[]; hasCompleteCoverage: boolean } {
   const allowed = new Map(sourceCitations.map((source) => [source.sourceId, source]));
   const used = new Set<string>();
-  const cleaned = answer.replace(/\[S([A-Za-z0-9]+)\]/gu, (marker, token: string) => {
+  // A citation placed just after sentence punctuation still belongs to that sentence.
+  const normalizedAnswer = answer.replace(/([.!?؟])\\s+(\\[S[A-Za-z0-9]+\\])/gu, '$2$1');
+  const cleaned = normalizedAnswer.replace(/\\[S([A-Za-z0-9]+)\\]/gu, (marker, token: string) => {
     const sourceId = 'S' + token;
     if (!allowed.has(sourceId)) return '';
     used.add(sourceId);
     return marker;
-  }).trim();
+  }).replace(/[ \\t]{2,}/gu, ' ').trim();
+
+  const claimSegments = cleaned
+    .split(/\\r?\\n/gu)
+    .flatMap((line) => line.split(/(?<=[.!?؟])\\s+/u))
+    .map((segment) => segment.replace(/^\\s*(?:[-*•]\\s+|\\d+[.)]\\s+)/u, '').trim())
+    .filter((segment) => segment.length > 0 && !/^#{1,6}\\s/u.test(segment));
+  const hasCompleteCoverage = claimSegments.every((segment) =>
+    [...segment.matchAll(/\\[S([A-Za-z0-9]+)\\]/gu)]
+      .some((match) => allowed.has('S' + match[1]))
+  );
+
   const citations = sourceCitations.filter((source) => used.has(source.sourceId));
-  return { answer: cleaned, citations };
+  return { answer: cleaned, citations, hasCompleteCoverage };
 }
 
 function makeSystemPrompt(): string {
@@ -360,9 +373,11 @@ export async function askLocalArchiveAssistant(
   }
 
   const validated = validateArchiveAssistantCitations(rawAnswer, citations);
-  if (validated.citations.length === 0) {
+  if (validated.citations.length === 0 || !validated.hasCompleteCoverage) {
     return {
-      answer: 'The local model did not provide a verifiable source citation, so its generated answer was withheld. Try a narrower question or a different search level.',
+      answer: validated.citations.length === 0
+        ? 'The local model did not provide a verifiable source citation, so its generated answer was withheld. Try a narrower question or a different search level.'
+        : 'The local model returned one or more statements without a valid source citation, so the generated response was withheld. Try a narrower question.',
       citations: [],
       evidenceCount: citations.length,
       retrievalScope: { snapshotId, sectionKey, year: null }

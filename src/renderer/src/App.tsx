@@ -271,7 +271,7 @@ function App() {
   const [databaseBackupStatus, setDatabaseBackupStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions || isImportingPhotos;
+  const isAnyImporting = isImportingAll || isImportingFriends || isImportingMessages || isImportingPosts || isImportingComments || isImportingReactions || isImportingPhotos || isImportingEvents || isImportingMarketplace || isImportingSavedItems;
 
   useEffect(() => {
     if (!isAnyImporting) setIsImportPaused(false);
@@ -408,6 +408,8 @@ function App() {
     setFriendsImport(null);
     setFriendDirectory(null);
     setEventRecords([]);
+    setMarketplaceListings([]);
+    setSavedItems([]);
     setFriendTypeFilter('all');
     setFriendQuery('');
     setFriendPage(1);

@@ -648,7 +648,7 @@ function App() {
       const settings = await window.desktopApi.setIncludeMessagesInGlobalSearch(enabled);
       setIncludeMessagesInGlobalSearch(settings.includeMessagesInGlobalSearch);
       if (!enabled && searchMode === 'semantic') setSearchMode('exact');
-      if (!includeMessagesInGlobalSearch && searchSection === 'messages' && searchMode === 'fuzzy') setSearchMode('exact');
+      if (!settings.includeMessagesInGlobalSearch && searchSection === 'messages' && searchMode === 'fuzzy') setSearchMode('exact');
       setSearchResults([]);
       setSearchedQuery(null);
       setSearchExportStatus('');

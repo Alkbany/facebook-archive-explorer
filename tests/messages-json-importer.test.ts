@@ -103,15 +103,16 @@ describe('TNG Messenger JSON importer', () => {
     });
 
     const conversations = listMessageConversations(database, snapshotId);
-    expect(conversations).toHaveLength(1);
-    expect(conversations[0]).toMatchObject({
+    expect(conversations).toMatchObject({ page: 1, total: 1, pageSize: 50 });
+    expect(conversations.items).toHaveLength(1);
+    expect(conversations.items[0]).toMatchObject({
       relativePath: 'your_facebook_activity/messages/inbox/williamriker_1000000001/message_1.json',
       conversationType: 'inbox',
       messageCount: 3,
       participants: ['Jean-Luc Picard', 'William Riker']
     });
 
-    const messages = getMessageConversation(database, snapshotId, conversations[0].sourceFileId);
+    const messages = getMessageConversation(database, snapshotId, conversations.items[0].sourceFileId);
     expect(messages.records).toHaveLength(3);
     expect(messages.records[0]).toMatchObject({
       sender: 'Jean-Luc Picard',

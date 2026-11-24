@@ -76,5 +76,8 @@
   "homepage": "https://github.com/Alkbany/facebook-archive-explorer#readme",
   "bugs": {
     "url": "https://github.com/Alkbany/facebook-archive-explorer/issues"
+  },
+  "author": {
+    "name": "Ahmed Alkbany"
   }
 }

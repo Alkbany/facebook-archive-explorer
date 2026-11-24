@@ -46,6 +46,7 @@ A section is not complete merely because its files are discovered or preserved b
 - Original export files and ZIP archives are read-only inputs. Read them from their selected local locations; do not upload, copy wholesale, or commit them to the source repository.
 - Imported records and indexes belong in the application's local SQLite database. Media bytes remain in the original backup and are read/streamed locally.
 - Preserve source paths, file/card positions, raw values, and provenance so results can be traced back to the original archive.
+- Within a message card, collapse repeated attachment references that resolve to the same archive-relative file. When an `<a href>` wraps an image/audio/video element, preserve the actual media element's kind rather than inferring it from the filename or counting the wrapper link as another attachment.
 
 ## 5. Four-level search system
 

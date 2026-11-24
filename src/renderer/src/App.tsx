@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type {
   ArchiveInspectionView,
   ArchiveSnapshotSummary,
@@ -30,6 +30,7 @@ import type {
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import { MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationSummary, type MessageRecordSummary } from '../../shared/archive/messages';
+import { createRequestGate } from '../../shared/request-gate';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import { ARCHIVE_SEARCH_PAGE_SIZE, MAX_ARCHIVE_SEARCH_OFFSET, type ArchiveSearchMode, type ArchiveSearchResult, type SemanticSearchStatus } from '../../shared/archive/search';
 import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
@@ -265,6 +266,7 @@ function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const conversationRequestGate = useRef(createRequestGate());
   const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; streamUrl: string | null; loading: boolean; error: string | null } | null>(null);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isImportingAll, setIsImportingAll] = useState(false);
@@ -372,6 +374,8 @@ function App() {
   }, []);
 
   async function chooseFolder() {
+    conversationRequestGate.current.invalidate();
+    setIsLoadingConversation(false);
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
@@ -468,6 +472,8 @@ function App() {
 
 
   async function openSavedBackup(snapshotId: string) {
+    conversationRequestGate.current.invalidate();
+    setIsLoadingConversation(false);
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
@@ -1176,6 +1182,8 @@ function App() {
       if (foundConversations.length > 0) {
         await loadConversation(foundConversations[0].sourceFileId);
       } else {
+        conversationRequestGate.current.invalidate();
+        setIsLoadingConversation(false);
         setSelectedConversationId(null);
         setConversationMessages([]);
       }
@@ -1193,6 +1201,7 @@ function App() {
   }
 
   async function loadConversation(sourceFileId: number, page = 1) {
+    const requestId = conversationRequestGate.current.begin();
     setSelectedConversationId(sourceFileId);
     setIsLoadingConversation(true);
     try {
@@ -1211,15 +1220,17 @@ function App() {
           }
         }))
       })));
+      if (!conversationRequestGate.current.isCurrent(requestId)) return;
       setConversationMessages(withPreviews);
       setConversationPage(result.page);
       setConversationPageSize(result.pageSize);
       setConversationTotal(result.total);
     } catch {
+      if (!conversationRequestGate.current.isCurrent(requestId)) return;
       setError('This conversation could not be opened from the selected backup.');
       setConversationMessages([]);
     } finally {
-      setIsLoadingConversation(false);
+      if (conversationRequestGate.current.isCurrent(requestId)) setIsLoadingConversation(false);
     }
   }
 

@@ -1,8 +1,9 @@
-import { app, dialog, ipcMain } from 'electron';
+import { app, dialog, ipcMain, shell } from 'electron';
 import { basename, extname, join } from 'node:path';
 import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';
+import { normalizeSafeExternalUrl } from '../../shared/text/safe-external-url';
 import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
 import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from '../../shared/archive/comparison';
 import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
@@ -69,6 +70,14 @@ export function registerIpcHandlers(
   databasePath: string,
   supportedSchemaVersion: number
 ): void {
+  ipcMain.handle(IPC_CHANNELS.openExternalUrl, async (_event, candidate: unknown) => {
+    const safeUrl = normalizeSafeExternalUrl(candidate);
+    if (!safeUrl) {
+      throw new Error('Only valid HTTP and HTTPS links can be opened.');
+    }
+    await shell.openExternal(safeUrl);
+  });
+
   async function runExclusiveImport<T>(importName: string, operation: () => Promise<T>): Promise<T> {
     return runExclusiveImportLock(importName, async () => {
       const result = await operation();

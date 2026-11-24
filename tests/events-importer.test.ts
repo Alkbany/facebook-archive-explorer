@@ -106,7 +106,7 @@ describe('Accounts Center Events JSON importer', () => {
     });
 
     const events = listEventRecords(database, snapshotId);
-    expect(events).toHaveLength(4);
+    expect(events).toHaveLength(3);
     expect(events.find((item) => item.title === 'Synthetic Community Meetup')).toMatchObject({
       rsvp: 'joined',
       description: 'A synthetic event description',
@@ -122,6 +122,12 @@ describe('Accounts Center Events JSON importer', () => {
         expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_event_responses.json' }),
         expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_events.json' }),
         expect.objectContaining({ sourcePath: 'your_facebook_activity/events/event_invitations.json' })
+      ]),
+      sources: expect.arrayContaining([
+        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_event_responses.json', sourceCardIndex: 0 }),
+        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_event_responses.json', sourceCardIndex: 1 }),
+        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/event_invitations.json', sourceCardIndex: 0 }),
+        expect.objectContaining({ sourcePath: 'your_facebook_activity/events/your_events.json', sourceCardIndex: 0 })
       ])
     });
     expect(events.find((item) => item.title === 'A declined synthetic event')?.rsvp).toBe('declined');

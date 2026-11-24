@@ -34,6 +34,7 @@ export function getSectionKeyForArchivePath(relativePath: string): string {
       case 'events':
         return 'events';
       case 'marketplace':
+    case 'facebook_marketplace':
         return 'marketplace';
       case 'saved_items':
       case 'saved_items_and_collections':

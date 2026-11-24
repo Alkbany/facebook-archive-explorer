@@ -5,6 +5,7 @@
 ## Milestone 0 — Foundation
 
 - [x] Confirm Electron + React + TypeScript architecture.
+- [x] Upgrade the app runtime from end-of-life Electron 37 to supported Electron 45.4.1; CI verifies the sandboxed preload, tests, renderer/main build, and Windows installer.
 - [x] Define local-first privacy and repository safety rules.
 - [x] Build the desktop shell and verify its production build in CI.
 - [x] Add the section evidence catalogue and Arabic search normalization.
@@ -49,7 +50,7 @@
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
 - [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
 - [x] Add a bounded generic HTML fallback for unreviewed sections, preserving visible text and source provenance while keeping sensitive sections out of full-text search.
-- [x] Add a dedicated Groups workspace for the three reviewed TNG activity collections, with group/author fields shown only where present in the observed source objects.\n- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
+- [x] Add a dedicated Groups workspace for the three reviewed TNG activity collections, with group/author fields shown only where present in the observed source objects. Keep it isolated from the generic Other Data section selector.\n- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
 - [x] Add a bounded plain-text fallback for discovered `.txt` files, preserving original text while limiting full-text indexing and respecting section sensitivity.
 - [ ] Add schema-specific JSON importers and parser fixtures for Events, Marketplace, Saved Items & Collections, additional Groups/Pages formats, and remaining sections.
 

@@ -1,5 +1,5 @@
-export type ArchiveSearchMode = 'exact' | 'fuzzy';
-export type ArchiveSearchMatchType = 'exact' | 'fuzzy';
+export type ArchiveSearchMode = 'exact' | 'fuzzy' | 'semantic';
+export type ArchiveSearchMatchType = 'exact' | 'fuzzy' | 'semantic';
 
 export interface ArchiveSearchResult {
   id: number;
@@ -17,6 +17,23 @@ export interface ArchiveSearchResult {
 
 export interface ArchiveSearchSettings {
   includeMessagesInGlobalSearch: boolean;
+  semanticSearchEnabled: boolean;
+}
+
+export type SemanticSearchPhase = 'disabled' | 'idle' | 'downloading' | 'loading' | 'indexing' | 'ready' | 'error';
+
+export interface SemanticSearchStatus {
+  enabled: boolean;
+  modelId: string;
+  modelVersion: string;
+  phase: SemanticSearchPhase;
+  total: number;
+  completed: number;
+  pending: number;
+  processing: number;
+  failed: number;
+  progressPercent: number | null;
+  lastErrorCode: string | null;
 }
 
 export type SearchExportResult =

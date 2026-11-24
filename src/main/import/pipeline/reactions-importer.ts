@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { facebookDateToUtc } from '../../../shared/time/facebook-date';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -69,15 +70,15 @@ export async function importReactionsSection(
           snapshot_id, source_file_id, source_record_index, section_key, record_type,
           title, body_text, normalized_text, event_time_raw, event_time_utc,
           sensitivity, search_enabled, payload_json, created_at
-        ) VALUES (?, ?, ?, 'likes_and_reactions', 'reaction', ?, ?, ?, ?, NULL, 'personal', 1, ?, ?)
+        ) VALUES (?, ?, ?, 'likes_and_reactions', 'reaction', ?, ?, ?, ?, ?, 'personal', 1, ?, ?)
         ON CONFLICT(source_file_id, source_record_index) DO UPDATE SET
           title=excluded.title, body_text=excluded.body_text, normalized_text=excluded.normalized_text,
-          event_time_raw=excluded.event_time_raw, payload_json=excluded.payload_json, created_at=excluded.created_at
+          event_time_raw=excluded.event_time_raw, event_time_utc=excluded.event_time_utc, payload_json=excluded.payload_json, created_at=excluded.created_at
       `);
       for (const record of parsed.records) {
         insert.run(snapshotId, file.id, record.sourceCardIndex, record.reactionType, record.descriptionRaw,
           normalizeSearchText([record.reactionType, record.descriptionRaw].filter(Boolean).join(' ')),
-          record.dateRaw, JSON.stringify({ reaction_image_raw: record.reactionImageRaw }), timestamp);
+          record.dateRaw, facebookDateToUtc(record.dateRaw), JSON.stringify({ reaction_image_raw: record.reactionImageRaw }), timestamp);
       }
       const unsupported = parsed.records.length === 0;
       for (const issue of parsed.issues) {

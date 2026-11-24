@@ -56,6 +56,10 @@ const desktopApi: DesktopApi = {
   setSemanticSearchEnabled: (enabled) =>
     ipcRenderer.invoke(IPC_CHANNELS.setSemanticSearchEnabled, enabled),
   retrySemanticIndexing: () => ipcRenderer.invoke(IPC_CHANNELS.retrySemanticIndexing),
+  getAiAssistantStatus: () => ipcRenderer.invoke(IPC_CHANNELS.getAiAssistantStatus),
+  setAiAssistantEnabled: (enabled) => ipcRenderer.invoke(IPC_CHANNELS.setAiAssistantEnabled, enabled),
+  askArchiveAssistant: (question, sectionKey, history) =>
+    ipcRenderer.invoke(IPC_CHANNELS.askArchiveAssistant, question, sectionKey, history),
   searchRecordsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>
     ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey, mode, similarityThreshold),
   exportSearchResultsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>

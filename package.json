@@ -61,11 +61,20 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Alkbany/facebook-archive-explorer.git"
+  },
+  "homepage": "https://github.com/Alkbany/facebook-archive-explorer#readme",
+  "bugs": {
+    "url": "https://github.com/Alkbany/facebook-archive-explorer/issues"
   }
 }

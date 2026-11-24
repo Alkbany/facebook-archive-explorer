@@ -53,20 +53,30 @@ function tokenSimilarity(left: string, right: string): number {
   return Math.max(0, 1 - editDistance(left, right) / denominator);
 }
 
-function fuzzyPrefixPatterns(term: string): string[] {
-  const patterns = new Set<string>();
-  if (term.length >= 2) patterns.add(term.slice(0, 2) + '*');
-  if (term.length >= 3) patterns.add('?' + term.slice(1, 3) + '*');
+function fuzzyCandidatePatterns(term: string): string[] {
+  const patterns = new Set<string>([term]);
 
-  // Prefixes after deleting or transposing one of the first few characters
-  // keep candidate lookup bounded while covering common early-position typos.
-  for (let index = 0; index < Math.min(4, term.length); index += 1) {
+  // One substitution at every character position.
+  for (let index = 0; index < term.length; index += 1) {
+    patterns.add(term.slice(0, index) + '?' + term.slice(index + 1));
+
+    // One missing character in the user's query (the stored token is shorter).
     const shortened = term.slice(0, index) + term.slice(index + 1);
-    if (shortened.length >= 2) patterns.add(shortened.slice(0, 2) + '*');
+    if (shortened.length >= 2) patterns.add(shortened);
+
+    // Adjacent transposition.
+    if (index < term.length - 1) {
+      patterns.add(
+        term.slice(0, index) + term[index + 1] + term[index] + term.slice(index + 2)
+      );
+    }
   }
-  for (let index = 0; index < Math.min(3, term.length - 1); index += 1) {
-    patterns.add(term.slice(index, index + 2) + '*');
+
+  // One extra character in the stored token, including at the first or last position.
+  for (let index = 0; index <= term.length; index += 1) {
+    patterns.add(term.slice(0, index) + '?' + term.slice(index));
   }
+
   return [...patterns];
 }
 
@@ -80,7 +90,7 @@ function findFuzzyTermCandidates(
 
   const minimumLength = Math.max(1, Math.floor(term.length * threshold));
   const maximumLength = Math.ceil(term.length / threshold);
-  const patterns = fuzzyPrefixPatterns(term);
+  const patterns = fuzzyCandidatePatterns(term);
   const wherePatterns = patterns.map(() => 'term GLOB ?').join(' OR ');
   const rows = database.prepare(`
     SELECT term FROM ${vocabularyTable}

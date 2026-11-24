@@ -91,7 +91,7 @@ The latest main-branch test installer is available in the repository's Actions t
 The following work is still required for a complete 1.0 release. A discovered filename or a generic fallback record is **not** counted as a verified section parser:
 
 - Verified field-level parsers for remaining activity-card sections and export formats. The current reviewed set is Friends, Messages, Posts, Comments, Likes & Reactions, sampled Photos & Videos, and the observed Groups TNG JSON collections.
-- Section-specific parsers and fixtures for Events, Marketplace, Saved Items & Collections, and additional Groups/Pages/other-activity formats. Generic HTML/JSON/TXT fallbacks preserve bounded content and source provenance but do not guarantee correct field mapping, relationships, or complete extraction.
+- Section-specific parsers for reviewed Events response/invitation/hosted JSON variants; Marketplace, Saved Items & Collections, and additional Groups/Pages/other-activity formats remain on the parser roadmap. Generic HTML/JSON/TXT fallbacks preserve bounded content and source provenance but do not guarantee correct field mapping, relationships, or complete extraction.
 - Broader Photos & Videos coverage for album layouts and media metadata not currently recognized. Image dimensions are read from bounded PNG/JPEG/GIF/WebP prefixes; video duration is currently limited to MP4/MOV/M4V headers found within a bounded 2 MiB prefix.
 - Evidence-backed parsing of raw Facebook date formats and date-range filters. Original date strings are retained where a reliable normalized date is not available.
 - Durable checkpoints within a single large source file. Current recovery is atomic per file; pause/resume takes effect after the active file transaction finishes.

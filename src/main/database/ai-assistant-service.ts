@@ -120,6 +120,8 @@ interface TextGenerator {
   ): Promise<TextGenerationOutput[]>;
 }
 
+type TextGeneratorLoader = (modelCacheDirectory: string) => Promise<TextGenerator>;
+
 interface TransformersEnvironment {
   cacheDir: string;
   allowRemoteModels: boolean;
@@ -165,7 +167,13 @@ function updateProgress(progress: unknown): void {
 }
 
 async function getTextGenerator(modelCacheDirectory: string): Promise<TextGenerator> {
-  if (generatorPromise) return generatorPromise;
+  if (generatorPromise) {
+    const cachedGenerator = await generatorPromise;
+    runtimeState.phase = 'ready';
+    runtimeState.progressPercent = 100;
+    runtimeState.lastErrorCode = null;
+    return cachedGenerator;
+  }
 
   runtimeState.phase = 'loading';
   runtimeState.lastErrorCode = null;
@@ -295,7 +303,8 @@ export function getAiAssistantStatus(database: DatabaseSync): AiAssistantStatus 
 
 export async function prepareAiAssistant(
   database: DatabaseSync,
-  modelCacheDirectory: string
+  modelCacheDirectory: string,
+  loadGenerator: TextGeneratorLoader = getTextGenerator
 ): Promise<AiAssistantStatus> {
   if (!getAiAssistantStatus(database).enabled) {
     runtimeState.phase = 'disabled';
@@ -303,8 +312,11 @@ export async function prepareAiAssistant(
     return getAiAssistantStatus(database);
   }
   try {
-    await getTextGenerator(modelCacheDirectory);
+    await loadGenerator(modelCacheDirectory);
   } catch {
+    runtimeState.phase = 'error';
+    runtimeState.progressPercent = null;
+    runtimeState.lastErrorCode = 'AI_ASSISTANT_MODEL_LOAD_FAILED';
     // Model state is surfaced through getAiAssistantStatus; importing/searching remains available.
   }
   return getAiAssistantStatus(database);
@@ -317,7 +329,8 @@ export async function askLocalArchiveAssistant(
   modelCacheDirectory: string,
   sectionKey: string | null = null,
   history: AiAssistantHistoryMessage[] = [],
-  comparedSnapshotId: string | null = null
+  comparedSnapshotId: string | null = null,
+  loadGenerator: TextGeneratorLoader = getTextGenerator
 ): Promise<ArchiveAssistantAnswer> {
   if (!getAiAssistantStatus(database).enabled) {
     throw new Error('Enable the AI Assistant before asking archive questions.');
@@ -419,7 +432,7 @@ export async function askLocalArchiveAssistant(
     };
   }
 
-  const generator = await getTextGenerator(modelCacheDirectory);
+  const generator = await loadGenerator(modelCacheDirectory);
   runtimeState.phase = 'ready';
   const messages: ChatMessage[] = [
     { role: 'system', content: makeSystemPrompt(comparisonReport !== null) },
@@ -447,7 +460,14 @@ export async function askLocalArchiveAssistant(
     }
   ];
 
-  const generated = await generator(messages, { max_new_tokens: 420, do_sample: false });
+  let generated: TextGenerationOutput[];
+  try {
+    generated = await generator(messages, { max_new_tokens: 420, do_sample: false });
+  } catch {
+    runtimeState.phase = 'error';
+    runtimeState.lastErrorCode = 'AI_ASSISTANT_INFERENCE_FAILED';
+    throw new Error('The local assistant model failed while generating an answer.');
+  }
   const rawAnswer = extractGeneratedText(generated[0]);
   if (!rawAnswer) {
     runtimeState.lastErrorCode = 'AI_ASSISTANT_EMPTY_RESPONSE';

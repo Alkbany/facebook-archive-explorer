@@ -128,7 +128,8 @@
 - [x] Add question-focused AI Assistant comparison across two saved backups of the same account, with separate evidence retrieval and snapshot-labelled source citations. The complete diff remains in the dedicated archive comparison view.
 - [x] Require every generated sentence or non-heading line to include at least one valid retrieved citation; withhold the complete answer when coverage is incomplete.
 - [x] Keep Exact and Fuzzy Search independent of the AI Assistant enable/disable setting; model loading and inference remain optional paths.
-- [ ] Validate that model loading or inference failures cannot interrupt archive browsing, Exact Search, or Fuzzy Search on a real Windows device.
+- [x] Add automated fault-injection coverage proving assistant model-load and inference failures leave archive evidence browsing, Exact Search, and Fuzzy Search usable.
+- [ ] Validate the same failure paths manually on a clean Windows device with the packaged application.
 
 
 

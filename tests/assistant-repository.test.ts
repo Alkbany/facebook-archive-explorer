@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { retrieveArchiveAssistantEvidence } from '../src/main/database/assistant-repository';
-import { getAiAssistantStatus } from '../src/main/database/ai-assistant-service';
+import { askLocalArchiveAssistant, getAiAssistantStatus, prepareAiAssistant } from '../src/main/database/ai-assistant-service';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getArchiveSearchSettings, setAiAssistantEnabled, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../src/main/database/search-settings-repository';
@@ -120,6 +120,53 @@ describe('archive assistant evidence retrieval', () => {
     expect(exactWhileEnabled.map((item) => item.id)).toEqual(exactWhileDisabled.map((item) => item.id));
     expect(fuzzyWhileEnabled.map((item) => item.id)).toEqual(fuzzyWhileDisabled.map((item) => item.id));
     expect(getAiAssistantStatus(database).enabled).toBe(true);
+  });
+
+  it('keeps archive search available after optional assistant model loading fails', async () => {
+    const recordId = addPost(0, 'Software interview', 'We discussed backend engineering', 2022);
+    setAiAssistantEnabled(database, true);
+
+    const status = await prepareAiAssistant(database, '/unused-model-cache', async () => {
+      throw new Error('Synthetic model download/load failure');
+    });
+
+    expect(status).toMatchObject({
+      enabled: true,
+      phase: 'error',
+      lastErrorCode: 'AI_ASSISTANT_MODEL_LOAD_FAILED'
+    });
+    expect(searchArchiveRecords(database, snapshotId, 'software', 'posts', 'exact')
+      .map((item) => item.id)).toContain(recordId);
+    expect(searchArchiveRecords(database, snapshotId, 'softwar', 'posts', 'fuzzy', 0.65)
+      .map((item) => item.id)).toContain(recordId);
+  });
+
+  it('keeps archive browsing and Exact/Fuzzy Search available after assistant inference fails', async () => {
+    const recordId = addPost(0, 'Software interview', 'We discussed backend engineering', 2022);
+    setAiAssistantEnabled(database, true);
+
+    await expect(askLocalArchiveAssistant(
+      database,
+      snapshotId,
+      'What did the software interview cover?',
+      '/unused-model-cache',
+      'posts',
+      [],
+      null,
+      async () => async () => {
+        throw new Error('Synthetic model inference failure');
+      }
+    )).rejects.toThrow('failed while generating an answer');
+
+    expect(getAiAssistantStatus(database)).toMatchObject({
+      enabled: true,
+      phase: 'error',
+      lastErrorCode: 'AI_ASSISTANT_INFERENCE_FAILED'
+    });
+    expect(searchArchiveRecords(database, snapshotId, 'software', 'posts', 'exact')
+      .map((item) => item.id)).toContain(recordId);
+    expect(searchArchiveRecords(database, snapshotId, 'softwar', 'posts', 'fuzzy', 0.65)
+      .map((item) => item.id)).toContain(recordId);
   });
 
   it('retrieves lexical evidence with the exact source path, card number, and record id', () => {

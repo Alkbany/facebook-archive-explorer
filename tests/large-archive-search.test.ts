@@ -107,6 +107,12 @@ describe('large synthetic archive search benchmark', () => {
       result.matchType === 'exact' &&
       (result.body ?? '').includes('Alexandria')
     )).toBe(true);
+    const exactSecondPage = searchArchiveRecords(
+      database, snapshotId, 'Alexandria', 'posts', 'exact', 0.8, null, null, PAGE_LIMIT
+    );
+    expect(exactSecondPage).toHaveLength(PAGE_LIMIT);
+    expect(new Set([...exactResults, ...exactSecondPage].map((result) => result.id)).size)
+      .toBe(PAGE_LIMIT * 2);
 
     const fuzzyStart = performance.now();
     const fuzzyResults = searchArchiveRecords(
@@ -121,6 +127,12 @@ describe('large synthetic archive search benchmark', () => {
       result.similarity >= 0.8 &&
       (result.body ?? '').includes('Alexandria')
     )).toBe(true);
+    const fuzzySecondPage = searchArchiveRecords(
+      database, snapshotId, 'Alexandrea', 'posts', 'fuzzy', 0.8, null, null, PAGE_LIMIT
+    );
+    expect(fuzzySecondPage).toHaveLength(PAGE_LIMIT);
+    expect(new Set([...fuzzyResults, ...fuzzySecondPage].map((result) => result.id)).size)
+      .toBe(PAGE_LIMIT * 2);
 
     console.info(
       '[synthetic-search-benchmark]',

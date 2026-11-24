@@ -41,6 +41,7 @@ import { getMessageConversation, listMessageConversations, listMessageMediaGalle
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscoveredVideoDurations } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
+import { MAX_ARCHIVE_SEARCH_OFFSET } from '../../shared/archive/search';
 import { getArchiveSearchSettings, setAiAssistantEnabled, setIncludeMessagesInGlobalSearch, setSemanticSearchEnabled } from '../database/search-settings-repository';
 import { createSemanticQueryEmbedding, getSemanticSearchStatus, processSemanticIndexQueue, retryFailedSemanticJobs, searchSemanticArchiveRecords } from '../database/semantic-search-service';
 import { askLocalArchiveAssistant, getAiAssistantStatus, prepareAiAssistant } from '../database/ai-assistant-service';
@@ -472,7 +473,7 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, async (
-    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown, dateFrom: unknown, dateTo: unknown
+    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown, dateFrom: unknown, dateTo: unknown, offset: unknown
   ) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before searching the archive.');
     if (
@@ -481,11 +482,13 @@ export function registerIpcHandlers(
       !(mode === undefined || mode === 'exact' || mode === 'fuzzy' || mode === 'semantic') ||
       !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold))) ||
       !(dateFrom === undefined || dateFrom === null || typeof dateFrom === 'string') ||
-      !(dateTo === undefined || dateTo === null || typeof dateTo === 'string')
+      !(dateTo === undefined || dateTo === null || typeof dateTo === 'string') ||
+      !(offset === undefined || (typeof offset === 'number' && Number.isSafeInteger(offset) && offset >= 0 && offset <= MAX_ARCHIVE_SEARCH_OFFSET))
     ) {
       throw new Error('Invalid search request.');
     }
     const searchMode = (mode ?? 'exact') as ArchiveSearchMode;
+    const resultOffset = (offset ?? 0) as number;
     if (searchMode === 'semantic') {
       if (!getSemanticSearchStatus(database).enabled) {
         throw new Error('Enable Semantic Search before using semantic queries.');
@@ -494,7 +497,8 @@ export function registerIpcHandlers(
       return searchSemanticArchiveRecords(
         database, selectedSnapshotId, vector, sectionKey, undefined,
         dateFrom as string | null | undefined ?? null,
-        dateTo as string | null | undefined ?? null
+        dateTo as string | null | undefined ?? null,
+        resultOffset
       );
     }
     return searchArchiveRecords(
@@ -505,12 +509,13 @@ export function registerIpcHandlers(
       searchMode,
       threshold === undefined ? 0.8 : threshold as number,
       dateFrom as string | null | undefined ?? null,
-      dateTo as string | null | undefined ?? null
+      dateTo as string | null | undefined ?? null,
+      resultOffset
     );
   });
 
   ipcMain.handle(IPC_CHANNELS.exportSearchResultsForSelectedBackup, async (
-    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown, dateFrom: unknown, dateTo: unknown
+    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown, dateFrom: unknown, dateTo: unknown, offset: unknown
   ) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before exporting search results.');
     if (
@@ -519,12 +524,14 @@ export function registerIpcHandlers(
       !(mode === undefined || mode === 'exact' || mode === 'fuzzy' || mode === 'semantic') ||
       !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold))) ||
       !(dateFrom === undefined || dateFrom === null || typeof dateFrom === 'string') ||
-      !(dateTo === undefined || dateTo === null || typeof dateTo === 'string')
+      !(dateTo === undefined || dateTo === null || typeof dateTo === 'string') ||
+      !(offset === undefined || (typeof offset === 'number' && Number.isSafeInteger(offset) && offset >= 0 && offset <= MAX_ARCHIVE_SEARCH_OFFSET))
     ) {
       throw new Error('Invalid export request.');
     }
     const searchMode = (mode ?? 'exact') as ArchiveSearchMode;
     const similarityThreshold = threshold === undefined ? 0.8 : threshold as number;
+    const resultOffset = (offset ?? 0) as number;
     const snapshotId = selectedSnapshotId;
     if (searchMode === 'semantic' && !getSemanticSearchStatus(database).enabled) {
       throw new Error('Enable Semantic Search before exporting semantic results.');
@@ -537,12 +544,14 @@ export function registerIpcHandlers(
           sectionKey,
           undefined,
           dateFrom as string | null | undefined ?? null,
-          dateTo as string | null | undefined ?? null
+          dateTo as string | null | undefined ?? null,
+          resultOffset
         )
       : searchArchiveRecords(
           database, snapshotId, query, sectionKey, searchMode, similarityThreshold,
           dateFrom as string | null | undefined ?? null,
-          dateTo as string | null | undefined ?? null
+          dateTo as string | null | undefined ?? null,
+          resultOffset
         );
     const save = await dialog.showSaveDialog({
       title: 'Export archive search results',
@@ -559,6 +568,7 @@ export function registerIpcHandlers(
       similarityThreshold,
       dateFrom: dateFrom ?? null,
       dateTo: dateTo ?? null,
+      offset: resultOffset,
       records: results
     };
     await writeFile(save.filePath, JSON.stringify(payload, null, 2), { encoding: 'utf8', flag: 'w' });

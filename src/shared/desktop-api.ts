@@ -161,8 +161,8 @@ export interface DesktopApi {
   getAiAssistantStatus(): Promise<AiAssistantStatus>;
   setAiAssistantEnabled(enabled: boolean): Promise<AiAssistantStatus>;
   askArchiveAssistant(question: string, sectionKey: string | null, history: AiAssistantHistoryMessage[]): Promise<ArchiveAssistantAnswer>;
-  searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number, dateFrom?: string | null, dateTo?: string | null): Promise<ArchiveSearchResult[]>;
-  exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number, dateFrom?: string | null, dateTo?: string | null): Promise<SearchExportResult>;
+  searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number, dateFrom?: string | null, dateTo?: string | null, offset?: number): Promise<ArchiveSearchResult[]>;
+  exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number, dateFrom?: string | null, dateTo?: string | null, offset?: number): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;
   listArchiveComparisonChanges(
     baselineSnapshotId: string,

@@ -31,7 +31,7 @@ import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archi
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
-import type { ArchiveSearchMode, ArchiveSearchResult, SemanticSearchStatus } from '../../shared/archive/search';
+import { ARCHIVE_SEARCH_PAGE_SIZE, MAX_ARCHIVE_SEARCH_OFFSET, type ArchiveSearchMode, type ArchiveSearchResult, type SemanticSearchStatus } from '../../shared/archive/search';
 import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import type {
   ArchiveComparisonReport,
@@ -163,6 +163,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSection, setSearchSection] = useState('all');
   const [searchResults, setSearchResults] = useState<ArchiveSearchResult[]>([]);
+  const [searchPage, setSearchPage] = useState(1);
   const [searchMode, setSearchMode] = useState<ArchiveSearchMode>('exact');
   const [searchThreshold, setSearchThreshold] = useState(0.8);
   const [searchDateFrom, setSearchDateFrom] = useState('');
@@ -668,7 +669,9 @@ function App() {
     }
   }
 
-  async function runArchiveSearch() {
+  async function runArchiveSearch(page = 1) {
+    const requestedPage = Math.max(1, Math.floor(page));
+    const resultOffset = (requestedPage - 1) * ARCHIVE_SEARCH_PAGE_SIZE;
     const query = searchQuery;
     const section = searchSection === 'all' ? null : searchSection;
     setIsSearching(true);
@@ -679,8 +682,9 @@ function App() {
       const effectiveMode = searchSection === 'messages' && !includeMessagesInGlobalSearch ? 'exact' : searchMode;
       const results = await window.desktopApi.searchRecordsForSelectedBackup(
         query, section, effectiveMode, searchThreshold,
-        searchDateFrom || null, searchDateTo || null
+        searchDateFrom || null, searchDateTo || null, resultOffset
       );
+      setSearchPage(requestedPage);
       setSearchResults(results);
       setSearchedQuery(query);
       setSearchedSection(searchSection);
@@ -816,7 +820,7 @@ function App() {
     try {
       const result = await window.desktopApi.exportSearchResultsForSelectedBackup(
         searchedQuery, searchedSection === 'all' ? null : searchedSection, searchedMode, searchedThreshold,
-        searchedDateFrom || null, searchedDateTo || null
+        searchedDateFrom || null, searchedDateTo || null, (searchPage - 1) * ARCHIVE_SEARCH_PAGE_SIZE
       );
       setSearchExportStatus(result.status === 'saved'
         ? `Saved ${result.recordsExported} records to ${result.fileName}.`
@@ -1721,7 +1725,7 @@ function App() {
                   <h3>Search this backup</h3>
                   <p>Use literal search, typo-tolerant matching, or optional local semantic search. The AI Assistant is a separate layer for evidence-based answers.</p>
                 </div>
-                <span>{searchResults.length.toLocaleString()} results</span>
+                <span>{searchedQuery === null ? 'No search run' : `Page ${searchPage} · ${searchResults.length.toLocaleString()} results`}</span>
               </div>
               <div className="search-privacy-setting">
                 <label>
@@ -1873,10 +1877,25 @@ function App() {
                 )}
               </div>
               <div className="search-export-row">
-                <span>{searchExportStatus || (searchResults.length === 250 ? 'The result list is capped at 250 records.' : '')}</span>
-                <button className="secondary-button" onClick={() => void exportArchiveSearch()} disabled={!searchResults.length || searchedQuery === null || isSearching}>
-                  Export results as JSON
-                </button>
+                <span>{searchExportStatus || (searchedQuery !== null && searchResults.length === ARCHIVE_SEARCH_PAGE_SIZE
+                  ? `Showing ${ARCHIVE_SEARCH_PAGE_SIZE} results. More matches may be available on the next page.`
+                  : searchedQuery !== null ? `${searchResults.length} results on this page.` : '')}</span>
+                <div className="search-pagination-controls">
+                  {searchedQuery !== null && (
+                    <>
+                      <button className="secondary-button" onClick={() => void runArchiveSearch(searchPage - 1)} disabled={isSearching || searchPage <= 1}>
+                        Previous
+                      </button>
+                      <span>Page {searchPage}</span>
+                      <button className="secondary-button" onClick={() => void runArchiveSearch(searchPage + 1)} disabled={isSearching || searchResults.length < ARCHIVE_SEARCH_PAGE_SIZE || searchPage * ARCHIVE_SEARCH_PAGE_SIZE > MAX_ARCHIVE_SEARCH_OFFSET}>
+                        Next
+                      </button>
+                    </>
+                  )}
+                  <button className="secondary-button" onClick={() => void exportArchiveSearch()} disabled={!searchResults.length || searchedQuery === null || isSearching}>
+                    Export this page as JSON
+                  </button>
+                </div>
               </div>
             </section>
 

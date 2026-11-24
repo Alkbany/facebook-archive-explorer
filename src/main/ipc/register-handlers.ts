@@ -6,6 +6,7 @@ import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../..
 import type { ArchiveFileStatus, ArchiveInspectionView, FriendDirectoryFilter, ImportProgressEvent } from '../../shared/archive/inspection';
 import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from '../../shared/archive/comparison';
 import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
+import type { ArchiveSearchMode } from '../../shared/archive/search';
 import {
   beginDiscoverySession,
   completeDiscoverySession,
@@ -32,6 +33,7 @@ import { getMessageConversation, listMessageConversations, listMessageMediaGalle
 import { getMessageMediaPreview } from '../database/media-preview';
 import { indexDiscoveredImageDimensions, indexDiscoveredMediaAssets, indexDiscoveredVideoDurations } from '../database/media-indexer';
 import { searchArchiveRecords } from '../database/search-repository';
+import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch } from '../database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../database/comparison-repository';
 import { exportDatabaseBackup, restoreDatabaseBackup, validateDatabaseBackup } from '../database/backup';
 import { listImportIssues } from '../database/import-issues-repository';
@@ -352,21 +354,51 @@ export function registerIpcHandlers(
     return listArchiveMediaGallery(database, selectedSnapshotId, filter as ArchiveMediaGalleryFilter, page as number, query);
   });
 
-  ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, (_event, query: unknown, sectionKey: unknown) => {
-    if (!selectedSnapshotId) throw new Error('Inspect a backup before searching the archive.');
-    if (typeof query !== 'string' || !(sectionKey === null || typeof sectionKey === 'string')) {
-      throw new Error('Invalid search request.');
-    }
-    return searchArchiveRecords(database, selectedSnapshotId, query, sectionKey);
+  ipcMain.handle(IPC_CHANNELS.getArchiveSearchSettings, () => getArchiveSearchSettings(database));
+
+  ipcMain.handle(IPC_CHANNELS.setIncludeMessagesInGlobalSearch, (_event, enabled: unknown) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid message-search setting.');
+    return setIncludeMessagesInGlobalSearch(database, enabled);
   });
 
-  ipcMain.handle(IPC_CHANNELS.exportSearchResultsForSelectedBackup, async (_event, query: unknown, sectionKey: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, (
+    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown
+  ) => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before searching the archive.');
+    if (
+      typeof query !== 'string' ||
+      !(sectionKey === null || typeof sectionKey === 'string') ||
+      !(mode === undefined || mode === 'exact' || mode === 'fuzzy') ||
+      !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold)))
+    ) {
+      throw new Error('Invalid search request.');
+    }
+    return searchArchiveRecords(
+      database,
+      selectedSnapshotId,
+      query,
+      sectionKey,
+      (mode ?? 'exact') as ArchiveSearchMode,
+      threshold === undefined ? 0.8 : threshold as number
+    );
+  });
+
+  ipcMain.handle(IPC_CHANNELS.exportSearchResultsForSelectedBackup, async (
+    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown
+  ) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before exporting search results.');
-    if (typeof query !== 'string' || !(sectionKey === null || typeof sectionKey === 'string')) {
+    if (
+      typeof query !== 'string' ||
+      !(sectionKey === null || typeof sectionKey === 'string') ||
+      !(mode === undefined || mode === 'exact' || mode === 'fuzzy') ||
+      !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold)))
+    ) {
       throw new Error('Invalid export request.');
     }
+    const searchMode = (mode ?? 'exact') as ArchiveSearchMode;
+    const similarityThreshold = threshold === undefined ? 0.8 : threshold as number;
     const snapshotId = selectedSnapshotId;
-    const results = searchArchiveRecords(database, snapshotId, query, sectionKey);
+    const results = searchArchiveRecords(database, snapshotId, query, sectionKey, searchMode, similarityThreshold);
     const save = await dialog.showSaveDialog({
       title: 'Export archive search results',
       defaultPath: 'facebook-archive-search-results.json',
@@ -378,6 +410,8 @@ export function registerIpcHandlers(
       snapshotId,
       query: query.trim(),
       sectionKey,
+      mode: searchMode,
+      similarityThreshold,
       records: results
     };
     await writeFile(save.filePath, JSON.stringify(payload, null, 2), { encoding: 'utf8', flag: 'w' });

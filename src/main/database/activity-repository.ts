@@ -23,7 +23,7 @@ export function listPostRecords(database: DatabaseSync, snapshotId: string): imp
     SELECT records.id AS id, source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex,
       records.title AS activityRaw, records.body_text AS bodyRaw,
-      records.event_time_raw AS dateRaw,
+      records.event_time_raw AS dateRaw, records.event_time_utc AS eventTimeUtc,
       COUNT(record_media.media_asset_id) AS mediaCount
     FROM records
     INNER JOIN source_files AS source ON source.id = records.source_file_id
@@ -43,7 +43,7 @@ export function listCommentActivities(database: DatabaseSync, snapshotId: string
       records.source_record_index AS sourceCardIndex,
       records.title AS activityRaw, records.body_text AS bodyRaw,
       json_extract(records.payload_json, '$.group_raw') AS groupRaw,
-      records.event_time_raw AS dateRaw
+      records.event_time_raw AS dateRaw, records.event_time_utc AS eventTimeUtc
     FROM records
     INNER JOIN source_files AS source ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id

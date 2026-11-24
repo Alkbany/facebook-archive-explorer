@@ -76,6 +76,8 @@ export const IPC_CHANNELS = {
   importCommentsForSelectedBackup: 'archive:import-comments',
   listCommentsForSelectedBackup: 'archive:list-comments',
   listPostsForSelectedBackup: 'archive:list-posts',
+  listEventsForSelectedBackup: 'archive:list-events',
+  importEventsForSelectedBackup: 'archive:import-events',
   importMessagesForSelectedBackup: 'archive:import-messages',
   importReactionsForSelectedBackup: 'archive:import-reactions',
   listReactionsForSelectedBackup: 'archive:list-reactions',
@@ -123,6 +125,8 @@ export interface DesktopApi {
   importPhotosAndVideosForSelectedBackup(): Promise<PhotoAlbumsImportSectionResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
   listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
+  listEventsForSelectedBackup(): Promise<import('./archive/inspection').EventRecordSummary[]>;
+  importEventsForSelectedBackup(): Promise<JsonImportSectionResult>;
   importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;
   listCommentsForSelectedBackup(): Promise<CommentActivitySummary[]>;
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;

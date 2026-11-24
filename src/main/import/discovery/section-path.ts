@@ -34,7 +34,7 @@ export function getSectionKeyForArchivePath(relativePath: string): string {
       case 'events':
         return 'events';
       case 'marketplace':
-    case 'facebook_marketplace':
+      case 'facebook_marketplace':
         return 'marketplace';
       case 'saved_items':
       case 'saved_items_and_collections':
@@ -43,6 +43,8 @@ export function getSectionKeyForArchivePath(relativePath: string): string {
         return 'your_facebook_activity';
     }
   }
+
+  if (root === 'facebook_marketplace' || root === 'marketplace') return 'marketplace';
 
   if (root === 'comments_and_reactions') return commentsOrReactions();
 

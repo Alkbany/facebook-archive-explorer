@@ -66,7 +66,6 @@ export function listMarketplaceListings(
       ? payload.listing_key
       : 'record:' + row.id;
     const location = parseLocation(payload.location);
-    const descriptionParts = (row.body ?? '').split('\n').filter(Boolean);
     const source = {
       sourcePath: row.sourcePath,
       sourceCardIndex: row.sourceCardIndex,
@@ -78,7 +77,7 @@ export function listMarketplaceListings(
       facebookId: nullableString(payload.facebook_id),
       title: row.title,
       price: nullableString(payload.price),
-      description: descriptionParts.length ? descriptionParts.join('\n') : null,
+      description: nullableString((payload as Record<string, unknown>).description),
       category: nullableString(payload.category),
       marketplace: nullableString(payload.marketplace),
       listingDateRaw: row.dateRaw,

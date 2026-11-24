@@ -114,10 +114,17 @@ describe('archive-wide media, search, and comparison', () => {
         title, body_text, normalized_text, sensitivity, search_enabled, created_at)
       VALUES (?, ?, 0, 'messages', 'message', 'Trip planning', 'We discussed Alexandria travel', 'we discussed alexandria travel', 'sensitive', 0, ?)
     `).run(baselineId, messages, now);
+    database.prepare("UPDATE records SET event_time_utc = '2022-06-15T12:00:00.000Z' WHERE source_file_id = ?").run(messages);
 
     expect(getArchiveSearchSettings(database).includeMessagesInGlobalSearch).toBe(false);
     expect(searchArchiveRecords(database, baselineId, 'Alexandria')).toHaveLength(0);
     expect(searchArchiveRecords(database, baselineId, 'Alexandria', 'messages')).toHaveLength(1);
+    expect(searchArchiveRecords(
+      database, baselineId, 'Alexandria', 'messages', 'exact', 0.8, '2022-06-01', '2022-06-30'
+    )).toHaveLength(1);
+    expect(searchArchiveRecords(
+      database, baselineId, 'Alexandria', 'messages', 'exact', 0.8, '2022-07-01', null
+    )).toHaveLength(0);
 
     setIncludeMessagesInGlobalSearch(database, true);
     expect(getArchiveSearchSettings(database).includeMessagesInGlobalSearch).toBe(true);

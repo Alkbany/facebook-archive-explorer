@@ -35,7 +35,7 @@
 - [x] Implement and test the five known Friends HTML file structures.
 - [x] Classify the current nested Accounts Center directory layout into the app's archive sections.
 - [x] Parse the observed TNG `connections/friends/your_friends.json` `friends_v2` collection into the searchable Friends directory while keeping raw contact fields out of search.
-- [x] Parse the observed TNG Groups `group_posts_v2`, `group_comments_v2`, and `groups_joined_v2` collections into the local Other Data workspace.
+- [x] Parse the observed TNG Groups `group_posts_v2`, `group_comments_v2`, and `groups_joined_v2` collections into the local Groups workspace, preserving the original JSON payload.
 - [x] Add synthetic, non-personal HTML fixtures for the Friends parser and importer.
 - [x] Store Friends records with source-card provenance; keep optional contact details outside FTS5.
 - [x] Report missing-name cards and unrecognized Friends page structures.
@@ -49,7 +49,7 @@
 - [x] Implement the observed Likes & Reactions card parser and snapshot-scoped importer.
 - [x] Add a schema-agnostic JSON fallback importer that preserves source values, safely extracts text, and keeps unreviewed sections out of full-text search.
 - [x] Add a bounded generic HTML fallback for unreviewed sections, preserving visible text and source provenance while keeping sensitive sections out of full-text search.
-- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
+- [x] Add a dedicated Groups workspace for the three reviewed TNG activity collections, with group/author fields shown only where present in the observed source objects.\n- [x] Add a paginated Other Data workspace for browsing preserved HTML/JSON/text records by section, with source provenance and sensitivity labels.
 - [x] Add a bounded plain-text fallback for discovered `.txt` files, preserving original text while limiting full-text indexing and respecting section sensitivity.
 - [ ] Add schema-specific JSON importers and parser fixtures for Events, Marketplace, Saved Items & Collections, additional Groups/Pages formats, and remaining sections.
 

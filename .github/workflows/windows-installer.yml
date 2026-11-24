@@ -143,7 +143,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: facebook-archive-explorer-windows-test
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/build-verification.txt
           if-no-files-found: error
           retention-days: 14
       - name: Upload beta release installer
@@ -151,7 +153,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: facebook-archive-explorer-windows-beta
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/build-verification.txt
           if-no-files-found: error
           retention-days: 14
       - name: Upload stable release installer
@@ -159,7 +163,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: facebook-archive-explorer-windows
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/build-verification.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -191,7 +197,9 @@ jobs:
             ${{ needs.build-windows-installer.outputs.signing_note }}
 
             Beta versions are early-access builds and are not the stable 1.0.0 release. The stable release will be tagged v1.0.0 only after the release-readiness checklist is complete.
-          files: release/*.exe
+          files: |
+            release/*.exe
+            release/build-verification.txt
           fail_on_unmatched_files: true
       - name: Remove temporary release branch
         if: startsWith(github.ref, 'refs/heads/release/')

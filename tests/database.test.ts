@@ -47,6 +47,11 @@ const migrations = [
     version: 7,
     name: 'semantic_search',
     sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/007_semantic_search.sql'), 'utf8')
+  },
+  {
+    version: 8,
+    name: 'ai_assistant',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/008_ai_assistant.sql'), 'utf8')
   }
 ] as const;
 
@@ -66,7 +71,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(initialCount.count).toBe(7);
+    expect(initialCount.count).toBe(8);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
     applyMigrations(database, migrations);
@@ -75,7 +80,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(finalCount.count).toBe(7);
+    expect(finalCount.count).toBe(8);
   });
 
   it('backfills only verified Unix timestamps for records imported by older versions', () => {
@@ -204,6 +209,13 @@ describe('local SQLite storage', () => {
     } finally {
       legacyDatabase.close();
     }
+  });
+
+  it('keeps both optional AI features disabled by default', () => {
+    expect(database.prepare("SELECT setting_value FROM app_settings WHERE setting_key = 'semantic_search_enabled'").get())
+      .toMatchObject({ setting_value: 'false' });
+    expect(database.prepare("SELECT setting_value FROM app_settings WHERE setting_key = 'ai_assistant_enabled'").get())
+      .toMatchObject({ setting_value: 'false' });
   });
 
   it('defaults optional semantic indexing to disabled and creates persistent queue tables', () => {

@@ -1,6 +1,7 @@
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
 import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult, SemanticSearchStatus } from './archive/search';
+import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from './archive/assistant';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -90,6 +91,9 @@ export const IPC_CHANNELS = {
   getSemanticSearchStatus: 'archive:get-semantic-search-status',
   setSemanticSearchEnabled: 'archive:set-semantic-search-enabled',
   retrySemanticIndexing: 'archive:retry-semantic-indexing',
+  getAiAssistantStatus: 'archive:get-ai-assistant-status',
+  setAiAssistantEnabled: 'archive:set-ai-assistant-enabled',
+  askArchiveAssistant: 'archive:ask-ai-assistant',
   searchRecordsForSelectedBackup: 'archive:search-records',
   exportSearchResultsForSelectedBackup: 'archive:export-search-results',
   compareArchiveSnapshots: 'archive:compare-snapshots',
@@ -136,6 +140,9 @@ export interface DesktopApi {
   getSemanticSearchStatus(): Promise<SemanticSearchStatus>;
   setSemanticSearchEnabled(enabled: boolean): Promise<SemanticSearchStatus>;
   retrySemanticIndexing(): Promise<SemanticSearchStatus>;
+  getAiAssistantStatus(): Promise<AiAssistantStatus>;
+  setAiAssistantEnabled(enabled: boolean): Promise<AiAssistantStatus>;
+  askArchiveAssistant(question: string, sectionKey: string | null, history: AiAssistantHistoryMessage[]): Promise<ArchiveAssistantAnswer>;
   searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<ArchiveSearchResult[]>;
   exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;

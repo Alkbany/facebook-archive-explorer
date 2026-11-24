@@ -145,6 +145,26 @@ describe('Posts import', () => {
   });
 
 
+  it('stores a UTC-normalized Arabic post date only when the export footer supplies its offset', async () => {
+    const html = `<div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
+      <div class="_3-96 _2pio _2lek _2lel">Synthetic reviewed post</div>
+      <div class="_3-96 _2let"><div><div class="_2pin"><div>TimezonePostNeedle</div></div></div></div>
+      <div class="_3-94 _2lem">٢٥/٠٧/٢٠١٧ ٨:٣٨ م</div>
+    </div><div class="_4t5o">Export created at 10:00 PM UTC+02</div>`;
+    await writeFile(join(root, 'posts', 'your_posts.html'), html, 'utf8');
+    const now = new Date().toISOString();
+    database.prepare(`INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at) VALUES (?, ?, ?, 'posts', 'html', 'discovered', ?)`)
+      .run(snapshotId, 'posts/your_posts.html', 'your_posts.html', now);
+
+    await importPostsSection(database, snapshotId, root);
+    const record = database.prepare('SELECT event_time_raw, event_time_utc FROM records WHERE snapshot_id = ?')
+      .get(snapshotId) as { event_time_raw: string; event_time_utc: string | null };
+    expect(record).toEqual({
+      event_time_raw: '٢٥/٠٧/٢٠١٧ ٨:٣٨ م',
+      event_time_utc: '2017-07-25T18:38:00.000Z'
+    });
+  });
+
   it('marks an unknown posts HTML layout as unsupported', async () => {
     await writeFile(join(root, 'posts', 'unknown.html'), '<html><body>Unknown</body></html>', 'utf8');
     const now = new Date().toISOString();

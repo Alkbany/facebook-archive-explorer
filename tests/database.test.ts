@@ -239,4 +239,40 @@ describe('local SQLite storage', () => {
     });
   });
 
+
+  it('reports the current imported record count instead of summing historical retry runs', () => {
+    const accountId = getOrCreateAccount(database, 'Retry summary account');
+    const timestamp = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO archive_snapshots (
+        id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+      ) VALUES ('retry-summary-snapshot', ?, 'Retry summary export', 'directory', '/tmp/retry-summary', 'partial', ?, ?)
+    `).run(accountId, timestamp, timestamp);
+    const sourceId = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, discovered_at
+      ) VALUES ('retry-summary-snapshot', 'posts/posts.html', 'posts.html', 'posts', 'html', ?)
+    `).run(timestamp).lastInsertRowid);
+    database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES ('retry-summary-snapshot', ?, 0, 'posts', 'post', 'Current record', 'personal', 1, '{}', ?)
+    `).run(sourceId, timestamp);
+    const insertRun = database.prepare(`
+      INSERT INTO import_runs (id, snapshot_id, run_type, status, started_at, finished_at, files_discovered, records_imported)
+      VALUES (?, 'retry-summary-snapshot', 'import', 'completed', ?, ?, 1, ?)
+    `);
+    insertRun.run('retry-run-one', timestamp, timestamp, 2);
+    insertRun.run('retry-run-two', timestamp, timestamp, 1);
+
+    expect(listArchiveSnapshots(database)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'retry-summary-snapshot',
+        filesDiscovered: 1,
+        recordsImported: 1
+      })
+    ]));
+  });
+
 });

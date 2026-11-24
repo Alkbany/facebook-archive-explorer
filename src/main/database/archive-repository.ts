@@ -234,18 +234,16 @@ export function listArchiveSnapshots(database: DatabaseSync): ArchiveSnapshotSum
       snapshots.display_name AS backupName,
       snapshots.status AS status,
       snapshots.created_at AS createdAt,
-      COALESCE(SUM(CASE WHEN runs.run_type = 'discovery' THEN runs.files_discovered ELSE 0 END), 0) AS filesDiscovered,
-      COALESCE(SUM(CASE WHEN runs.run_type = 'import' THEN runs.records_imported ELSE 0 END), 0) AS recordsImported
+      (
+        SELECT COUNT(*) FROM source_files
+        WHERE source_files.snapshot_id = snapshots.id
+      ) AS filesDiscovered,
+      (
+        SELECT COUNT(*) FROM records
+        WHERE records.snapshot_id = snapshots.id
+      ) AS recordsImported
     FROM archive_snapshots AS snapshots
     INNER JOIN accounts ON accounts.id = snapshots.account_id
-    LEFT JOIN import_runs AS runs
-      ON runs.snapshot_id = snapshots.id
-    GROUP BY
-      snapshots.id,
-      accounts.display_name,
-      snapshots.display_name,
-      snapshots.status,
-      snapshots.created_at
     ORDER BY snapshots.created_at DESC
   `).all() as unknown as ArchiveSnapshotSummary[];
 }

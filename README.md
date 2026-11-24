@@ -98,7 +98,8 @@ The following work is still required for a complete 1.0 release. A discovered fi
 - Broader localized date coverage beyond the observed Arabic 12-hour HTML format with explicit export-footer UTC offsets; other locales, DST interpretation, and unsupported date formats still require evidence. Original date strings are always retained.
 - Durable checkpoints within a single large source file. Current recovery is atomic per file; pause/resume takes effect after the active file transaction finishes.
 - Four distinct search levels now have implementation foundations: Exact Search, Fuzzy Search, optional local Semantic Search (multilingual embeddings), and a separate optional local AI Assistant (LLM). Real-model inference, relevance, and complete real-export validation remain beta acceptance work; see [approved project decisions](docs/PROJECT-DECISIONS.md).
-- Large-archive performance benchmarks and end-to-end validation against a complete real Facebook export.
+- Automated search testing includes a repeatable 50,000-record synthetic archive benchmark for Exact and Fuzzy Search. It records observed timings without imposing machine-dependent speed thresholds.
+- Full large-archive performance benchmarks and end-to-end validation against a complete real Facebook export. The synthetic 50,000-record benchmark covers Exact/Fuzzy retrieval only; it does not replace real directory/ZIP import, media, or full-backup measurements.
 - Clean-device Windows install, launch, upgrade, and uninstall smoke tests; final privacy/security review and release checklist.
 - A trusted Windows signing identity, code-signing provider onboarding, and Smart App Control validation. Test installers may remain unsigned until signing is configured.
 

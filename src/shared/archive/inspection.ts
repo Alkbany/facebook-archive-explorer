@@ -73,6 +73,47 @@ export interface PhotoAlbumsImportSectionResult {
 }
 
 
+
+export interface MarketplaceSourceReference {
+  sourcePath: string;
+  sourceCardIndex: number;
+  recordId: number;
+}
+
+export interface MarketplaceListingSummary {
+  id: number;
+  listingKey: string;
+  facebookId: string | null;
+  title: string;
+  price: string | null;
+  description: string | null;
+  category: string | null;
+  marketplace: string | null;
+  listingDateRaw: string | null;
+  listingDateUtc: string | null;
+  locationName: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  sources: MarketplaceSourceReference[];
+}
+
+export interface SavedItemContextSummary {
+  name: string | null;
+  url: string | null;
+  source: string | null;
+}
+
+export interface SavedItemSummary {
+  id: number;
+  title: string;
+  savedDateRaw: string | null;
+  savedDateUtc: string | null;
+  contexts: SavedItemContextSummary[];
+  sourcePath: string;
+  sourceCardIndex: number;
+}
+
 export interface EventSourceReference {
   sourcePath: string;
   sourceCardIndex: number;
@@ -215,7 +256,7 @@ export interface ImportIssueReport {
 
 
 
-export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'groups' | 'events' | 'html_fallback' | 'text_fallback' | 'json';
+export type ImportProgressSectionKey = 'friends' | 'messages' | 'posts' | 'comments' | 'likes_and_reactions' | 'photos_and_videos' | 'groups' | 'events' | 'marketplace' | 'saved_items_and_collections' | 'html_fallback' | 'text_fallback' | 'json';
 
 export interface ImportProgressEvent {
   sectionKey: ImportProgressSectionKey;
@@ -287,6 +328,8 @@ export interface ImportAllSupportedDataResult {
     photosAndVideos: PhotoAlbumsImportSectionResult;
     groups: JsonImportSectionResult;
     events: JsonImportSectionResult;
+    marketplace: JsonImportSectionResult;
+    savedItems: JsonImportSectionResult;
     htmlFallback: JsonImportSectionResult;
     textFallback: JsonImportSectionResult;
     json: JsonImportSectionResult;

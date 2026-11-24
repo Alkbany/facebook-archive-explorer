@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation on `main`.** The main branch includes the redesigned Electron/React desktop workspace, local SQLite storage, account/backup grouping, legacy and current nested Accounts Center directory classification, directory and ZIP discovery, ZIP-backed media streaming, reviewed Friends HTML + TNG JSON, Messages legacy HTML + TNG JSON, Likes & Reactions HTML, sampled Posts HTML + TNG timeline JSON, Comments HTML + TNG JSON, and Groups TNG JSON importers with a dedicated Groups workspace. It also includes bounded HTML/JSON/plain-text fallbacks (UTF-8 and BOM-marked UTF-16), the Other Data browser, unified media inventory, local full-text search, JSON search export, snapshot comparison, import diagnostics/coverage, database backup/restore, and streamed audio/video.
+> **Status: active implementation on `main`.** The main branch includes the redesigned Electron/React desktop workspace, local SQLite storage, account/backup grouping, legacy and current nested Accounts Center directory classification, directory and ZIP discovery, ZIP-backed media streaming, reviewed Friends HTML + TNG JSON, Messages legacy HTML + TNG JSON, Likes & Reactions HTML, sampled Posts HTML + TNG timeline JSON, Comments HTML + TNG JSON, and Groups TNG JSON importers with a dedicated Groups workspace. It also includes bounded HTML/JSON/plain-text fallbacks (UTF-8 and BOM-marked UTF-16), the Other Data browser, unified media inventory, four-level local search (Exact, Fuzzy, optional Semantic Search, and a separate optional evidence-grounded AI Assistant), snapshot comparison, import diagnostics/coverage, database backup/restore, and streamed audio/video.
 
 ## Product decisions
 
@@ -59,7 +59,7 @@ The latest main-branch test installer is available in the repository's Actions t
 - Detailed snapshot comparisons with record-level before/after values, change-type and section filters, text/path search, pagination, and native CSV or JSON export. CSV output neutralizes spreadsheet formula-leading text.
 - A read-only Archive Files browser showing all discovered source paths, formats, import states, record counts, safe diagnostic codes, and file sizes when discovery metadata is available, with section/status filters, search, and pagination. This includes files in unsupported sections.
 - A standalone **Import Photos & Videos** action that runs the same reviewed album-index and explicitly linked album-detail importers as Import All; it shares the global import lock and reports progress and diagnostics.
-- A unified media library that filters by media kind, searches file names/archive paths, and paginates 50 distinct files at a time from SQLite. Search and filtering happen before pagination; browsing is not limited to the first 1,000 media references. MP4/MOV/M4V duration scans use bounded file prefixes and suffixes.
+- A unified media library that filters by media kind, searches file names/archive paths, and paginates 100 distinct files by default, with selectable 50/100/250 page sizes and Grid/List views, directly from SQLite. Search and filtering happen before pagination; browsing is not limited to the first 1,000 media references. MP4/MOV/M4V duration scans use bounded file prefixes and suffixes.
 - Functional sidebar navigation to Overview, Friends, Conversations, Photos & Videos, Activity, and Search. Navigation entries no longer advertise implemented modules as “Soon”.
 
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.
@@ -78,11 +78,11 @@ The latest main-branch test installer is available in the repository's Actions t
 - DOM parsing and explicit **Import Posts** action for the sampled `posts/*.html` card structure; raw author labels/dates and local photo/video/audio references are preserved.
 - Searchable local Posts and Likes & Reactions activity panels, scoped to the selected backup.
 - Conversation browser with conversation filtering, source-order message timeline, raw timestamps, reactions, and local attachment previews.
-- A unified media library that indexes all discovered image, video, and audio files across the backup, including album preview images linked by the imported Photos & Videos index; imported context is shown when available (first 1,000 references shown).
+- A unified media library that indexes all discovered image, video, and audio files across the backup, including album preview images linked by the imported Photos & Videos index; results are filtered before database pagination, with 100 items per page by default.
 - In-app image and sticker preview plus local streaming audio/video playback with byte-range seeking. This works for directory backups and ZIP backups without extraction; deflated ZIP media is streamed through decompression to satisfy byte ranges.
 - Message records are marked sensitive and excluded from FTS5 by default.
 - Message attachment references are resolved locally and linked only when the file exists in the discovered backup inventory; original media bytes are not copied.
-- Arabic-aware unified FTS5 search across indexed Friends, Posts, Comments, Likes & Reactions, Photos & Videos album summaries, and eligible generic JSON, HTML, and plain-text records from non-sensitive sections, with section filtering and JSON export of search results.
+- Exact and Fuzzy Search across eligible indexed Friends, Posts, Comments, Likes & Reactions, Photos & Videos album summaries, and generic records, with metadata/path matching, a separate opt-in message index, section filters, confidence labels, and JSON export. Optional Semantic Search adds local embeddings; a separate local AI Assistant can answer questions using retrieved records and source citations.
 - Snapshot comparison for two backups of the same account, matching section, source-relative path, and original card index and reporting aggregate changes.
 - Verified local application-database export and restore, using SQLite's online backup API, integrity/foreign-key/schema checks, a pre-restore recovery copy, and interrupted-swap recovery. The database backup contains indexes and imported records, not the original Facebook media.
 
@@ -95,7 +95,7 @@ The following work is still required for a complete 1.0 release. A discovered fi
 - Broader Photos & Videos coverage for album layouts and media metadata not currently recognized. Image dimensions are read from bounded PNG/JPEG/GIF/WebP prefixes; video duration is currently limited to MP4/MOV/M4V headers found within a bounded 2 MiB prefix.
 - Evidence-backed parsing of raw Facebook date formats and date-range filters. Original date strings are retained where a reliable normalized date is not available.
 - Durable checkpoints within a single large source file. Current recovery is atomic per file; pause/resume takes effect after the active file transaction finishes.
-- Four-level search roadmap: Exact Search (current FTS5 baseline), Fuzzy Search (typo tolerance), optional local Semantic Search (embeddings), and optional evidence-grounded AI Assistant (LLM). Only Exact Search is currently implemented; see [approved project decisions](docs/PROJECT-DECISIONS.md).
+- Four distinct search levels now have implementation foundations: Exact Search, Fuzzy Search, optional local Semantic Search (multilingual embeddings), and a separate optional local AI Assistant (LLM). Real-model inference, relevance, and complete real-export validation remain beta acceptance work; see [approved project decisions](docs/PROJECT-DECISIONS.md).
 - Large-archive performance benchmarks and end-to-end validation against a complete real Facebook export.
 - Clean-device Windows install, launch, upgrade, and uninstall smoke tests; final privacy/security review and release checklist.
 - A trusted Windows signing identity, code-signing provider onboarding, and Smart App Control validation. Test installers may remain unsigned until signing is configured.

@@ -9,6 +9,7 @@ import { recoverInterruptedDatabaseSwap } from './database/backup';
 import { recoverAllInterruptedImports } from './import/pipeline/import-all';
 import { getSemanticSearchStatus, processSemanticIndexQueue } from './database/semantic-search-service';
 import { getAiAssistantStatus, prepareAiAssistant } from './database/ai-assistant-service';
+import { resolveRendererEntry } from './renderer-entry';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'archive-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -35,8 +36,8 @@ function createMainWindow(): BrowserWindow {
   window.once('ready-to-show', () => window.show());
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
-  const rendererUrl = process.env.ELECTRON_RENDERER_URL;
-  const developmentOrigin = rendererUrl ? new URL(rendererUrl).origin : null;
+  const rendererEntry = resolveRendererEntry(app.isPackaged, process.env.ELECTRON_RENDERER_URL);
+  const developmentOrigin = rendererEntry.kind === 'development-url' ? rendererEntry.origin : null;
 
   window.webContents.on('will-navigate', (event, targetUrl) => {
     if (developmentOrigin) {
@@ -52,7 +53,7 @@ function createMainWindow(): BrowserWindow {
     event.preventDefault();
   });
 
-  if (rendererUrl) void window.loadURL(rendererUrl);
+  if (rendererEntry.kind === 'development-url') void window.loadURL(rendererEntry.url);
   else void window.loadFile(join(__dirname, '../renderer/index.html'));
 
   window.on('closed', () => {

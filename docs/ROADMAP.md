@@ -149,6 +149,7 @@
 - [x] Attach a Windows installer SHA-256 verification record to main-branch test artifacts and versioned GitHub Releases.
 - [x] Publish early-access pre-releases [v0.1.0-beta.1](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.1) and [v0.1.0-beta.2](https://github.com/Alkbany/facebook-archive-explorer/releases/tag/v0.1.0-beta.2); reserve v1.0.0 for the stable release gate.
 - [x] Permit the custom `archive-media:` scheme under renderer `media-src` only, with a regression test keeping scripts, images, and general connections restricted.
+- [x] Ensure packaged applications always load their bundled renderer; restrict the development renderer override to unauthenticated loopback HTTP.
 - [ ] Final privacy/security review and release checklist.
 
 ## Stable 1.0.0 release gate

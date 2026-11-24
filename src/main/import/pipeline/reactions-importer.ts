@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { clearSourceFileRecords } from './source-file-records';
 import { normalizeSearchText } from '../../../shared/text/normalize';
-import { facebookDateToUtc } from '../../../shared/time/facebook-date';
+import { facebookDateToUtc, facebookLocalizedHtmlDateToUtc } from '../../../shared/time/facebook-date';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -86,7 +86,9 @@ export async function importReactionsSection(
       for (const record of parsed.records) {
         insert.run(snapshotId, file.id, record.sourceCardIndex, record.reactionType, record.descriptionRaw,
           normalizeSearchText([record.reactionType, record.descriptionRaw].filter(Boolean).join(' ')),
-          record.dateRaw, facebookDateToUtc(record.dateRaw), JSON.stringify({ reaction_image_raw: record.reactionImageRaw }), timestamp);
+          record.dateRaw,
+          facebookLocalizedHtmlDateToUtc(record.dateRaw, parsed.timezoneOffsetMinutes ?? null) ?? facebookDateToUtc(record.dateRaw),
+          JSON.stringify({ reaction_image_raw: record.reactionImageRaw }), timestamp);
       }
       const unsupported = parsed.records.length === 0;
       for (const issue of parsed.issues) {

@@ -169,7 +169,7 @@ function searchFtsTable(
         row.title ?? '',
         row.body ?? '',
         row.normalizedText ?? ''
-      ].join(' ')).match(/[\\p{L}\\p{N}_]+/gu) ?? [];
+      ].join(' ')).match(/[\p{L}\p{N}_]+/gu) ?? [];
       const tokenScores = fuzzyQueryTerms.map((queryTerm) =>
         searchableTokens.length === 0
           ? 0
@@ -230,7 +230,7 @@ function searchArchiveMetadata(
 ): SearchHit[] {
   const rawNeedle = query.trim().replace(/^"|"$/gu, '');
   if (!rawNeedle) return [];
-  const rows = database.prepare(\`
+  const rows = database.prepare(`
     SELECT records.id AS id, records.section_key AS sectionKey,
       records.record_type AS recordType, source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex, records.title AS title,
@@ -252,7 +252,7 @@ function searchArchiveMetadata(
       )
     ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
     LIMIT ?
-  \`).all(
+  `).all(
     snapshotId, includeMessages ? 1 : 0, sectionKey, sectionKey, sectionKey,
     rawNeedle, rawNeedle, rawNeedle, rawNeedle, MAX_RESULTS
   ) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;

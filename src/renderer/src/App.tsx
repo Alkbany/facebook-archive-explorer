@@ -29,7 +29,7 @@ import type {
 } from '../../shared/archive/inspection';
 import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archive/section-registry';
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
-import { MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationSummary, type MessageRecordSummary } from '../../shared/archive/messages';
+import { MESSAGE_CONVERSATION_LIST_PAGE_SIZE, MESSAGE_CONVERSATION_PAGE_SIZE, type MessageConversationSummary, type MessageRecordSummary } from '../../shared/archive/messages';
 import { createRequestGate } from '../../shared/request-gate';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import { ARCHIVE_SEARCH_PAGE_SIZE, MAX_ARCHIVE_SEARCH_OFFSET, type ArchiveSearchMode, type ArchiveSearchResult, type SemanticSearchStatus } from '../../shared/archive/search';
@@ -264,7 +264,13 @@ function App() {
   const [mediaFilter, setMediaFilter] = useState<ArchiveMediaGalleryFilter>('all');
   const [mediaViewMode, setMediaViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+  const [selectedConversationSummary, setSelectedConversationSummary] = useState<MessageConversationSummary | null>(null);
+  const [conversationsPage, setConversationsPage] = useState(1);
+  const [conversationsTotal, setConversationsTotal] = useState(0);
   const [conversationFilter, setConversationFilter] = useState('');
+  const [conversationAppliedFilter, setConversationAppliedFilter] = useState('');
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const conversationListRequestGate = useRef(createRequestGate());
   const [conversationSearchInput, setConversationSearchInput] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
@@ -431,6 +437,11 @@ function App() {
     setReactionRecords([]);
     setReactionFilter('');
     setConversations([]);
+    setConversationsPage(1);
+    setConversationsTotal(0);
+    setConversationFilter('');
+    setConversationAppliedFilter('');
+    setSelectedConversationSummary(null);
     setConversationMessages([]);
     setMediaGallery([]);
     setMediaTotal(0);
@@ -439,7 +450,11 @@ function App() {
     setMediaQueryInput('');
     setMediaPage(1);
     setSelectedConversationId(null);
+    setSelectedConversationSummary(null);
+    setConversationsPage(1);
+    setConversationsTotal(0);
     setConversationFilter('');
+    setConversationAppliedFilter('');
     setConversationSearchInput('');
     setConversationSearch('');
 
@@ -548,7 +563,7 @@ function App() {
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
-        window.desktopApi.listMessagesForSelectedBackup(),
+        window.desktopApi.listMessagesForSelectedBackup(1, ''),
         window.desktopApi.listMediaForSelectedBackup('all', 1, ''),
         window.desktopApi.listImportIssuesForSelectedBackup(),
         window.desktopApi.getImportCoverageForSelectedBackup(),
@@ -563,7 +578,13 @@ function App() {
       setPostRecords(posts);
       setCommentRecords(comments);
       setReactionRecords(reactions);
-      setConversations(foundConversations);
+      setConversations(foundConversations.items);
+      setConversationsPage(foundConversations.page);
+      setConversationsTotal(foundConversations.total);
+      setConversationFilter('');
+      setConversationAppliedFilter('');
+      setSelectedConversationSummary(foundConversations.items[0] ?? null);
+      setSelectedConversationId(foundConversations.items[0]?.sourceFileId ?? null);
       setMediaGallery(media.items);
       setMediaTotal(media.total);
       setMediaPage(media.page);
@@ -579,7 +600,7 @@ function App() {
       setMarketplaceListings(marketplace);
       setSavedItems(savedItems);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
-      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId, 1, '');
+      if (foundConversations.items.length > 0) await loadConversation(foundConversations.items[0].sourceFileId, 1, '');
     } catch {
       setInspection(null);
       setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the original folder or ZIP again to create a fresh inventory.');
@@ -1162,7 +1183,7 @@ function App() {
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
-        window.desktopApi.listMessagesForSelectedBackup(),
+        window.desktopApi.listMessagesForSelectedBackup(1, ''),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
         window.desktopApi.listFallbackRecordSectionsForSelectedBackup(),
@@ -1173,7 +1194,12 @@ function App() {
       setPostRecords(posts);
       setCommentRecords(comments);
       setReactionRecords(reactions);
-      setConversations(foundConversations);
+      setConversations(foundConversations.items);
+      setConversationsPage(foundConversations.page);
+      setConversationsTotal(foundConversations.total);
+      setConversationFilter('');
+      setConversationAppliedFilter('');
+      setSelectedConversationSummary(foundConversations.items[0] ?? null);
       setPhotoAlbums(albums);
       setFriendDirectory(friends);
       setFriendTypeFilter('all');
@@ -1185,12 +1211,15 @@ function App() {
       setSavedItems(savedItems);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       else { setFallbackSectionKey(''); setFallbackRecords(null); }
-      if (foundConversations.length > 0) {
-        await loadConversation(foundConversations[0].sourceFileId, 1, '');
+      if (foundConversations.items.length > 0) {
+        setSelectedConversationId(foundConversations.items[0].sourceFileId);
+        await loadConversation(foundConversations.items[0].sourceFileId, 1, '');
       } else {
         conversationRequestGate.current.invalidate();
         setIsLoadingConversation(false);
         setSelectedConversationId(null);
+        setSelectedConversationSummary(null);
+        setConversationsTotal(0);
         setConversationMessages([]);
       }
 
@@ -1204,6 +1233,31 @@ function App() {
     } finally {
       setIsImportingAll(false);
     }
+  }
+
+  async function loadConversationDirectory(page = 1, query = conversationAppliedFilter) {
+    const requestId = conversationListRequestGate.current.begin();
+    setIsLoadingConversations(true);
+    try {
+      const result = await window.desktopApi.listMessagesForSelectedBackup(page, query);
+      if (!conversationListRequestGate.current.isCurrent(requestId)) return;
+      setConversations(result.items);
+      setConversationsPage(result.page);
+      setConversationsTotal(result.total);
+      setConversationAppliedFilter(query);
+    } catch {
+      if (conversationListRequestGate.current.isCurrent(requestId)) {
+        setError('The conversation list could not be loaded from the selected backup.');
+      }
+    } finally {
+      if (conversationListRequestGate.current.isCurrent(requestId)) setIsLoadingConversations(false);
+    }
+  }
+
+  function applyConversationFilter() {
+    const query = conversationFilter.trim();
+    setConversationFilter(query);
+    void loadConversationDirectory(1, query);
   }
 
   async function loadConversation(sourceFileId: number, page = 1, searchQuery = conversationSearch) {
@@ -1308,13 +1362,19 @@ function App() {
     try {
       const result = await window.desktopApi.importMessagesForSelectedBackup();
       setMessagesImport(result);
-      const foundConversations = await window.desktopApi.listMessagesForSelectedBackup();
-      setConversations(foundConversations);
+      const foundConversations = await window.desktopApi.listMessagesForSelectedBackup(1, '');
+      setConversations(foundConversations.items);
+      setConversationsPage(foundConversations.page);
+      setConversationsTotal(foundConversations.total);
+      setConversationFilter('');
+      setConversationAppliedFilter('');
+      setSelectedConversationSummary(foundConversations.items[0] ?? null);
+      setSelectedConversationId(foundConversations.items[0]?.sourceFileId ?? null);
       await refreshMediaGallery();
       await refreshImportIssues();
       await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
-      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId, 1, '');
+      if (foundConversations.items.length > 0) await loadConversation(foundConversations.items[0].sourceFileId, 1, '');
     } catch {
       setError('Messages data could not be imported. Check the local import report.');
     } finally {
@@ -1322,12 +1382,9 @@ function App() {
     }
   }
 
-  const selectedConversation = conversations.find((item) => item.sourceFileId === selectedConversationId) ?? null;
+  const selectedConversation = conversations.find((item) => item.sourceFileId === selectedConversationId)
+    ?? (selectedConversationSummary?.sourceFileId === selectedConversationId ? selectedConversationSummary : null);
   const visibleMedia = mediaGallery;
-  const visibleConversations = conversations.filter((item) => {
-    const haystack = [item.relativePath, item.conversationType, ...item.participants].join(' ').toLocaleLowerCase();
-    return haystack.includes(conversationFilter.trim().toLocaleLowerCase());
-  });
 
   const sectionCounts = inspection
     ? Object.entries(inspection.sectionFileCounts).sort((a, b) => b[1] - a[1]).slice(0, 8)
@@ -2465,7 +2522,7 @@ function App() {
                 {messagesImport.failedFiles} failed
               </p>
             )}
-            {(messagesImport || conversations.length > 0) && (
+            {(messagesImport || conversationsTotal > 0 || conversations.length > 0) && (
               <section className="conversation-workspace" id="conversation-explorer">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -2473,31 +2530,40 @@ function App() {
                     <h3>Conversation explorer</h3>
                     <p>Browse imported conversations locally. Message text is not included in global search.</p>
                   </div>
-                  <span>{conversations.length.toLocaleString()} conversations</span>
+                  <span>{conversationsTotal.toLocaleString()} conversations</span>
                 </div>
-                {conversations.length === 0 ? (
+                {conversationsTotal === 0 ? (
                   <div className="conversation-empty">
-                    <strong>No readable conversations found yet.</strong>
-                    <span>Check the import report for unsupported or failed HTML files.</span>
+                    <strong>{conversationAppliedFilter ? 'No conversations match this search.' : 'No readable conversations found yet.'}</strong>
+                    <span>{conversationAppliedFilter ? 'Try another participant name or archive path.' : 'Check the import report for unsupported or failed HTML files.'}</span>
                   </div>
                 ) : (
                   <div className="conversation-browser">
                     <aside className="conversation-list-panel">
-                      <label className="conversation-search">
-                        <span>⌕</span>
-                        <input
-                          value={conversationFilter}
-                          onChange={(event) => setConversationFilter(event.target.value)}
-                          placeholder="Find a conversation…"
-                          aria-label="Find a conversation"
-                        />
-                      </label>
+                      <div className="conversation-list-search">
+                        <label className="conversation-search">
+                          <span>⌕</span>
+                          <input
+                            value={conversationFilter}
+                            onChange={(event) => setConversationFilter(event.target.value)}
+                            onKeyDown={(event) => { if (event.key === 'Enter') applyConversationFilter(); }}
+                            maxLength={100}
+                            placeholder="Find a person or conversation…"
+                            aria-label="Find a conversation"
+                          />
+                        </label>
+                        <button className="secondary-button" onClick={applyConversationFilter} disabled={isLoadingConversations}>Find</button>
+                        {conversationAppliedFilter && <button className="text-button" onClick={() => { setConversationFilter(''); void loadConversationDirectory(1, ''); }} disabled={isLoadingConversations}>Clear</button>}
+                      </div>
+                      {isLoadingConversations ? <p className="conversation-filter-empty">Loading conversations…</p> : null}
                       <div className="conversation-list">
-                        {visibleConversations.map((conversation) => (
+                        {conversations.map((conversation) => (
                           <button
                             className={conversation.sourceFileId === selectedConversationId ? 'conversation-list-item selected' : 'conversation-list-item'}
                             key={conversation.sourceFileId}
                             onClick={() => {
+                              setSelectedConversationSummary(conversation);
+                              setSelectedConversationId(conversation.sourceFileId);
                               setConversationSearchInput('');
                               setConversationSearch('');
                               void loadConversation(conversation.sourceFileId, 1, '');
@@ -2511,7 +2577,14 @@ function App() {
                             </span>
                           </button>
                         ))}
-                        {visibleConversations.length === 0 && <p className="conversation-filter-empty">No matches.</p>}
+                        {conversations.length === 0 && !isLoadingConversations && <p className="conversation-filter-empty">No conversations on this page.</p>}
+                      </div>
+                      <div className="conversation-list-pagination">
+                        <span>{conversationsTotal === 0 ? '0 conversations' : `Showing ${((conversationsPage - 1) * MESSAGE_CONVERSATION_LIST_PAGE_SIZE + 1).toLocaleString()}–${Math.min(conversationsPage * MESSAGE_CONVERSATION_LIST_PAGE_SIZE, conversationsTotal).toLocaleString()} of ${conversationsTotal.toLocaleString()}`}</span>
+                        <div>
+                          <button className="secondary-button" onClick={() => void loadConversationDirectory(conversationsPage - 1)} disabled={isLoadingConversations || conversationsPage <= 1}>Previous</button>
+                          <button className="secondary-button" onClick={() => void loadConversationDirectory(conversationsPage + 1)} disabled={isLoadingConversations || conversationsPage >= Math.max(1, Math.ceil(conversationsTotal / MESSAGE_CONVERSATION_LIST_PAGE_SIZE))}>Next</button>
+                        </div>
                       </div>
                     </aside>
                     <div className="conversation-detail-panel">

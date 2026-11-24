@@ -82,15 +82,16 @@ describe('Messages conversation import', () => {
     });
 
     const record = database.prepare(`
-      SELECT title, body_text, event_time_raw, sensitivity, search_enabled, payload_json
+      SELECT title, body_text, event_time_raw, event_time_utc, sensitivity, search_enabled, payload_json
       FROM records WHERE snapshot_id = ?
     `).get(snapshotId) as {
-      title: string; body_text: string; event_time_raw: string;
+      title: string; body_text: string; event_time_raw: string; event_time_utc: string | null;
       sensitivity: string; search_enabled: number; payload_json: string;
     };
     expect(record).toMatchObject({
       title: 'Synthetic Sender',
       event_time_raw: 'Raw message date',
+      event_time_utc: null,
       sensitivity: 'sensitive',
       search_enabled: 0
     });

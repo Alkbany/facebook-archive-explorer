@@ -22,6 +22,11 @@ const migrations = [
     version: 2,
     name: 'unique_account_display_names',
     sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8')
+  },
+  {
+    version: 3,
+    name: 'backfill_verified_event_times',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/003_backfill_verified_event_times.sql'), 'utf8')
   }
 ] as const;
 
@@ -41,7 +46,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(initialCount.count).toBe(2);
+    expect(initialCount.count).toBe(3);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
     applyMigrations(database, migrations);
@@ -50,7 +55,47 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(finalCount.count).toBe(2);
+    expect(finalCount.count).toBe(3);
+  });
+
+  it('backfills only verified Unix timestamps for records imported by older versions', () => {
+    const legacyDatabase = openAppDatabase(':memory:', migrations.slice(0, 2));
+    try {
+      const timestamp = new Date().toISOString();
+      legacyDatabase.prepare(
+        'INSERT INTO accounts (id, display_name, created_at, updated_at) VALUES (?, ?, ?, ?)'
+      ).run('legacy-account', 'Legacy account', timestamp, timestamp);
+      legacyDatabase.prepare(`
+        INSERT INTO archive_snapshots (
+          id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+        ) VALUES ('legacy-snapshot', 'legacy-account', 'Legacy export', 'directory', '/tmp/legacy', 'completed', ?, ?)
+      `).run(timestamp, timestamp);
+      const sourceId = legacyDatabase.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, discovered_at
+        ) VALUES ('legacy-snapshot', 'posts/posts.json', 'posts.json', 'posts', 'json', ?)
+      `).run(timestamp).lastInsertRowid;
+      const insertRecord = legacyDatabase.prepare(`
+        INSERT INTO records (
+          snapshot_id, source_file_id, source_record_index, section_key, record_type,
+          event_time_raw, event_time_utc, created_at
+        ) VALUES ('legacy-snapshot', ?, ?, ?, 'test', ?, NULL, ?)
+      `);
+      insertRecord.run(sourceId, 0, 'posts', '1540000000', timestamp);
+      insertRecord.run(sourceId, 1, 'comments', '١٥/١٠/٢٠١٨ ٧:٣٦ ص', timestamp);
+
+      applyMigrations(legacyDatabase, [migrations[2]]);
+
+      const rows = legacyDatabase.prepare(
+        'SELECT event_time_utc AS eventTimeUtc FROM records ORDER BY source_record_index'
+      ).all() as Array<{ eventTimeUtc: string | null }>;
+      expect(rows).toEqual([
+        { eventTimeUtc: '2018-10-20T00:26:40.000Z' },
+        { eventTimeUtc: null }
+      ]);
+    } finally {
+      legacyDatabase.close();
+    }
   });
 
   it('indexes eligible text in FTS5 and blocks sensitive records from the index', () => {

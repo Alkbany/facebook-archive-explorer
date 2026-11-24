@@ -32,7 +32,7 @@ export interface ArchiveAssistantEvidence {
 }
 
 function extractYear(question: string): number | null {
-  const years = question.match(/(?:19|20)\\d{2}/gu);
+  const years = question.match(/(?:19|20)\d{2}/gu);
   if (!years || years.length === 0) return null;
   const candidate = Number(years[0]);
   return candidate >= 1900 && candidate <= 2099 ? candidate : null;
@@ -40,7 +40,7 @@ function extractYear(question: string): number | null {
 
 function extractTerms(question: string): string[] {
   const normalized = normalizeSearchText(question);
-  const tokens = normalized.match(/[\\p{L}\\p{N}_]+/gu) ?? [];
+  const tokens = normalized.match(/[\p{L}\p{N}_]+/gu) ?? [];
   return [...new Set(tokens.filter((token) => token.length > 1 && !STOP_WORDS.has(token)))].slice(0, 10);
 }
 

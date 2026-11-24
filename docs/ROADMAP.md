@@ -106,12 +106,16 @@
 - [ ] (Only if public distribution is planned) Verify signed release behavior on a clean Windows 11 device.
 - [ ] Final privacy/security review and release checklist.
 
+## Stable 1.0.0 release gate
+
+The beta release is not the product's completion point. Do not tag v1.0.0 until the supported archive scope has passed the complete real-export end-to-end test, the large-archive and recovery checks, clean Windows install/upgrade/uninstall smoke tests, and the final privacy/security checklist. Features that have not been verified against an actual export structure must remain explicitly unsupported rather than being advertised as complete.
+
 ## Next implementation order
 
 1. **Parser coverage:** inspect each remaining section's actual export files, add a section-specific parser only when its structure is evidenced, and add non-personal fixtures for every supported variant.
 2. **Activity and date handling:** extend activity-card coverage, then normalize observed Facebook date formats and add date filters without guessing ambiguous dates.
 3. **Media completeness:** broaden album-layout recognition and safely improve metadata coverage while retaining bounded reads and original-file references.
 4. **Reliability at scale:** benchmark large directory and ZIP backups, test retries/recovery, and run a complete real-backup end-to-end pass.
-5. **Windows release readiness:** clean-device install/upgrade/uninstall checks, signing identity and Smart App Control validation, privacy/security review, and final release checklist.
+5. **Windows release readiness:** complete clean-device install/upgrade/uninstall checks, validate optional Authenticode signing on a trusted Windows 11 device, review privacy/security, and finish the 1.0.0 release checklist.
 
 **Evidence rule:** when a section's export structure has not been inspected, keep it clearly marked as fallback/unsupported. Do not promote filename discovery or generic text preservation to verified parser support. Ask for a representative export sample only when implementation of that exact section requires it; never commit personal export data or fixtures derived from it.

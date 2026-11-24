@@ -157,7 +157,8 @@ export async function importAllSupportedData(
   database: DatabaseSync,
   snapshotId: string,
   archiveRoot: string,
-  onProgress?: ImportProgressReporter
+  onProgress?: ImportProgressReporter,
+  afterSectionImport?: () => Promise<void>
 ): Promise<ImportAllSupportedDataResult> {
   recoverInterruptedImports(database, snapshotId);
   const startedAt = new Date().toISOString();
@@ -166,15 +167,25 @@ export async function importAllSupportedData(
 
   try {
     const friends = await importFriendsSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const messages = await importMessagesSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const posts = await importPostsSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const comments = await importCommentsSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const reactions = await importReactionsSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const photosAndVideos = await importPhotosAndVideosSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const groups = await importGroupsJsonSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const htmlFallback = await importHtmlFallbackFilesSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const textFallback = await importTextFallbackFilesSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
     const json = await importJsonFilesSection(database, snapshotId, archiveRoot, onProgress);
+    await afterSectionImport?.();
 
     const sections = { friends, messages, posts, comments, reactions, photosAndVideos, groups, htmlFallback, textFallback, json };
     const totals = Object.values(sections).reduce<ImportAllSupportedDataResult['totals']>((result, section) => {

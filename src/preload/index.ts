@@ -49,7 +49,7 @@ const desktopApi: DesktopApi = {
   listPhotoAlbumsForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listPhotoAlbumsForSelectedBackup),
   getPhotoAlbumDetailForSelectedBackup: (albumRecordId) =>
     ipcRenderer.invoke(IPC_CHANNELS.getPhotoAlbumDetailForSelectedBackup, albumRecordId),
-  listMessagesForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessagesForSelectedBackup),
+  listMessagesForSelectedBackup: (page, searchQuery) => ipcRenderer.invoke(IPC_CHANNELS.listMessagesForSelectedBackup, page, searchQuery),
   listMessageMediaForSelectedBackup: () => ipcRenderer.invoke(IPC_CHANNELS.listMessageMediaForSelectedBackup),
   getMessagesForSelectedConversation: (sourceFileId, page, searchQuery) =>
     ipcRenderer.invoke(IPC_CHANNELS.getMessagesForSelectedConversation, sourceFileId, page, searchQuery),

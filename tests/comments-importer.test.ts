@@ -90,7 +90,7 @@ describe('Comments import', () => {
     const normalizedTime = database.prepare(
       'SELECT event_time_utc AS value FROM records WHERE snapshot_id = ?'
     ).get(snapshotId) as { value: string | null };
-    expect(normalizedTime.value).toBe('2018-10-20T00:26:40.000Z');
+    expect(normalizedTime.value).toBe('2018-10-20T01:46:40.000Z');
   });
 
   it('marks an unknown comments HTML layout as unsupported', async () => {

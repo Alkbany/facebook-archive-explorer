@@ -23,6 +23,10 @@ import { inspectArchiveZip } from '../import/discovery/zip-inventory';
 import { importFriendsSection } from '../import/pipeline/friends-importer';
 import { importAllSupportedData, importPhotosAndVideosSection } from '../import/pipeline/import-all';
 import { importEventsJsonSection } from '../import/pipeline/events-json-importer';
+import { importMarketplaceJsonSection } from '../import/pipeline/marketplace-json-importer';
+import { importSavedItemsJsonSection } from '../import/pipeline/saved-items-json-importer';
+import { listMarketplaceListings } from '../database/marketplace-repository';
+import { listSavedItems } from '../database/saved-items-repository';
 import { importPostsSection } from '../import/pipeline/posts-importer';
 import { importCommentsSection } from '../import/pipeline/comments-importer';
 import { listPostRecords, listCommentActivities, listPhotoAlbums, getPhotoAlbumDetail, listEventRecords } from '../database/activity-repository';
@@ -726,6 +730,42 @@ export function registerIpcHandlers(
     const archiveRoot = selectedBackupDirectory;
     return runExclusiveImport('Events', () =>
       importEventsJsonSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
+      })
+    );
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listMarketplaceForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before opening Marketplace.');
+    return listMarketplaceListings(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importMarketplaceForSelectedBackup, async (event) => {
+    if (!selectedSnapshotId || !selectedBackupDirectory) {
+      throw new Error('Select a local backup before importing Marketplace listings.');
+    }
+    const snapshotId = selectedSnapshotId;
+    const archiveRoot = selectedBackupDirectory;
+    return runExclusiveImport('Marketplace listings', () =>
+      importMarketplaceJsonSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
+      })
+    );
+  });
+
+  ipcMain.handle(IPC_CHANNELS.listSavedItemsForSelectedBackup, () => {
+    if (!selectedSnapshotId) throw new Error('Inspect a backup before opening Saved Items.');
+    return listSavedItems(database, selectedSnapshotId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.importSavedItemsForSelectedBackup, async (event) => {
+    if (!selectedSnapshotId || !selectedBackupDirectory) {
+      throw new Error('Select a local backup before importing Saved Items.');
+    }
+    const snapshotId = selectedSnapshotId;
+    const archiveRoot = selectedBackupDirectory;
+    return runExclusiveImport('Saved Items', () =>
+      importSavedItemsJsonSection(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
         if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
       })
     );

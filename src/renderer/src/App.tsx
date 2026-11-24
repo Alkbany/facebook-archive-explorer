@@ -1022,7 +1022,6 @@ function App() {
       search: 'unified-search-panel',
       files: 'archive-files-workspace',
       events: 'events-workspace',
-      events: 'events-workspace',
       overview: 'welcome-panel',
       other: 'fallback-records-workspace'
     };
@@ -1075,7 +1074,6 @@ function App() {
       setCommentsImport(result.sections.comments);
       setReactionsImport(result.sections.reactions);
       setPhotosImport(result.sections.photosAndVideos);
-      setEventRecords(await window.desktopApi.listEventsForSelectedBackup());
 
       const [posts, comments, reactions, foundConversations, albums, friends, fallback, events] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),

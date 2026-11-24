@@ -21,7 +21,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "cheerio": "^1.2.0",
-    "yauzl": "^3.4.0"
+    "yauzl": "^3.4.0",
+    "@huggingface/transformers": "^4.3.2"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

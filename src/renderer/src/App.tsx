@@ -447,6 +447,9 @@ function App() {
     setConversationFilter('');
     setActiveMedia(null);
     setMediaFilter('all');
+    setMediaQuery('');
+    setMediaQueryInput('');
+    setMediaPage(1);
 
     try {
       const report = await window.desktopApi.openSavedSnapshot(snapshotId);
@@ -1979,7 +1982,7 @@ function App() {
                   <h3>Unified media library</h3>
                   <p>Images, videos, and audio files are indexed from the full backup, including files not yet linked to an imported record. Original media stays in place.</p>
                 </div>
-                <span>{mediaTotal.toLocaleString()} files in this backup</span>
+                <span>{mediaTotal.toLocaleString()} files found</span>
               </div>
               <form
                 className="media-gallery-search"

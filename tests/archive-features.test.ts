@@ -7,11 +7,13 @@ import { getOrCreateAccount, listArchiveSnapshots } from '../src/main/database/a
 import { indexDiscoveredMediaAssets } from '../src/main/database/media-indexer';
 import { listArchiveMediaGallery } from '../src/main/database/messages-repository';
 import { searchArchiveRecords } from '../src/main/database/search-repository';
+import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch } from '../src/main/database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../src/main/database/comparison-repository';
 
 const migrations = [
   { version: 1, name: 'initial_schema', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8') },
-  { version: 2, name: 'unique_account_display_names', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') }
+  { version: 2, name: 'unique_account_display_names', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') },
+  { version: 6, name: 'search_preferences', sql: readFileSync(join(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8') }
 ];
 
 describe('archive-wide media, search, and comparison', () => {
@@ -97,7 +99,44 @@ describe('archive-wide media, search, and comparison', () => {
       { sectionKey: 'posts', body: 'Phoenix emulator discussion' }
     ]);
     expect(searchArchiveRecords(database, baselineId, 'Phoenix', 'comments')).toHaveLength(1);
+    expect(searchArchiveRecords(database, baselineId, 'Phoenix', null)).toHaveLength(2);
     expect(searchArchiveRecords(database, baselineId, 'Phoenix', 'messages')).toHaveLength(0);
+  });
+
+  it('uses a separate opt-in index for sensitive message text and removes it when disabled', () => {
+    const messages = addSource(baselineId, 'messages/inbox/thread/thread.html', 'html', 'messages');
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, sensitivity, search_enabled, created_at)
+      VALUES (?, ?, 0, 'messages', 'message', 'Trip planning', 'We discussed Alexandria travel', 'we discussed alexandria travel', 'sensitive', 0, ?)
+    `).run(baselineId, messages, now);
+
+    expect(getArchiveSearchSettings(database).includeMessagesInGlobalSearch).toBe(false);
+    expect(searchArchiveRecords(database, baselineId, 'Alexandria')).toHaveLength(0);
+    expect(searchArchiveRecords(database, baselineId, 'Alexandria', 'messages')).toHaveLength(1);
+
+    setIncludeMessagesInGlobalSearch(database, true);
+    expect(getArchiveSearchSettings(database).includeMessagesInGlobalSearch).toBe(true);
+    expect(searchArchiveRecords(database, baselineId, 'Alexandria').map((record) => record.sectionKey)).toContain('messages');
+
+    setIncludeMessagesInGlobalSearch(database, false);
+    expect(searchArchiveRecords(database, baselineId, 'Alexandria').map((record) => record.sectionKey)).not.toContain('messages');
+  });
+
+  it('finds likely missing, extra, substituted, and transposed characters in Fuzzy Search', () => {
+    const posts = addSource(baselineId, 'posts/travel.html', 'html', 'posts');
+    addPost(baselineId, posts, 0, 'Alexandria trip', 'Planning a journey');
+    const missingOrExtra = searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.8);
+    expect(missingOrExtra).toEqual([
+      expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
+    ]);
+
+    const transposed = searchArchiveRecords(database, baselineId, 'Alexandira', null, 'fuzzy', 0.8);
+    expect(transposed).toEqual([
+      expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
+    ]);
+    expect(searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.95)).toHaveLength(0);
   });
 
   it('compares source-card positions and reports added, removed, changed, and unchanged counts', () => {

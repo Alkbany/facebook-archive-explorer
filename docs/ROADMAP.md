@@ -124,7 +124,8 @@
 - [x] Retrieve local archive evidence, answer through a bounded local conversation context, and validate citation IDs before exposing navigable source cards.
 - [x] Exclude sensitive message content unless the independent message-search setting is enabled; no archive text is sent to a cloud inference provider.
 - [ ] Validate real model inference, Arabic response quality, citation completeness, and grounding against adversarial/instruction-like text inside archived content. The small model may be less reliable than larger local models.
-- [ ] Add a richer evidence-ranking pass (hybrid lexical + semantic retrieval when Semantic Search is enabled), multi-snapshot/compare queries, and stronger citation coverage validation.
+- [x] Combine bounded lexical BM25 and optional semantic retrieval rankings with reciprocal-rank fusion, deduplicating records and assigning citation IDs only after final ranking.
+- [ ] Add multi-snapshot/compare queries and stronger claim-to-citation coverage validation for the AI Assistant.
 - [ ] AI failure or disabled models must never disable archive browsing, Exact Search, or Fuzzy Search.
 
 

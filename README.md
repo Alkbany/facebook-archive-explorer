@@ -63,6 +63,7 @@ The latest main-branch test installer is available in the repository's Actions t
 - A standalone **Import Photos & Videos** action that runs the same reviewed album-index and explicitly linked album-detail importers as Import All; it shares the global import lock and reports progress and diagnostics.
 - A unified media library that filters by media kind, searches file names/archive paths, and paginates 100 distinct files by default, with selectable 50/100/250 page sizes and Grid/List views, directly from SQLite. Search and filtering happen before pagination; browsing is not limited to the first 1,000 media references. MP4/MOV/M4V duration scans use bounded file prefixes and suffixes.
 - Functional sidebar navigation to Overview, Friends, Conversations, Photos & Videos, Activity, and Search. Navigation entries no longer advertise implemented modules as “Soon”.
+- Optional local AI Assistant combines lexical BM25 and, when enabled, semantic retrieval rankings with reciprocal-rank fusion. Records matched by both methods receive a combined rank contribution, and lexical retrieval remains available when Semantic Search is disabled or unavailable.
 
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.
 - Native selection of a local export directory or ZIP archive and a user-defined account label.

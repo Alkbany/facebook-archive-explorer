@@ -4,6 +4,7 @@
 
 ### Added
 
+- Rank AI Assistant evidence with reciprocal-rank fusion across lexical BM25 and optional semantic results; matching records receive combined rank contributions, with deterministic record-ID tie-breaking and lexical fallback.
 - Optimize Semantic Search top-result selection with a bounded heap and stable tie-breaking; add regression coverage for 300 ranked records across non-overlapping pages and invalid offsets.
 - Add 250-result previous/next pagination for Exact, Fuzzy, and Semantic Search; page-aware JSON export now exports the currently displayed page.
 - Load Messenger conversations in ordered 50-message database pages, batch attachment lookup for each page, and keep image/sticker previews bounded per page.

@@ -7,6 +7,7 @@ import { getSelectedSnapshotId, registerIpcHandlers } from './ipc/register-handl
 import { registerArchiveMediaProtocol } from './database/media-stream';
 import { recoverInterruptedDatabaseSwap } from './database/backup';
 import { recoverAllInterruptedImports } from './import/pipeline/import-all';
+import { getSemanticSearchStatus, processSemanticIndexQueue } from './database/semantic-search-service';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'archive-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -68,6 +69,9 @@ app.whenReady().then(() => {
   database = openAppDatabase(databasePath, DATABASE_MIGRATIONS);
   recoverAllInterruptedImports(database);
   registerIpcHandlers(database, databasePath, DATABASE_MIGRATIONS.length);
+  if (getSemanticSearchStatus(database).enabled) {
+    void processSemanticIndexQueue(database, join(app.getPath('userData'), 'models')).catch(() => undefined);
+  }
   registerArchiveMediaProtocol(database, () => getSelectedSnapshotId());
   createMainWindow();
 

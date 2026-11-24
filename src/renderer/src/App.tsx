@@ -437,6 +437,7 @@ function App() {
     setReactionRecords([]);
     setReactionFilter('');
     conversationListRequestGate.current.invalidate();
+    setIsLoadingConversations(false);
     setConversations([]);
     setConversationsPage(1);
     setConversationsTotal(0);
@@ -451,6 +452,7 @@ function App() {
     setMediaQueryInput('');
     setMediaPage(1);
     conversationListRequestGate.current.invalidate();
+    setIsLoadingConversations(false);
     setSelectedConversationId(null);
     setSelectedConversationSummary(null);
     setConversationsPage(1);
@@ -2534,13 +2536,7 @@ function App() {
                   </div>
                   <span>{conversationsTotal.toLocaleString()} conversations</span>
                 </div>
-                {conversationsTotal === 0 ? (
-                  <div className="conversation-empty">
-                    <strong>{conversationAppliedFilter ? 'No conversations match this search.' : 'No readable conversations found yet.'}</strong>
-                    <span>{conversationAppliedFilter ? 'Try another participant name or archive path.' : 'Check the import report for unsupported or failed HTML files.'}</span>
-                  </div>
-                ) : (
-                  <div className="conversation-browser">
+                <div className="conversation-browser">
                     <aside className="conversation-list-panel">
                       <div className="conversation-list-search">
                         <label className="conversation-search">
@@ -2579,7 +2575,7 @@ function App() {
                             </span>
                           </button>
                         ))}
-                        {conversations.length === 0 && !isLoadingConversations && <p className="conversation-filter-empty">No conversations on this page.</p>}
+                        {conversations.length === 0 && !isLoadingConversations && <p className="conversation-filter-empty">{conversationAppliedFilter ? 'No conversations match this search.' : 'No readable conversations found yet.'}</p>}
                       </div>
                       <div className="conversation-list-pagination">
                         <span>{conversationsTotal === 0 ? '0 conversations' : `Showing ${((conversationsPage - 1) * MESSAGE_CONVERSATION_LIST_PAGE_SIZE + 1).toLocaleString()}–${Math.min(conversationsPage * MESSAGE_CONVERSATION_LIST_PAGE_SIZE, conversationsTotal).toLocaleString()} of ${conversationsTotal.toLocaleString()}`}</span>
@@ -2667,7 +2663,6 @@ function App() {
                       )}
                     </div>
                   </div>
-                )}
               </section>
             )}
             <section className="media-gallery-panel">

@@ -102,8 +102,11 @@ function collectLabelValues(value: Record<string, unknown>): Map<string, unknown
 }
 
 function listingKey(title: string, dateUtc: string | null, filePath: string, sourceIndex: number, facebookId: string | null): string {
-  if (facebookId) return 'facebook-id:' + facebookId;
+  // The clean items_selling_v2 and label/value detail file are the same
+  // listing. Prefer their shared normalized title + UTC creation time so the
+  // records merge even when only one of the two copies carries the Facebook ID.
   if (dateUtc) return normalizeListingTitle(title) + '|' + dateUtc;
+  if (facebookId) return 'facebook-id:' + facebookId;
   return normalizeListingTitle(title) + '|unknown|' + filePath + '|' + sourceIndex;
 }
 

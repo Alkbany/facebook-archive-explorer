@@ -5,6 +5,7 @@
 ### Added
 
 - Add AI Assistant comparison mode for two backups of the same account, with independent retrieval and source citations labelled by snapshot.
+- Add service-level integration coverage for cross-snapshot retrieval, backup provenance, prompt scope, and citation validation without requiring a model download.
 - Require complete sentence-level citation coverage for AI Assistant answers; withhold a generated response if any statement lacks a valid source ID.
 - Add regression coverage proving Exact and Fuzzy Search remain available whether the optional AI Assistant is enabled or disabled.
 - Paginate and filter the Messenger conversation directory in SQLite, returning 50 conversation summaries per page with a matching total instead of loading the entire directory into the renderer.

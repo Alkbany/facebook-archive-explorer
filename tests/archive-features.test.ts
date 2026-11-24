@@ -163,6 +163,40 @@ describe('archive-wide media, search, and comparison', () => {
     expect(searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.95)).toHaveLength(0);
   });
 
+  it('filters Exact Search by inclusive UTC calendar days and excludes ambiguous timestamps', () => {
+    const sourceId = addSource(baselineId, 'posts/utc-dates.html', 'html', 'posts');
+    addPost(baselineId, sourceId, 0, 'Alexandria trip', 'A dated travel record');
+    addPost(baselineId, sourceId, 1, 'Alexandria trip', 'A dated travel record');
+    addPost(baselineId, sourceId, 2, 'Alexandria trip', 'A dated travel record');
+    addPost(baselineId, sourceId, 3, 'Alexandria trip', 'A date without a verified timezone');
+
+    database.prepare("UPDATE records SET event_time_utc = '2022-01-01T00:00:00.000Z' WHERE source_file_id = ? AND source_record_index = 0").run(sourceId);
+    database.prepare("UPDATE records SET event_time_utc = '2022-12-31T23:59:59.999Z' WHERE source_file_id = ? AND source_record_index = 1").run(sourceId);
+    database.prepare("UPDATE records SET event_time_utc = '2023-01-01T00:00:00.000Z' WHERE source_file_id = ? AND source_record_index = 2").run(sourceId);
+
+    const inYear = searchArchiveRecords(
+      database, baselineId, 'Alexandria trip', null, 'exact', 0.8, '2022-01-01', '2022-12-31'
+    );
+    expect(inYear.map((record) => record.sourceCardIndex)).toEqual([0, 1]);
+
+    const finalDay = searchArchiveRecords(
+      database, baselineId, 'Alexandria trip', null, 'exact', 0.8, '2022-12-31', '2022-12-31'
+    );
+    expect(finalDay.map((record) => record.sourceCardIndex)).toEqual([1]);
+
+    const afterStart = searchArchiveRecords(
+      database, baselineId, 'Alexandria trip', null, 'exact', 0.8, '2023-01-01', null
+    );
+    expect(afterStart.map((record) => record.sourceCardIndex)).toEqual([2]);
+
+    expect(() => searchArchiveRecords(
+      database, baselineId, 'Alexandria trip', null, 'exact', 0.8, '2022-02-30', null
+    )).toThrow(/calendar date/i);
+    expect(() => searchArchiveRecords(
+      database, baselineId, 'Alexandria trip', null, 'exact', 0.8, '2023-01-01', '2022-12-31'
+    )).toThrow(/start date/i);
+  });
+
   it('compares source-card positions and reports added, removed, changed, and unchanged counts', () => {
     const basePath = addSource(baselineId, 'posts/your_posts.html', 'html', 'posts');
     const newPath = addSource(comparedId, 'posts/your_posts.html', 'html', 'posts');

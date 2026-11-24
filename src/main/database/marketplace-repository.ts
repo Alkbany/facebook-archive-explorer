@@ -108,6 +108,7 @@ export function listMarketplaceListings(
     } else {
       existing.facebookId ||= next.facebookId;
       existing.price ||= next.price;
+      existing.description ||= next.description;
       existing.category ||= next.category;
       existing.marketplace ||= next.marketplace;
     }

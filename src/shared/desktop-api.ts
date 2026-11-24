@@ -1,6 +1,6 @@
 import type { MessageConversationSummary, MessageMediaGalleryItem, MessageRecordSummary } from './archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryPage } from './archive/media';
-import type { ArchiveSearchResult, SearchExportResult } from './archive/search';
+import type { ArchiveSearchMode, ArchiveSearchResult, ArchiveSearchSettings, SearchExportResult } from './archive/search';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -85,6 +85,8 @@ export const IPC_CHANNELS = {
   getMessagesForSelectedConversation: 'archive:get-conversation-messages',
   getMessageMediaPreview: 'archive:get-message-media-preview',
   listMediaForSelectedBackup: 'archive:list-media',
+  getArchiveSearchSettings: 'archive:get-search-settings',
+  setIncludeMessagesInGlobalSearch: 'archive:set-message-search-setting',
   searchRecordsForSelectedBackup: 'archive:search-records',
   exportSearchResultsForSelectedBackup: 'archive:export-search-results',
   compareArchiveSnapshots: 'archive:compare-snapshots',
@@ -126,8 +128,10 @@ export interface DesktopApi {
   getMessagesForSelectedConversation(sourceFileId: number): Promise<MessageRecordSummary[]>;
   getMessageMediaPreview(mediaAssetId: number): Promise<string>;
   listMediaForSelectedBackup(filter: ArchiveMediaGalleryFilter, page: number, query: string): Promise<ArchiveMediaGalleryPage>;
-  searchRecordsForSelectedBackup(query: string, sectionKey: string | null): Promise<ArchiveSearchResult[]>;
-  exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null): Promise<SearchExportResult>;
+  getArchiveSearchSettings(): Promise<ArchiveSearchSettings>;
+  setIncludeMessagesInGlobalSearch(enabled: boolean): Promise<ArchiveSearchSettings>;
+  searchRecordsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<ArchiveSearchResult[]>;
+  exportSearchResultsForSelectedBackup(query: string, sectionKey: string | null, mode?: ArchiveSearchMode, similarityThreshold?: number): Promise<SearchExportResult>;
   compareArchiveSnapshots(baselineSnapshotId: string, comparedSnapshotId: string): Promise<ArchiveComparisonReport>;
   listArchiveComparisonChanges(
     baselineSnapshotId: string,

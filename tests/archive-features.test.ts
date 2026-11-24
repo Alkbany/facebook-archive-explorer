@@ -127,6 +127,18 @@ describe('archive-wide media, search, and comparison', () => {
   it('finds likely missing, extra, substituted, and transposed characters in Fuzzy Search', () => {
     const posts = addSource(baselineId, 'posts/travel.html', 'html', 'posts');
     addPost(baselineId, posts, 0, 'Alexandria trip', 'Planning a journey');
+    const exactPhrase = searchArchiveRecords(database, baselineId, '"Alexandria trip"');
+    expect(exactPhrase).toEqual([
+      expect.objectContaining({ title: 'Alexandria trip', matchType: 'exact' })
+    ]);
+    expect(searchArchiveRecords(database, baselineId, 'travel.html')).toEqual([
+      expect.objectContaining({ sourcePath: 'posts/travel.html', matchType: 'exact' })
+    ]);
+    database.prepare("UPDATE records SET event_time_raw = '2022-11-24' WHERE source_file_id = ?").run(posts);
+    expect(searchArchiveRecords(database, baselineId, '2022-11-24')).toEqual([
+      expect.objectContaining({ dateRaw: '2022-11-24', sourcePath: 'posts/travel.html' })
+    ]);
+
     const missingOrExtra = searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.8);
     expect(missingOrExtra).toEqual([
       expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })

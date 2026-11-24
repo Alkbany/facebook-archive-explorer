@@ -87,6 +87,10 @@ describe('Likes & Reactions import', () => {
     const visible = listReactionRecords(database, snapshotId);
     expect(visible).toHaveLength(2);
     expect(visible.map((record) => record.reactionType)).toEqual(['like', 'love']);
+    expect(visible.map((record) => record.eventTimeUtc)).toEqual([
+      '2018-10-20T01:46:40.000Z',
+      '2018-10-20T01:46:40.000Z'
+    ]);
     const normalizedTimes = database.prepare('SELECT event_time_utc AS value FROM records WHERE snapshot_id = ? ORDER BY id').all(snapshotId) as Array<{ value: string | null }>;
     expect(normalizedTimes).toEqual([{ value: '2018-10-20T01:46:40.000Z' }, { value: '2018-10-20T01:46:40.000Z' }]);
   });

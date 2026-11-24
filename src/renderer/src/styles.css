@@ -435,6 +435,33 @@ h1 { margin: 0 0 7px; color: var(--ink); font-size: 28px; font-weight: 750; lett
 .media-gallery-heading h3 { margin: 0 0 5px; color: #30354d; font-size: 14px; }
 .media-gallery-heading p:not(.eyebrow) { margin: 0; color: #9296a7; font-size: 9px; }
 .media-gallery-heading > span { color: #6c63bd; font-size: 9px; white-space: nowrap; }
+.media-gallery-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 17px 0;
+}
+.media-gallery-search input {
+  min-width: 180px;
+  min-height: 34px;
+  flex: 1 1 260px;
+  padding: 0 10px;
+  border: 1px solid #e4e6ef;
+  border-radius: 8px;
+  color: #41465d;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+}
+.media-gallery-search input:focus {
+  outline: 2px solid #dcd8fb;
+  outline-offset: 1px;
+}
+.media-gallery-search .secondary-button {
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 9px;
+}
 .media-gallery-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 17px; border-bottom: 1px solid #f0f1f5; }
 .media-gallery-filters button {
   padding: 6px 10px; border: 1px solid #e8e9f0; border-radius: 20px;

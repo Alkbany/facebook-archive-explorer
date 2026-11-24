@@ -169,6 +169,82 @@ describe('archive assistant evidence retrieval', () => {
       .map((item) => item.id)).toContain(recordId);
   });
 
+  it('retrieves and labels evidence from both selected snapshots in a comparison question', async () => {
+    const comparedSnapshotId = 'assistant-evidence-compared-snapshot';
+    const now = new Date().toISOString();
+    database.prepare(`
+      INSERT INTO archive_snapshots (
+        id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+      ) VALUES (?, (SELECT account_id FROM archive_snapshots WHERE id = ?),
+        'Newer synthetic backup', 'directory', '/tmp/assistant-evidence-compared', 'completed', ?, ?)
+    `).run(comparedSnapshotId, snapshotId, now, now);
+
+    const comparedSourceId = Number(database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, 'posts/your_posts.html', 'your_posts.html', 'posts', 'html', 'completed', ?)
+    `).run(comparedSnapshotId, now).lastInsertRowid);
+    const comparedRecordId = Number(database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, event_time_raw, event_time_utc,
+        sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, 0, 'posts', 'post', 'Software interview', 
+        'We discussed a newer backend engineering role', 'software interview newer backend engineering role',
+        '2024-11-24T10:00:00.000Z', '2024-11-24T10:00:00.000Z',
+        'personal', 1, '{}', ?)
+    `).run(comparedSnapshotId, comparedSourceId, now).lastInsertRowid);
+
+    const baselineRecordId = addPost(0, 'Software interview', 'We discussed an earlier backend engineering role', 2022);
+    setAiAssistantEnabled(database, true);
+
+    let capturedMessages: Array<{ role?: string; content: string }> = [];
+    const response = await askLocalArchiveAssistant(
+      database,
+      snapshotId,
+      'What did the software interviews cover?',
+      '/unused-model-cache',
+      'posts',
+      [],
+      comparedSnapshotId,
+      async () => async (messages) => {
+        capturedMessages = messages;
+        return [{
+          generated_text: [{
+            role: 'assistant',
+            content: 'The older backup mentions an earlier backend engineering role [S1]. The newer backup mentions a newer backend engineering role [S2].'
+          }]
+        }];
+      }
+    );
+
+    expect(response.retrievalScope).toMatchObject({
+      snapshotId,
+      comparedSnapshotId,
+      sectionKey: 'posts'
+    });
+    expect(response.citations).toHaveLength(2);
+    expect(response.citations[0]).toMatchObject({
+      sourceId: 'S1',
+      recordId: baselineRecordId,
+      snapshotId,
+      snapshotLabel: 'Synthetic backup',
+      comparisonSide: 'baseline'
+    });
+    expect(response.citations[1]).toMatchObject({
+      sourceId: 'S2',
+      recordId: comparedRecordId,
+      snapshotId: comparedSnapshotId,
+      snapshotLabel: 'Newer synthetic backup',
+      comparisonSide: 'compared'
+    });
+    expect(capturedMessages[0]?.content).toContain('Absence from this bounded retrieval is NOT proof');
+    expect(capturedMessages.at(-1)?.content).toContain('Older baseline: Synthetic backup');
+    expect(capturedMessages.at(-1)?.content).toContain('Compared backup: Newer synthetic backup');
+    expect(capturedMessages.at(-1)?.content).toContain('"comparisonSide":"baseline"');
+    expect(capturedMessages.at(-1)?.content).toContain('"comparisonSide":"compared"');
+  });
+
   it('retrieves lexical evidence with the exact source path, card number, and record id', () => {
     const id = addPost(2, 'Software interview', 'We discussed a backend engineering role', 2022);
     const results = retrieveArchiveAssistantEvidence(

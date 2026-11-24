@@ -125,7 +125,7 @@
 - [x] Exclude sensitive message content unless the independent message-search setting is enabled; no archive text is sent to a cloud inference provider.
 - [ ] Validate real model inference, Arabic response quality, citation completeness, and grounding against adversarial/instruction-like text inside archived content. The small model may be less reliable than larger local models.
 - [x] Combine bounded lexical BM25 and optional semantic retrieval rankings with reciprocal-rank fusion, deduplicating records and assigning citation IDs only after final ranking.
-- [x] Add question-focused AI Assistant comparison across two saved backups of the same account, with separate evidence retrieval and snapshot-labelled source citations. The complete diff remains in the dedicated archive comparison view.
+- [x] Add question-focused AI Assistant comparison across two saved backups of the same account, with separate evidence retrieval and snapshot-labelled source citations. A synthetic integration test verifies retrieval, labels, prompt scope, and citation provenance; the complete diff remains in the dedicated archive comparison view.
 - [x] Require every generated sentence or non-heading line to include at least one valid retrieved citation; withhold the complete answer when coverage is incomplete.
 - [x] Keep Exact and Fuzzy Search independent of the AI Assistant enable/disable setting; model loading and inference remain optional paths.
 - [x] Add automated fault-injection coverage proving assistant model-load and inference failures leave archive evidence browsing, Exact Search, and Fuzzy Search usable.

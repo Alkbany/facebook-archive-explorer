@@ -134,7 +134,8 @@
 - [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
-- [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup; automated unit/build checks do not replace this validation.
+- [x] Add a repeatable 50,000-record synthetic SQLite/FTS benchmark for Exact and Fuzzy Search; report observed timings without hardware-independent pass/fail speed thresholds.
+- [ ] Benchmark full real directory and ZIP backups, including import, media indexing/streaming, search, and recovery; complete an end-to-end pass with a real Facebook Backup. Synthetic search benchmarks and unit/build checks do not replace this validation.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
 - [x] Support optional trusted Authenticode signing and verify all packaged Windows executable binaries when signing credentials are configured; publish clearly labelled unsigned personal-use builds and beta releases otherwise.
 - [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not require a paid certificate, but unsigned binaries may be blocked by Smart App Control.

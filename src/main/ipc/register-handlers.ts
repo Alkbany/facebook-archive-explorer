@@ -332,7 +332,7 @@ export function registerIpcHandlers(
     return listMessageMediaGallery(database, selectedSnapshotId);
   });
 
-  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async (_event, filter: unknown, page: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.listMediaForSelectedBackup, async (_event, filter: unknown, page: unknown, query: unknown) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before browsing media.');
     const allowedFilters: ArchiveMediaGalleryFilter[] = ['all', 'image', 'sticker', 'video', 'audio'];
     if (typeof filter !== 'string' || !allowedFilters.includes(filter as ArchiveMediaGalleryFilter)) {
@@ -341,12 +341,15 @@ export function registerIpcHandlers(
     if (!Number.isSafeInteger(page) || (page as number) < 1 || (page as number) > 1_000_000) {
       throw new Error('Invalid media gallery page.');
     }
+    if (typeof query !== 'string' || query.length > 180) {
+      throw new Error('Invalid media gallery search query.');
+    }
     indexDiscoveredMediaAssets(database, selectedSnapshotId);
     if (selectedBackupDirectory) {
       await indexDiscoveredImageDimensions(database, selectedSnapshotId, selectedBackupDirectory);
       await indexDiscoveredVideoDurations(database, selectedSnapshotId, selectedBackupDirectory);
     }
-    return listArchiveMediaGallery(database, selectedSnapshotId, filter as ArchiveMediaGalleryFilter, page as number);
+    return listArchiveMediaGallery(database, selectedSnapshotId, filter as ArchiveMediaGalleryFilter, page as number, query);
   });
 
   ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, (_event, query: unknown, sectionKey: unknown) => {

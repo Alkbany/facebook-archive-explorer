@@ -46,5 +46,5 @@ AI features must be local-only, optional, configurable, and disabled by default.
 ## Marketplace and saved links
 
 - Marketplace seller and raw listing source fields are retained only in the local record payload for provenance. Seller values are not copied into Marketplace search text or rendered in the listing workspace by the current importer.
-- Saved-item and Marketplace external links are retained only when their scheme is HTTP or HTTPS. The application does not fetch or preview these URLs automatically; opening a link is an explicit user action.
+- Saved-item and Marketplace external links are retained only when their scheme is HTTP or HTTPS. The application does not fetch or preview these URLs automatically. An explicit click routes the URL through a narrow main-process IPC handler, which validates HTTP/HTTPS and rejects malformed URLs or embedded credentials before opening the operating system's default browser. Arbitrary renderer navigation and new windows remain denied.
 - Conversation content, Marketplace messages, saved searches, and unsupported Marketplace/Collections files are not treated as listing records. They remain in generic fallback and follow the applicable sensitivity rules.

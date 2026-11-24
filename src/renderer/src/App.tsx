@@ -2277,7 +2277,7 @@ function App() {
           )}
         </section>
 
-        {visibleFallbackSections.length > 0 && (
+        {((isGroupsWorkspace && groupsFallbackSection !== null) || (activeNavigation === 'other' && nonGroupFallbackSections.length > 0)) && (
           <section className="fallback-records-panel" id="fallback-records-workspace">
             <div className="media-gallery-heading">
               <div>
@@ -2327,7 +2327,7 @@ function App() {
               </div>
               {isGroupsWorkspace
                 ? <span className="fallback-sensitivity">Reviewed Groups JSON subset · original fields remain available below</span>
-                : fallbackSections.find((section) => section.sectionKey === fallbackSectionKey)?.sensitivity === 'sensitive'
+                : visibleFallbackSections.find((section) => section.sectionKey === fallbackSectionKey)?.sensitivity === 'sensitive'
                   ? <span className="fallback-sensitivity sensitive">Sensitive section · excluded from global search; filter within this section only</span>
                   : <span className="fallback-sensitivity">Preserved fallback text · not a verified structured parser</span>}
             </div>

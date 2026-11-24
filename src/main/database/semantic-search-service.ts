@@ -34,7 +34,7 @@ interface TransformersRuntime {
   pipeline(
     task: 'feature-extraction',
     model: string,
-    options: { progress_callback: (progress: unknown) => void }
+    options: { dtype: 'q4'; progress_callback: (progress: unknown) => void }
   ): Promise<unknown>;
 }
 
@@ -88,6 +88,7 @@ async function getFeatureExtractor(modelCacheDirectory: string): Promise<Feature
     runtime.env.useBrowserCache = false;
 
     const loaded = await runtime.pipeline('feature-extraction', SEMANTIC_MODEL_ID, {
+      dtype: 'q4',
       progress_callback: recordRuntimeProgress
     });
     runtimeState.phase = 'ready';

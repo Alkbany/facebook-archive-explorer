@@ -153,6 +153,7 @@ function parsedListing(
     category,
     marketplace,
     seller,
+    description,
     location: place,
     source_path: filePath,
     source_index: sourceIndex,

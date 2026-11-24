@@ -27,10 +27,10 @@ describe('generic plain-text fallback importer', () => {
     const accountId = getOrCreateAccount(database, 'Synthetic text account');
     snapshotId = 'text-fallback-snapshot';
     const now = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO archive_snapshots (id, account_id, display_name, source_kind, source_path, status, created_at, updated_at)
       VALUES (?, ?, 'Synthetic text export', 'directory', ?, 'discovered', ?, ?)
-    \`).run(snapshotId, accountId, root, now, now);
+    `).run(snapshotId, accountId, root, now, now);
   });
 
   afterEach(async () => {
@@ -49,12 +49,12 @@ describe('generic plain-text fallback importer', () => {
     const now = new Date().toISOString();
     for (const sample of samples) {
       await writeFile(join(root, sample.path), sample.text, 'utf8');
-      database.prepare(\`
+      database.prepare(`
         INSERT INTO source_files (
           snapshot_id, relative_path, file_name, section_key, detected_format,
           file_size_bytes, status, discovered_at
         ) VALUES (?, ?, ?, ?, 'text', ?, 'discovered', ?)
-      \`).run(snapshotId, sample.path, sample.path.split('/').pop() ?? sample.path,
+      `).run(snapshotId, sample.path, sample.path.split('/').pop() ?? sample.path,
         sample.section, Buffer.byteLength(sample.text), now);
     }
 
@@ -66,11 +66,11 @@ describe('generic plain-text fallback importer', () => {
       failedFiles: 0
     });
 
-    const records = database.prepare(\`
+    const records = database.prepare(`
       SELECT section_key AS sectionKey, record_type AS recordType, title, body_text AS body,
         sensitivity, search_enabled AS searchEnabled, payload_json AS payload
       FROM records WHERE snapshot_id = ? ORDER BY section_key
-    \`).all(snapshotId) as Array<{
+    `).all(snapshotId) as Array<{
       sectionKey: string; recordType: string; title: string; body: string;
       sensitivity: string; searchEnabled: number; payload: string;
     }>;
@@ -94,10 +94,10 @@ describe('generic plain-text fallback importer', () => {
     const indexed = database.prepare('SELECT COUNT(*) AS count FROM record_search').get() as { count: number };
     expect(indexed.count).toBe(2);
 
-    const statuses = database.prepare(\`
+    const statuses = database.prepare(`
       SELECT relative_path AS path, status, parser_key AS parserKey, record_count AS recordCount
       FROM source_files WHERE snapshot_id = ? ORDER BY relative_path
-    \`).all(snapshotId) as Array<{ path: string; status: string; parserKey: string; recordCount: number }>;
+    `).all(snapshotId) as Array<{ path: string; status: string; parserKey: string; recordCount: number }>;
     expect(statuses.find((row) => row.path === 'empty_section/empty.txt'))
       .toMatchObject({ status: 'empty', parserKey: 'text_fallback', recordCount: 0 });
     expect(statuses.filter((row) => row.path !== 'empty_section/empty.txt')
@@ -108,12 +108,12 @@ describe('generic plain-text fallback importer', () => {
     const path = 'oversized_section/large.txt';
     await writeFile(join(root, path), 'tiny placeholder', 'utf8');
     const now = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO source_files (
         snapshot_id, relative_path, file_name, section_key, detected_format,
         file_size_bytes, status, discovered_at
       ) VALUES (?, ?, 'large.txt', 'oversized_section', 'text', ?, 'discovered', ?)
-    \`).run(snapshotId, path, MAX_TEXT_FILE_BYTES + 1, now);
+    `).run(snapshotId, path, MAX_TEXT_FILE_BYTES + 1, now);
 
     const result = await importTextFallbackFilesSection(database, snapshotId, root);
     expect(result.failedFiles).toBe(1);
@@ -127,11 +127,11 @@ describe('generic plain-text fallback importer', () => {
     const path = 'groups/notes.txt';
     await writeFile(join(root, path), 'One local note', 'utf8');
     const now = new Date().toISOString();
-    database.prepare(\`
+    database.prepare(`
       INSERT INTO source_files (
         snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
       ) VALUES (?, ?, 'notes.txt', 'groups', 'text', 'discovered', ?)
-    \`).run(snapshotId, path, now);
+    `).run(snapshotId, path, now);
 
     expect((await importTextFallbackFilesSection(database, snapshotId, root)).recordsImported).toBe(1);
     expect(await importTextFallbackFilesSection(database, snapshotId, root)).toEqual({

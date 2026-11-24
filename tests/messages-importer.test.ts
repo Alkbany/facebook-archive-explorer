@@ -112,8 +112,9 @@ describe('Messages conversation import', () => {
     expect(links.count).toBe(2);
 
     const conversations = listMessageConversations(database, snapshotId);
-    expect(conversations).toHaveLength(1);
-    expect(conversations[0]).toMatchObject({
+    expect(conversations).toMatchObject({ page: 1, pageSize: 50, total: 1 });
+    expect(conversations.items).toHaveLength(1);
+    expect(conversations.items[0]).toMatchObject({
       relativePath: 'messages/inbox/thread-1/thread.html',
       conversationType: 'inbox',
       messageCount: 1,
@@ -122,11 +123,11 @@ describe('Messages conversation import', () => {
     const gallery = listMessageMediaGallery(database, snapshotId);
     expect(gallery).toHaveLength(2);
     expect(gallery).toEqual(expect.arrayContaining([
-      expect.objectContaining({ mediaKind: 'image', sender: 'Synthetic Sender', sourceFileId: conversations[0].sourceFileId }),
-      expect.objectContaining({ mediaKind: 'audio', sender: 'Synthetic Sender', sourceFileId: conversations[0].sourceFileId })
+      expect.objectContaining({ mediaKind: 'image', sender: 'Synthetic Sender', sourceFileId: conversations.items[0].sourceFileId }),
+      expect.objectContaining({ mediaKind: 'audio', sender: 'Synthetic Sender', sourceFileId: conversations.items[0].sourceFileId })
     ]));
 
-    const displayedMessages = getMessageConversation(database, snapshotId, conversations[0].sourceFileId);
+    const displayedMessages = getMessageConversation(database, snapshotId, conversations.items[0].sourceFileId);
     expect(displayedMessages.records[0]).toMatchObject({
       sender: 'Synthetic Sender',
       body: expect.stringContaining('Message Search Exclusion Needle'),
@@ -143,6 +144,47 @@ describe('Messages conversation import', () => {
     ).all();
     expect(indexed).toHaveLength(0);
     await expect(readFile(htmlPath, 'utf8')).resolves.toBe(html);
+  });
+
+  it('paginates and searches the conversation directory in SQLite', () => {
+    const timestamp = new Date().toISOString();
+    const insertSource = database.prepare(`
+      INSERT INTO source_files (
+        snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+      ) VALUES (?, ?, 'thread.html', 'messages', 'html', 'completed', ?)
+    `);
+    const insertRecord = database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, 0, 'messages', 'message', ?, 'Synthetic body', 'sensitive', 0, '{}', ?)
+    `);
+    for (let index = 0; index < 55; index += 1) {
+      const label = String(index).padStart(3, '0');
+      const sourceId = Number(insertSource.run(
+        snapshotId, `messages/inbox/conversation-${label}/thread.html`, timestamp
+      ).lastInsertRowid);
+      insertRecord.run(snapshotId, sourceId, `Participant ${label}`, timestamp);
+    }
+
+    const first = listMessageConversations(database, snapshotId, 1, '');
+    const second = listMessageConversations(database, snapshotId, 2, '');
+    expect(first).toMatchObject({ page: 1, pageSize: 50, total: 55 });
+    expect(first.items).toHaveLength(50);
+    expect(second).toMatchObject({ page: 2, pageSize: 50, total: 55 });
+    expect(second.items).toHaveLength(5);
+    expect(new Set([...first.items, ...second.items].map((item) => item.sourceFileId)).size).toBe(55);
+
+    const byParticipant = listMessageConversations(database, snapshotId, 1, 'PARTICIPANT 017');
+    expect(byParticipant).toMatchObject({ page: 1, total: 1 });
+    expect(byParticipant.items[0].participants).toEqual(['Participant 017']);
+
+    const byPath = listMessageConversations(database, snapshotId, 1, 'conversation-004');
+    expect(byPath).toMatchObject({ total: 1 });
+    expect(byPath.items[0].relativePath).toContain('conversation-004');
+
+    expect(() => listMessageConversations(database, snapshotId, 0, '')).toThrow('conversation-list page');
+    expect(() => listMessageConversations(database, snapshotId, 1, 'x'.repeat(101))).toThrow('conversation-list search');
   });
 
   it('normalizes an Arabic message date only when the same export footer gives UTC offset', async () => {

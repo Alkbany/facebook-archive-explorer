@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Normalize the observed Arabic Facebook HTML date format for Posts, Comments, Likes & Reactions, and Messenger only when the same export footer provides a valid explicit UTC offset; preserve the raw date and fail closed for unsupported formats or missing offsets.
+
 ### Fixed
 
 - Deduplicate linked Messenger attachments by archive-relative path and preserve media type from the actual image/audio/video element; add regression coverage for linked photos and MP4 audio.

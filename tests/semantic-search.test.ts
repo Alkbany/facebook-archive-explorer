@@ -102,6 +102,32 @@ describe('local semantic search indexing', () => {
     `).get(postId)).toMatchObject({ status: 'pending' });
   });
 
+  it('filters semantic results by reliable UTC event dates', () => {
+    const first = addPost(0, 'Alexandria travel', 'Planning a dated trip');
+    const second = addPost(1, 'Alexandria travel', 'Planning a dated trip');
+    const ambiguous = addPost(2, 'Alexandria travel', 'Date not reliable');
+    database.prepare("UPDATE records SET event_time_utc = '2022-01-01T00:00:00.000Z' WHERE id = ?").run(first);
+    database.prepare("UPDATE records SET event_time_utc = '2023-01-01T00:00:00.000Z' WHERE id = ?").run(second);
+
+    setSemanticSearchEnabled(database, true);
+    const now = new Date().toISOString();
+    const vector = new Float32Array(384);
+    vector[0] = 1;
+    const insert = database.prepare(`
+      INSERT INTO semantic_embeddings (
+        record_id, snapshot_id, model_id, model_version, dimensions, embedding, created_at
+      ) VALUES (?, ?, 'Xenova/multilingual-e5-small', 'multilingual-e5-small-v1', 384, ?, ?)
+    `);
+    for (const id of [first, second, ambiguous]) {
+      insert.run(id, snapshotId, Buffer.from(vector.buffer), now);
+    }
+
+    const results = searchSemanticArchiveRecords(
+      database, snapshotId, vector, null, 0.35, '2022-01-01', '2022-12-31'
+    );
+    expect(results.map((record) => record.id)).toEqual([first]);
+  });
+
   it('keeps sensitive message embeddings out unless global message search is opted in', () => {
     const messageId = addMessage(0);
     setSemanticSearchEnabled(database, true);

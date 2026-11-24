@@ -54,6 +54,7 @@ jobs:
       artifact_name: ${{ steps.release-metadata.outputs.artifact_name }}
       signing_status: ${{ steps.release-metadata.outputs.signing_status }}
       signing_note: ${{ steps.release-metadata.outputs.signing_note }}
+      has_certificate: ${{ steps.release-metadata.outputs.has_certificate }}
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -95,6 +96,7 @@ jobs:
           "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
           "signing_status=$signingStatus" >> $env:GITHUB_OUTPUT
           "signing_note=$signingNote" >> $env:GITHUB_OUTPUT
+          "has_certificate=$($hasCertificate.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
       - name: Set package version for versioned build
         if: steps.release-metadata.outputs.version != ''
         run: npm version "${{ steps.release-metadata.outputs.version }}" --no-git-tag-version --allow-same-version
@@ -127,7 +129,7 @@ jobs:
         shell: pwsh
         run: ./scripts/verify-windows-package.ps1
       - name: Verify trusted signatures when a certificate is configured
-        if: (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/')) && secrets.WIN_CSC_LINK != ''
+        if: (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/')) && steps.release-metadata.outputs.has_certificate == 'true'
         shell: pwsh
         run: ./scripts/verify-windows-signatures.ps1
       - name: Upload personal-use test installer

@@ -3,11 +3,11 @@ import { facebookDateToUtc } from '../src/shared/time/facebook-date';
 
 describe('facebookDateToUtc', () => {
   it('converts observed Unix-second timestamps to ISO UTC', () => {
-    expect(facebookDateToUtc('1540000000')).toBe('2018-10-20T00:26:40.000Z');
+    expect(facebookDateToUtc('1540000000')).toBe('2018-10-20T01:46:40.000Z');
   });
 
   it('converts Unix-millisecond timestamps to ISO UTC', () => {
-    expect(facebookDateToUtc('1540000000000')).toBe('2018-10-20T00:26:40.000Z');
+    expect(facebookDateToUtc('1540000000000')).toBe('2018-10-20T01:46:40.000Z');
   });
 
   it('converts ISO timestamps only when an explicit timezone is present', () => {

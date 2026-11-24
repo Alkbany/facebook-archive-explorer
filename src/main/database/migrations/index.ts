@@ -4,6 +4,7 @@ import verifiedEventTimes from './003_backfill_verified_event_times.sql?raw';
 import fallbackParserKeys from './004_backfill_fallback_parser_keys.sql?raw';
 import mediaMetadataScanState from './005_media_metadata_scan_state.sql?raw';
 import searchPreferences from './006_search_preferences.sql?raw';
+import semanticSearch from './007_semantic_search.sql?raw';
 import type { SqlMigration } from '../connection';
 
 export const DATABASE_MIGRATIONS: readonly SqlMigration[] = [
@@ -36,5 +37,10 @@ export const DATABASE_MIGRATIONS: readonly SqlMigration[] = [
     version: 6,
     name: 'search_preferences',
     sql: searchPreferences
+  },
+  {
+    version: 7,
+    name: 'semantic_search',
+    sql: semanticSearch
   }
 ];

@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Allow the local `archive-media:` protocol in the renderer Content Security Policy for audio/video playback without widening script, image, or connection sources.
 - Isolate optional AI Assistant model loading and inference failures from archive browsing and Exact/Fuzzy Search; expose distinct load/inference error states and cover both with fault-injection regression tests.
 - Ignore stale asynchronous message-page responses after a different conversation or backup is selected, preventing an older request from replacing the current timeline.
 - Deduplicate linked Messenger attachments by archive-relative path and preserve media type from the actual image/audio/video element; add regression coverage for linked photos and MP4 audio.

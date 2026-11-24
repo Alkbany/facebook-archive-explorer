@@ -75,7 +75,8 @@
 - [x] Stream audio/video directly from original files with byte-range seeking and snapshot-scoped IDs.
 - [x] Unified local full-text search with section filtering across eligible records.
 - [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.
-- [ ] Add evidence-backed timezone handling for localized Facebook HTML dates where the export supplies enough context, then add date-range filters in the relevant browsing workspaces.
+- [x] Add date-range controls to Posts, Comments, and Likes & Reactions using stored normalized UTC timestamps. Records with only raw/localized date strings are excluded while a date range is active rather than assigned a guessed timezone.
+- [ ] Add evidence-backed timezone handling for localized Facebook HTML dates where the export supplies enough context; then extend date-range filters to those records and other relevant workspaces.
 - [x] Searchable Likes & Reactions activity panel with snapshot-scoped results.
 - [x] Sampled Photos & Videos root album index import, searchable album summaries, and cover-image association.
 - [x] Sampled album-detail parsing, photo captions/dates, comment records, and local photo browsing.
@@ -94,13 +95,13 @@
 
 ## Milestone 6 — Windows release
 
-- [x] Build and upload a Windows NSIS test-installer artifact from `main` after type-checking, unit tests, and packaging.
+- [x] Build a Windows NSIS test-installer package from `main` after type-checking and unit tests; do not publish the package unless its executables have valid trusted signatures.
 - [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
 - [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup; automated unit/build checks do not replace this validation.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
-- [x] Add secure CI support for a trusted Windows code-signing certificate and require signature verification before version-tag release.
+- [x] Add secure CI support for a trusted Windows code-signing certificate; require signature verification before version-tag releases and skip main-branch artifact uploads when unsigned.
 - [ ] Configure a trusted signing identity; no certificate is currently available in repository secrets.
 - [ ] Complete code-signing provider onboarding and verify Smart App Control behavior on a clean Windows 11 device.
 - [ ] Final privacy/security review and release checklist.

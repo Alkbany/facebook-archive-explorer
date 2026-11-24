@@ -4,13 +4,14 @@ import { normalizeSearchText } from '../../../shared/text/normalize';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
-import { parseMessageConversation } from '../parsers/messages-parser';
+import { parseMessageConversation, parseMessageConversationJson } from '../parsers/messages-parser';
 
 interface MessageSourceFileRow {
   id: number;
   relative_path: string;
   file_name: string;
   detected_format: string;
+  file_size_bytes?: number | null;
 }
 
 export interface MessagesImportSectionResult {
@@ -52,6 +53,8 @@ function insertIssue(
   `).run(runId, sourceFileId, severity, code, message, JSON.stringify(context), new Date().toISOString());
 }
 
+const MAX_MESSAGE_FILE_BYTES = 50 * 1024 * 1024;
+
 async function importOneConversation(
   database: DatabaseSync,
   snapshotId: string,
@@ -71,9 +74,16 @@ async function importOneConversation(
 
   database.exec('SAVEPOINT messages_file_import');
   try {
-    if (source.detected_format !== 'html') throw new Error('MESSAGES_FILE_NOT_HTML');
-    const html = await readArchiveUtf8File(archiveRoot, source.relative_path);
-    const parsed = parseMessageConversation(html, source.relative_path);
+    if (source.file_size_bytes !== null && source.file_size_bytes !== undefined &&
+        source.file_size_bytes > MAX_MESSAGE_FILE_BYTES) {
+      throw new ArchiveReadError('FILE_TOO_LARGE');
+    }
+    const sourceText = await readArchiveUtf8File(archiveRoot, source.relative_path, MAX_MESSAGE_FILE_BYTES);
+    const parsed = source.detected_format === 'json'
+      ? parseMessageConversationJson(sourceText.replace(/^\uFEFF/u, ''), source.relative_path)
+      : source.detected_format === 'html'
+        ? parseMessageConversation(sourceText, source.relative_path)
+        : (() => { throw new Error('MESSAGES_FORMAT_UNSUPPORTED'); })();
     const timestamp = new Date().toISOString();
     const insertRecord = database.prepare(`
       INSERT INTO records (
@@ -127,7 +137,10 @@ async function importOneConversation(
         JSON.stringify({
           sender_raw: message.senderRaw,
           reactions_raw: message.reactionsRaw,
-          conversation_type: source.relative_path.split('/')[1] ?? 'unknown',
+          conversation_type: source.relative_path.split('/')[0] === 'your_facebook_activity'
+            ? source.relative_path.split('/')[2] ?? 'unknown'
+            : source.relative_path.split('/')[1] ?? 'unknown',
+          message_raw: message.rawPayload ?? null,
           media_references: message.media
         }),
         timestamp
@@ -198,7 +211,7 @@ async function importOneConversation(
   }
 }
 
-/** Imports discovered HTML conversation files from inbox and archived/request folders. */
+/** Imports legacy HTML conversations and observed Accounts Center message_*.json chunks. */
 export async function importMessagesSection(
   database: DatabaseSync,
   snapshotId: string,
@@ -208,14 +221,24 @@ export async function importMessagesSection(
   const files = database.prepare(`
     SELECT id, relative_path, file_name, detected_format
     FROM source_files
-    WHERE snapshot_id = ? AND section_key = 'messages' AND detected_format = 'html'
+    WHERE snapshot_id = ? AND section_key = 'messages'
       AND (
-        lower(relative_path) LIKE 'messages/inbox/%'
-        OR lower(relative_path) LIKE 'messages/archived_threads/%'
-        OR lower(relative_path) LIKE 'messages/filtered_threads/%'
-        OR lower(relative_path) LIKE 'messages/message_requests/%'
+        (
+          detected_format = 'html'
+          AND (
+            lower(relative_path) LIKE 'messages/inbox/%'
+            OR lower(relative_path) LIKE 'messages/archived_threads/%'
+            OR lower(relative_path) LIKE 'messages/filtered_threads/%'
+            OR lower(relative_path) LIKE 'messages/message_requests/%'
+          )
+          AND (length(relative_path) - length(replace(relative_path, '/', ''))) = 3
+        )
+        OR (
+          detected_format = 'json'
+          AND lower(relative_path) LIKE 'your_facebook_activity/messages/%'
+          AND lower(file_name) GLOB 'message_*.json'
+        )
       )
-      AND (length(relative_path) - length(replace(relative_path, '/', ''))) = 3
       AND status IN ('discovered', 'failed', 'unsupported')
     ORDER BY relative_path
   `).all(snapshotId) as unknown as MessageSourceFileRow[];

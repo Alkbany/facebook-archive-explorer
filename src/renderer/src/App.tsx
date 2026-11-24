@@ -216,7 +216,7 @@ function App() {
   const [mediaGallery, setMediaGallery] = useState<ArchiveMediaGalleryItem[]>([]);
   const [mediaTotal, setMediaTotal] = useState(0);
   const [mediaPage, setMediaPage] = useState(1);
-  const [mediaPageSize, setMediaPageSize] = useState(50);
+  const [mediaPageSize, setMediaPageSize] = useState(100);
   const [mediaQuery, setMediaQuery] = useState('');
   const [mediaQueryInput, setMediaQueryInput] = useState('');
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
@@ -228,6 +228,7 @@ function App() {
   const [photoAlbumDetail, setPhotoAlbumDetail] = useState<PhotoAlbumDetailView | null>(null);
   const [isLoadingPhotoAlbum, setIsLoadingPhotoAlbum] = useState(false);
   const [mediaFilter, setMediaFilter] = useState<ArchiveMediaGalleryFilter>('all');
+  const [mediaViewMode, setMediaViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [conversationFilter, setConversationFilter] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
@@ -548,12 +549,13 @@ function App() {
   async function loadMediaGallery(
     filter: ArchiveMediaGalleryFilter = mediaFilter,
     page: number = mediaPage,
-    query: string = mediaQuery
+    query: string = mediaQuery,
+    pageSize: number = mediaPageSize
   ) {
     setIsLoadingMedia(true);
     try {
       const boundedQuery = query.trim().slice(0, 180);
-      const result = await window.desktopApi.listMediaForSelectedBackup(filter, page, boundedQuery);
+      const result = await window.desktopApi.listMediaForSelectedBackup(filter, page, boundedQuery, pageSize);
       setMediaGallery(result.items);
       setMediaTotal(result.total);
       setMediaPage(result.page);
@@ -2091,24 +2093,49 @@ function App() {
                   </button>
                 )}
               </form>
-              <div className="media-gallery-filters">
-                {(['all', 'image', 'sticker', 'video', 'audio'] as ArchiveMediaGalleryFilter[]).map((kind) => (
-                  <button
-                    key={kind}
-                    className={mediaFilter === kind ? 'active' : ''}
-                    onClick={() => void loadMediaGallery(kind, 1, mediaQuery)}
-                    disabled={isLoadingMedia}
-                  >
-                    {kind === 'all' ? 'All media' : kind}
-                  </button>
-                ))}
+              <div className="media-gallery-toolbar">
+                <div className="media-gallery-filters">
+                  {(['all', 'image', 'sticker', 'video', 'audio'] as ArchiveMediaGalleryFilter[]).map((kind) => (
+                    <button
+                      key={kind}
+                      className={mediaFilter === kind ? 'active' : ''}
+                      onClick={() => void loadMediaGallery(kind, 1, mediaQuery)}
+                      disabled={isLoadingMedia}
+                    >
+                      {kind === 'all' ? 'All media' : kind}
+                    </button>
+                  ))}
+                </div>
+                <div className="media-gallery-view-controls">
+                  <label>
+                    <span>Items per page</span>
+                    <select
+                      value={mediaPageSize}
+                      onChange={(event) => {
+                        const nextPageSize = Number(event.target.value);
+                        setMediaPageSize(nextPageSize);
+                        void loadMediaGallery(mediaFilter, 1, mediaQuery, nextPageSize);
+                      }}
+                      disabled={isLoadingMedia}
+                      aria-label="Media items per page"
+                    >
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={250}>250</option>
+                    </select>
+                  </label>
+                  <div role="group" aria-label="Media view">
+                    <button type="button" className={mediaViewMode === 'grid' ? 'active' : ''} onClick={() => setMediaViewMode('grid')}>Grid</button>
+                    <button type="button" className={mediaViewMode === 'list' ? 'active' : ''} onClick={() => setMediaViewMode('list')}>List</button>
+                  </div>
+                </div>
               </div>
               {isLoadingMedia ? (
                 <div className="conversation-empty">Loading media files…</div>
               ) : visibleMedia.length === 0 ? (
                 <div className="conversation-empty">No {mediaFilter === 'all' ? '' : mediaFilter + ' '}files of this type were found in the backup inventory.</div>
               ) : (
-                <div className="media-gallery-list">
+                <div className={mediaViewMode === "grid" ? "media-gallery-list media-gallery-grid" : "media-gallery-list media-gallery-list-mode"}>
                   {visibleMedia.map((media) => (
                     <article className="media-gallery-item" key={media.id + ':' + (media.recordId ?? 'file')}>
                       <div className="media-gallery-icon">{media.mediaKind === 'video' ? '▶' : media.mediaKind === 'audio' ? '♫' : '▧'}</div>

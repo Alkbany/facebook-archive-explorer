@@ -168,6 +168,110 @@ describe('Import all supported data', () => {
     ).get(snapshotId)).toMatchObject({ title: 'Preserved unfamiliar group record' });
   });
 
+  it('runs reviewed Events, Marketplace, and Saved Items JSON importers together in Import All', async () => {
+    const fixtures = [
+      {
+        section: 'events',
+        relativePath: 'your_facebook_activity/events/your_event_responses.json',
+        fileName: 'your_event_responses.json',
+        value: {
+          event_responses_v2: {
+            events_joined: [{
+              name: 'Synthetic Import-All Meetup',
+              start_timestamp: 1_800_000_000,
+              description: 'Synthetic event imported in the combined pipeline'
+            }]
+          }
+        }
+      },
+      {
+        section: 'marketplace',
+        relativePath: 'your_facebook_activity/facebook_marketplace/items_sold.json',
+        fileName: 'items_sold.json',
+        value: {
+          items_selling_v2: [{
+            title: 'Synthetic Import-All Listing',
+            price: '$12',
+            description: 'Synthetic listing imported in the combined pipeline',
+            created_timestamp: 1_791_220_991
+          }]
+        }
+      },
+      {
+        section: 'saved_items_and_collections',
+        relativePath: 'your_facebook_activity/saved_items_and_collections/your_saved_items.json',
+        fileName: 'your_saved_items.json',
+        value: {
+          saves_v2: [{
+            timestamp: 1_760_227_200,
+            title: 'Synthetic Import-All Saved Item',
+            attachments: []
+          }]
+        }
+      }
+    ] as const;
+
+    const now = new Date().toISOString();
+    for (const fixture of fixtures) {
+      const absolutePath = join(root, fixture.relativePath);
+      await mkdir(join(absolutePath, '..'), { recursive: true });
+      await writeFile(absolutePath, JSON.stringify(fixture.value), 'utf8');
+      database.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at
+        ) VALUES (?, ?, ?, ?, 'json', 'discovered', ?)
+      `).run(snapshotId, fixture.relativePath, fixture.fileName, fixture.section, now);
+    }
+
+    const result = await importAllSupportedData(database, snapshotId, root);
+
+    expect(result.sections.events).toMatchObject({
+      filesAttempted: 1, recordsImported: 1, unsupportedFiles: 0, failedFiles: 0
+    });
+    expect(result.sections.marketplace).toMatchObject({
+      filesAttempted: 1, recordsImported: 1, unsupportedFiles: 0, failedFiles: 0
+    });
+    expect(result.sections.savedItems).toMatchObject({
+      filesAttempted: 1, recordsImported: 1, unsupportedFiles: 0, failedFiles: 0
+    });
+
+    const imported = database.prepare(`
+      SELECT section_key AS sectionKey, title, record_type AS recordType
+      FROM records
+      WHERE snapshot_id = ?
+        AND section_key IN ('events', 'marketplace', 'saved_items_and_collections')
+      ORDER BY section_key
+    `).all(snapshotId) as Array<{ sectionKey: string; title: string; recordType: string }>;
+
+    expect(imported).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sectionKey: 'events',
+        title: 'Synthetic Import-All Meetup',
+        recordType: 'event'
+      }),
+      expect.objectContaining({
+        sectionKey: 'marketplace',
+        title: 'Synthetic Import-All Listing',
+        recordType: 'listing'
+      }),
+      expect.objectContaining({
+        sectionKey: 'saved_items_and_collections',
+        title: 'Synthetic Import-All Saved Item',
+        recordType: 'saved_item'
+      })
+    ]));
+    expect(imported).toHaveLength(3);
+
+    const states = database.prepare(`
+      SELECT section_key AS sectionKey, status, parser_key AS parserKey
+      FROM source_files
+      WHERE snapshot_id = ?
+        AND section_key IN ('events', 'marketplace', 'saved_items_and_collections')
+      ORDER BY section_key
+    `).all(snapshotId) as Array<{ sectionKey: string; status: string; parserKey: string | null }>;
+    expect(states.every((row) => row.status === 'completed' && row.parserKey !== null)).toBe(true);
+  });
+
   it('runs every reviewed importer sequentially and reports unsupported structures', async () => {
     const progress: ImportProgressEvent[] = [];
     const result = await importAllSupportedData(database, snapshotId, root, (event) => progress.push(event));

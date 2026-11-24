@@ -33,7 +33,9 @@ describe('bounded video duration indexing', () => {
       { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') },
       { version: 3, name: 'backfill_verified_event_times', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/003_backfill_verified_event_times.sql'), 'utf8') },
       { version: 4, name: 'backfill_fallback_parser_keys', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/004_backfill_fallback_parser_keys.sql'), 'utf8') },
-      { version: 5, name: 'media_metadata_scan_state', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/005_media_metadata_scan_state.sql'), 'utf8') }
+      { version: 5, name: 'media_metadata_scan_state', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/005_media_metadata_scan_state.sql'), 'utf8') },
+      { version: 6, name: 'search_preferences', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8') },
+      { version: 7, name: 'semantic_search', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/007_semantic_search.sql'), 'utf8') }
     ];
     database = openAppDatabase(':memory:', migrations);
     root = await mkdtemp(join(tmpdir(), 'media-indexer-test-'));

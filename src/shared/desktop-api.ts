@@ -32,6 +32,8 @@ import type {
   ImportIssueReport,
   ImportCoverageReport,
   ImportProgressEvent,
+  JsonImportSectionResult,
+  EventRecordSummary,
   FallbackArchiveSectionSummary,
   FallbackArchiveRecordsPage
 } from './archive/inspection';
@@ -125,7 +127,7 @@ export interface DesktopApi {
   importPhotosAndVideosForSelectedBackup(): Promise<PhotoAlbumsImportSectionResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
   listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
-  listEventsForSelectedBackup(): Promise<import('./archive/inspection').EventRecordSummary[]>;
+  listEventsForSelectedBackup(): Promise<EventRecordSummary[]>;
   importEventsForSelectedBackup(): Promise<JsonImportSectionResult>;
   importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;
   listCommentsForSelectedBackup(): Promise<CommentActivitySummary[]>;

@@ -232,7 +232,7 @@ export async function importTngPhotoAlbumJsonSection(
         'search_enabled = excluded.search_enabled, payload_json = excluded.payload_json, created_at = excluded.created_at'
       );
 
-      let linkedPhotos = 0;
+      let importedPhotoRecords = 0;
       for (const photo of parsed.photos) {
         const payload = JSON.stringify({
           album_path: file.relative_path,
@@ -257,17 +257,17 @@ export async function importTngPhotoAlbumJsonSection(
           snapshotId, file.id, recordIndex, parsed.albumTitle, photo.captionRaw,
           normalized, photo.dateRaw, payload, timestamp
         );
+        importedPhotoRecords += 1;
         const row = database.prepare(
           'SELECT id FROM records WHERE source_file_id = ? AND source_record_index = ?'
         ).get(file.id, recordIndex) as { id: number };
         database.prepare('DELETE FROM record_media WHERE record_id = ?').run(row.id);
         if (linkLocalImage(row.id, photo.imagePath, photo.sourceIndex, 'album_photo')) {
           summary.mediaReferences += 1;
-          linkedPhotos += 1;
         }
       }
 
-      const totalRecords = 1 + parsed.photos.length;
+      const totalRecords = 1 + importedPhotoRecords;
       database.prepare(
         "UPDATE source_files SET status = 'completed', parser_key = 'tng_photo_album_json', " +
         'record_count = ?, safe_error_code = NULL, processed_at = ? WHERE id = ? AND snapshot_id = ?'

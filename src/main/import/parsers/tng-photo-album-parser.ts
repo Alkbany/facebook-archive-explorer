@@ -6,6 +6,7 @@ export interface TngPhotoAlbumPhoto {
   imagePath: string;
   captionRaw: string | null;
   dateRaw: string | null;
+  rawPayload: unknown;
 }
 
 export interface TngPhotoAlbumJson {
@@ -15,6 +16,7 @@ export interface TngPhotoAlbumJson {
   coverPath: string | null;
   photos: TngPhotoAlbumPhoto[];
   invalidPhotoPaths: number;
+  rawPayload: unknown;
 }
 
 function cleanString(value: unknown): string | null {
@@ -70,7 +72,8 @@ export function parseTngPhotoAlbumJson(jsonText: string, sourceFile: string): Tn
       sourceIndex,
       imagePath,
       captionRaw: cleanString(photo.description),
-      dateRaw: rawTimestamp(photo.creation_timestamp)
+      dateRaw: rawTimestamp(photo.creation_timestamp),
+      rawPayload: value
     });
   });
 
@@ -84,6 +87,7 @@ export function parseTngPhotoAlbumJson(jsonText: string, sourceFile: string): Tn
     dateRaw: rawTimestamp(album.last_modified_timestamp),
     coverPath: cover ? safeLocalPhotoPath(cover.uri) : null,
     photos,
-    invalidPhotoPaths
+    invalidPhotoPaths,
+    rawPayload: parsed
   };
 }

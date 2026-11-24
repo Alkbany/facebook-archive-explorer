@@ -51,7 +51,7 @@ const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapabili
   posts: 'sampled-html-json',
   comments: 'sampled-html-json',
   likes_and_reactions: 'sampled-html-json',
-  photos_and_videos: 'sampled-html',
+  photos_and_videos: 'sampled-html-json',
   groups: 'sampled-json'
 };
 

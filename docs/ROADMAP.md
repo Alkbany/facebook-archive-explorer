@@ -58,6 +58,7 @@
 - [x] Read image dimensions from PNG, JPEG, GIF, and WebP headers using bounded 256 KiB prefix reads in batches of 50 when the media gallery opens; large image files are not loaded in full.
 - [x] Read MP4/MOV/M4V duration from movie headers using bounded 2 MiB prefixes (up to 10 unscanned videos per gallery opening; other containers or later movie metadata remain unavailable).
 - [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
+- [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [ ] Groups, events, Marketplace, saved items, and remaining activity sections.
 
 ## Milestone 4 — Browsing and search

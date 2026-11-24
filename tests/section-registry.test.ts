@@ -20,7 +20,7 @@ describe('archive section catalogue', () => {
     expect(getArchiveImportCapability('friends')).toBe('known-html-json');
     expect(getArchiveImportCapability('messages')).toBe('sampled-html-json');
     expect(getArchiveImportCapability('posts')).toBe('sampled-html-json');
-    expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html');
+    expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html-json');
     expect(getArchiveImportCapability('groups')).toBe('sampled-json');
     expect(getArchiveSection('groups')?.evidence).toBe('sampled');
     expect(getArchiveImportCapability('events')).toBe('generic-fallback');

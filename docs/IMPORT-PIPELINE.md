@@ -159,3 +159,6 @@ The Groups-specific JSON importer recognizes the TNG \`group_posts_v2\`, \`group
 
 
 The Messages importer recognizes current Accounts Center \`message_*.json\` chunks beneath \`your_facebook_activity/messages/\` alongside the existing legacy HTML conversation layout. It imports sender, message text, raw millisecond timestamp, reaction labels, call-event markers, photo and sticker references. Only local archive-relative photo/sticker paths are linked. Share URLs and remote media URLs are never copied into message text, and all message content remains sensitive and excluded from global full-text search.
+
+
+The Photos & Videos importer also recognizes self-contained Accounts Center album JSON files at \`your_facebook_activity/posts/album/{id}.json\`. It imports the album title, description, raw last-modified timestamp, photo captions and raw creation timestamps into the existing album/photo workspace. Cover and photo links are created only for image paths that match discovered local image files. Original JSON metadata remains in the local record payload but is not copied into full-text fields; EXIF, upload IPs, locations, and other metadata are therefore not part of global search. Unrecognized album JSON layouts remain eligible for the generic JSON fallback.

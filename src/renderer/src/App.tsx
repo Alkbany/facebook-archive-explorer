@@ -8,6 +8,7 @@ import type {
   PostsImportSectionResult,
   CommentsImportSectionResult,
   CommentActivitySummary,
+  EventRecordSummary,
   PostRecordSummary,
   MessagesImportSectionResult,
   ReactionsImportSectionResult,
@@ -205,6 +206,9 @@ function App() {
   const [friendQuery, setFriendQuery] = useState('');
   const [friendPage, setFriendPage] = useState(1);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [eventRecords, setEventRecords] = useState<EventRecordSummary[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isImportingEvents, setIsImportingEvents] = useState(false);
   const [activeNavigation, setActiveNavigation] = useState('overview');
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
@@ -395,6 +399,7 @@ function App() {
     setPhotosImport(null);
     setFriendsImport(null);
     setFriendDirectory(null);
+    setEventRecords([]);
     setFriendTypeFilter('all');
     setFriendQuery('');
     setFriendPage(1);
@@ -513,7 +518,7 @@ function App() {
       setSelectedFolder(report.archiveName);
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
-      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files, fallback] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files, fallback, events] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
@@ -524,7 +529,8 @@ function App() {
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
         window.desktopApi.listArchiveFilesForSelectedBackup('all', 'all', '', 1),
-        window.desktopApi.listFallbackRecordSectionsForSelectedBackup()
+        window.desktopApi.listFallbackRecordSectionsForSelectedBackup(),
+        window.desktopApi.listEventsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -541,6 +547,7 @@ function App() {
       setArchiveFileDirectory(files);
       setArchiveFilePage(files.page);
       setFallbackSections(fallback);
+      setEventRecords(events);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
     } catch {
@@ -961,6 +968,33 @@ function App() {
     }
   }
 
+  async function loadEvents() {
+    setIsLoadingEvents(true);
+    try {
+      setEventRecords(await window.desktopApi.listEventsForSelectedBackup());
+    } catch {
+      setError('The Events workspace could not be loaded. Import Events first and try again.');
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  }
+
+  async function importEvents() {
+    setIsImportingEvents(true);
+    setError(null);
+    try {
+      await window.desktopApi.importEventsForSelectedBackup();
+      await loadEvents();
+      await refreshImportIssues();
+      await refreshImportCoverage();
+      setSavedBackups(await window.desktopApi.listArchiveSnapshots());
+    } catch {
+      setError('Events data could not be imported. Check the local import report.');
+    } finally {
+      setIsImportingEvents(false);
+    }
+  }
+
   async function loadArchiveFiles(status: ArchiveFileStatus, sectionKey: string, query: string, page: number) {
     setIsLoadingArchiveFiles(true);
     setArchiveFileStatus(status);
@@ -987,6 +1021,8 @@ function App() {
       activity: 'activity-tools',
       search: 'unified-search-panel',
       files: 'archive-files-workspace',
+      events: 'events-workspace',
+      events: 'events-workspace',
       overview: 'welcome-panel',
       other: 'fallback-records-workspace'
     };
@@ -1039,15 +1075,17 @@ function App() {
       setCommentsImport(result.sections.comments);
       setReactionsImport(result.sections.reactions);
       setPhotosImport(result.sections.photosAndVideos);
+      setEventRecords(await window.desktopApi.listEventsForSelectedBackup());
 
-      const [posts, comments, reactions, foundConversations, albums, friends, fallback] = await Promise.all([
+      const [posts, comments, reactions, foundConversations, albums, friends, fallback, events] = await Promise.all([
         window.desktopApi.listPostsForSelectedBackup(),
         window.desktopApi.listCommentsForSelectedBackup(),
         window.desktopApi.listReactionsForSelectedBackup(),
         window.desktopApi.listMessagesForSelectedBackup(),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
-        window.desktopApi.listFallbackRecordSectionsForSelectedBackup()
+        window.desktopApi.listFallbackRecordSectionsForSelectedBackup(),
+        window.desktopApi.listEventsForSelectedBackup()
       ]);
       setPostRecords(posts);
       setCommentRecords(comments);
@@ -1059,6 +1097,7 @@ function App() {
       setFriendQuery('');
       setFriendPage(friends.page);
       setFallbackSections(fallback);
+      setEventRecords(events);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       else { setFallbackSectionKey(''); setFallbackRecords(null); }
       if (foundConversations.length > 0) {
@@ -1212,6 +1251,12 @@ function App() {
         <button type="button" className={activeNavigation === 'conversations' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('conversations', 'conversation-explorer')}><span>▤</span> Conversations</button>
         <button type="button" className={activeNavigation === 'photos' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('photos', 'photo-albums-workspace')}><span>▧</span> Photos &amp; videos</button>
         <button type="button" className={activeNavigation === 'activity' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('activity', 'activity-tools')}><span>◷</span> Activity</button>
+        {((inspection?.sectionFileCounts.events ?? 0) > 0 || eventRecords.length > 0) && (
+          <button type="button" className={activeNavigation === 'events' ? 'nav-item nav-item-active' : 'nav-item'}
+            onClick={() => { void loadEvents(); navigateToSection('events', 'events-workspace'); }}>
+            <span>◉</span> Events
+          </button>
+        )}
         <button type="button" className={activeNavigation === 'search' ? 'nav-item nav-item-active' : 'nav-item'} onClick={() => navigateToSection('search', 'unified-search-panel')}><span>⌕</span> Search</button>
         {groupsFallbackSection && (
           <button
@@ -2824,6 +2869,68 @@ function App() {
             </div>
           )}
         </section>
+
+        {activeNavigation === 'events' && (
+          <section className="events-workspace" id="events-workspace">
+            <div className="media-gallery-heading">
+              <div>
+                <p className="eyebrow">PERSONAL ACTIVITY · EVENTS</p>
+                <h3>Events</h3>
+                <p>Events joined, hosted, interested, declined, or invited. Repeated entries from response and invitation files are combined; all original source references are retained.</p>
+              </div>
+              <div className="events-workspace-actions">
+                <span>{eventRecords.length.toLocaleString()} unique events</span>
+                <button className="secondary-button" onClick={() => void importEvents()} disabled={isImportingEvents || isLoadingEvents || isAnyImporting}>
+                  {isImportingEvents ? 'Importing Events…' : 'Import / refresh Events'}
+                </button>
+              </div>
+            </div>
+            {isLoadingEvents ? (
+              <p className="events-empty">Loading Events…</p>
+            ) : eventRecords.length === 0 ? (
+              <p className="events-empty">No supported Events records have been imported yet. Run Import / refresh Events to process the reviewed JSON files. Unrecognized files remain available in Other data.</p>
+            ) : (
+              <div className="events-record-list">
+                {eventRecords.map((record) => (
+                  <article className="event-record-card" key={record.eventKey}>
+                    <div className="event-record-heading">
+                      <div>
+                        <strong>{record.title}</strong>
+                        <span>{record.rsvp.replaceAll('_', ' ')}</span>
+                      </div>
+                      <small>{record.startDateUtc ? new Date(record.startDateUtc).toLocaleString() : record.startDateRaw ?? 'Start date not provided'}</small>
+                    </div>
+                    {record.description && <p>{record.description}</p>}
+                    {(record.locationName || record.address) && (
+                      <div className="event-record-location">
+                        {record.locationName && <span>{record.locationName}</span>}
+                        {record.address && <span>{record.address}</span>}
+                      </div>
+                    )}
+                    {record.endDateRaw && (
+                      <small>End: {new Date(Number(record.endDateRaw) * 1000).toLocaleString()}</small>
+                    )}
+                    {record.url && /^https?:\/\//iu.test(record.url) && (
+                      <a href={record.url} target="_blank" rel="noreferrer">Open Facebook event</a>
+                    )}
+                    <div className="event-source-list">
+                      <span>{record.sources.length} original source {record.sources.length === 1 ? 'record' : 'records'}</span>
+                      {record.sources.map((source) => (
+                        <button key={source.recordId} className="text-button"
+                          onClick={() => {
+                            void loadArchiveFiles('all', 'all', source.sourcePath, 1);
+                            navigateToSection('files', 'archive-files-workspace');
+                          }}>
+                          {source.sourcePath} · item {source.sourceCardIndex + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {((isGroupsWorkspace && groupsFallbackSection !== null) || (activeNavigation === 'other' && nonGroupFallbackSections.length > 0)) && (
           <section className="fallback-records-panel" id="fallback-records-workspace">

@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { ArchiveSearchMatchType, ArchiveSearchMode, ArchiveSearchResult } from '../../shared/archive/search';
 import { getArchiveSection } from '../../shared/archive/section-registry';
 import { normalizeSearchText } from '../../shared/text/normalize';
+import { getUtcDateRangeBounds, type UtcDateRangeBounds } from '../../shared/text/utc-date-range';
 
 const MAX_QUERY_LENGTH = 180;
 const MAX_RESULTS = 250;
@@ -134,7 +135,8 @@ function searchFtsTable(
   mode: ArchiveSearchMode,
   threshold: number,
   table: 'record_search' | 'message_search',
-  vocabulary: 'record_search_vocab' | 'message_search_vocab'
+  vocabulary: 'record_search_vocab' | 'message_search_vocab',
+  dateRange: UtcDateRangeBounds
 ): SearchHit[] {
   let matchExpression: string | null;
   let fuzzyQueryTerms: string[] = [];
@@ -166,10 +168,16 @@ function searchFtsTable(
     WHERE ${table} MATCH ? AND records.snapshot_id = ?
       AND ${table === 'message_search' ? '1 = 1' : 'records.search_enabled = 1'}
       AND (? IS NULL OR records.section_key = ?)
+      AND (? IS NULL OR records.event_time_utc >= ?)
+      AND (? IS NULL OR records.event_time_utc < ?)
     ORDER BY relevance ASC, source.relative_path COLLATE NOCASE,
       records.source_record_index ASC
     LIMIT ?
-  `).all(matchExpression, snapshotId, sectionKey, sectionKey, MAX_RESULTS) as Array<Omit<SearchHit, 'matchType' | 'similarity'> & { normalizedText: string | null }>; 
+  `).all(
+    matchExpression, snapshotId, sectionKey, sectionKey,
+    dateRange.fromInclusive, dateRange.fromInclusive,
+    dateRange.toExclusive, dateRange.toExclusive, MAX_RESULTS
+  ) as Array<Omit<SearchHit, 'matchType' | 'similarity'> & { normalizedText: string | null }>; 
 
   const hits: SearchHit[] = [];
   for (const row of rows) {
@@ -201,7 +209,8 @@ function searchFtsTable(
 function searchMessagesWithoutGlobalIndex(
   database: DatabaseSync,
   snapshotId: string,
-  query: string
+  query: string,
+  dateRange: UtcDateRangeBounds
 ): SearchHit[] {
   const trimmed = query.trim();
   const normalized = trimmed.startsWith('"') && trimmed.endsWith('"')
@@ -224,9 +233,15 @@ function searchMessagesWithoutGlobalIndex(
       AND source.snapshot_id = records.snapshot_id
     WHERE records.snapshot_id = ? AND records.section_key = 'messages'
       AND records.sensitivity = 'sensitive' AND ${clauses}
+      AND (? IS NULL OR records.event_time_utc >= ?)
+      AND (? IS NULL OR records.event_time_utc < ?)
     ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
     LIMIT ?
-  `).all(snapshotId, ...terms, MAX_RESULTS) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;
+  `).all(
+    snapshotId, ...terms,
+    dateRange.fromInclusive, dateRange.fromInclusive,
+    dateRange.toExclusive, dateRange.toExclusive, MAX_RESULTS
+  ) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;
 
   return rows.map((row) => ({ ...row, matchType: 'exact', similarity: 1 }));
 }
@@ -236,7 +251,8 @@ function searchArchiveMetadata(
   snapshotId: string,
   query: string,
   sectionKey: string | null,
-  includeMessages: boolean
+  includeMessages: boolean,
+  dateRange: UtcDateRangeBounds
 ): SearchHit[] {
   const rawNeedle = query.trim().replace(/^"|"$/gu, '');
   if (!rawNeedle) return [];
@@ -254,6 +270,8 @@ function searchArchiveMetadata(
         OR (? = 1 AND records.section_key = 'messages' AND records.sensitivity = 'sensitive')
         OR (? = 'messages' AND records.section_key = 'messages' AND records.sensitivity = 'sensitive'))
       AND (? IS NULL OR records.section_key = ?)
+      AND (? IS NULL OR records.event_time_utc >= ?)
+      AND (? IS NULL OR records.event_time_utc < ?)
       AND (
         instr(lower(COALESCE(source.relative_path, '')), lower(?)) > 0
         OR instr(lower(COALESCE(source.file_name, '')), lower(?)) > 0
@@ -264,6 +282,8 @@ function searchArchiveMetadata(
     LIMIT ?
   `).all(
     snapshotId, includeMessages ? 1 : 0, sectionKey, sectionKey, sectionKey,
+    dateRange.fromInclusive, dateRange.fromInclusive,
+    dateRange.toExclusive, dateRange.toExclusive,
     rawNeedle, rawNeedle, rawNeedle, rawNeedle, MAX_RESULTS
   ) as Array<Omit<SearchHit, 'matchType' | 'similarity'>>;
 
@@ -277,7 +297,9 @@ export function searchArchiveRecords(
   query: string,
   sectionKey: string | null = null,
   mode: Exclude<ArchiveSearchMode, 'semantic'> = 'exact',
-  similarityThreshold = 0.8
+  similarityThreshold = 0.8,
+  dateFrom: string | null = null,
+  dateTo: string | null = null
 ): ArchiveSearchResult[] {
   if (typeof query !== 'string' || query.length < 1 || query.length > MAX_QUERY_LENGTH) {
     throw new Error('Search text must be 1 to 180 characters.');
@@ -292,6 +314,7 @@ export function searchArchiveRecords(
     throw new Error('Fuzzy similarity must be between 0.65 and 0.98.');
   }
 
+  const dateRange = getUtcDateRangeBounds(dateFrom, dateTo);
   const messageSearchEnabled = (database.prepare(
     'SELECT setting_value AS value FROM app_settings WHERE setting_key = ?'
   ).get(MESSAGE_SEARCH_SETTING) as { value: string } | undefined)?.value === 'true';
@@ -303,9 +326,9 @@ export function searchArchiveRecords(
     // Section-scoped inspection remains available without placing message
     // text in a persistent global-search index. In this privacy mode, it is
     // an exact, on-demand scan rather than Fuzzy Search over a stored vocab.
-    const messages = searchMessagesWithoutGlobalIndex(database, snapshotId, query);
+    const messages = searchMessagesWithoutGlobalIndex(database, snapshotId, query, dateRange);
     if (mode === 'exact') {
-      messages.push(...searchArchiveMetadata(database, snapshotId, query, 'messages', true));
+      messages.push(...searchArchiveMetadata(database, snapshotId, query, 'messages', true, dateRange));
     }
     const scoped = new Map<number, SearchHit>();
     for (const result of messages) scoped.set(result.id, result);
@@ -314,19 +337,19 @@ export function searchArchiveRecords(
 
   const results = searchFtsTable(
     database, snapshotId, query, sectionKey, mode, similarityThreshold,
-    'record_search', 'record_search_vocab'
+    'record_search', 'record_search_vocab', dateRange
   );
 
   if ((sectionKey === null || sectionKey === 'messages') && messageSearchEnabled) {
     const messages = searchFtsTable(
       database, snapshotId, query, 'messages', mode, similarityThreshold,
-      'message_search', 'message_search_vocab'
+      'message_search', 'message_search_vocab', dateRange
     );
     results.push(...messages);
   }
 
   if (mode === 'exact') {
-    results.push(...searchArchiveMetadata(database, snapshotId, query, sectionKey, messageSearchEnabled));
+    results.push(...searchArchiveMetadata(database, snapshotId, query, sectionKey, messageSearchEnabled, dateRange));
   }
 
   const unique = new Map<number, SearchHit>();

@@ -59,7 +59,7 @@ The latest main-branch test installer is available in the repository's Actions t
 - Detailed snapshot comparisons with record-level before/after values, change-type and section filters, text/path search, pagination, and native CSV or JSON export. CSV output neutralizes spreadsheet formula-leading text.
 - A read-only Archive Files browser showing all discovered source paths, formats, import states, record counts, safe diagnostic codes, and file sizes when discovery metadata is available, with section/status filters, search, and pagination. This includes files in unsupported sections.
 - A standalone **Import Photos & Videos** action that runs the same reviewed album-index and explicitly linked album-detail importers as Import All; it shares the global import lock and reports progress and diagnostics.
-- A unified media library that filters by media kind and paginates 50 distinct files at a time from SQLite, so browsing is not limited to the first 1,000 media references. MP4/MOV/M4V duration scans use bounded file prefixes and suffixes.
+- A unified media library that filters by media kind, searches file names/archive paths, and paginates 50 distinct files at a time from SQLite. Search and filtering happen before pagination; browsing is not limited to the first 1,000 media references. MP4/MOV/M4V duration scans use bounded file prefixes and suffixes.
 - Functional sidebar navigation to Overview, Friends, Conversations, Photos & Videos, Activity, and Search. Navigation entries no longer advertise implemented modules as “Soon”.
 
 - Electron desktop shell with a narrow, typed preload API and secure window defaults.

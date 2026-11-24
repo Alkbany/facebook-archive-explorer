@@ -159,7 +159,7 @@ Example: a query such as `Alexandrea` can suggest or find `Alexandria`.
 
 ## 11. Completion and evidence rules
 
-A feature is complete only when its implementation, tests, user-facing behavior, and documentation agree. For parser coverage, evidence must come from reviewed export structures and representative fixtures. For search quality, tests must cover Arabic and English, exact phrases, missing/extra/substituted/transposed characters, similarity thresholds, semantic paraphrases, privacy exclusions, indexing recovery, and source references. Performance and privacy checks are required before 1.0.
+A feature is complete only when its implementation, tests, user-facing behavior, and documentation agree. For parser coverage, evidence must come from reviewed export structures and representative fixtures. For search quality, tests must cover Arabic and English, exact phrases, missing/extra/substituted/transposed characters, similarity thresholds, semantic paraphrases, privacy exclusions, indexing recovery, and source references. Performance and privacy checks are required before 1.0. Synthetic 50,000-record Exact/Fuzzy search measurements are useful regression evidence, but must not be presented as a substitute for timing real directory and ZIP imports, media indexing/streaming, semantic indexing, or a complete real backup. Do not use universal millisecond thresholds across different hardware; record corpus size, machine context, and observed timings.
 
 ---
 

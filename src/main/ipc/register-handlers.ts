@@ -697,9 +697,23 @@ export function registerIpcHandlers(
     if (!archiveRoot || !snapshotId) {
       throw new Error('Inspect an archive folder before importing supported data.');
     }
-    return runExclusiveImport('Import All', () => importAllSupportedData(database, snapshotId, archiveRoot, (progress: ImportProgressEvent) => {
-      if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
-    }));
+    return runExclusiveImport('Import All', () => importAllSupportedData(
+      database,
+      snapshotId,
+      archiveRoot,
+      (progress: ImportProgressEvent) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.importProgress, progress);
+      },
+      async () => {
+        if (getSemanticSearchStatus(database).enabled) {
+          try {
+            await processSemanticIndexQueue(database, getSemanticModelCacheDirectory());
+          } catch {
+            // Semantic indexing is a recoverable side task and never aborts archive import.
+          }
+        }
+      }
+    ));
   });
 
   ipcMain.handle(IPC_CHANNELS.importPhotosAndVideosForSelectedBackup, async (event) => {

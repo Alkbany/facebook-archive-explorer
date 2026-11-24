@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readMp4DurationMs } from '../src/main/database/video-duration';
+import { readMp4DurationMs, readMp4DurationMsFromTail } from '../src/main/database/video-duration';
 
 function atom(type: string, payload: Buffer): Buffer {
   const header = Buffer.alloc(8);
@@ -43,6 +43,31 @@ describe('bounded MP4/MOV duration reader', () => {
     large.write('data', 16, 4, 'ascii');
     const buffer = Buffer.concat([large, atom('moov', movieHeaderV0(25, 250))]);
     expect(readMp4DurationMs(buffer)).toBe(10000);
+  });
+
+  it('finds a complete moov atom in a bounded suffix after a large media payload', () => {
+    const suffix = Buffer.concat([
+      Buffer.alloc(64, 0x7f),
+      atom('moov', movieHeaderV0(1000, 180250))
+    ]);
+    expect(readMp4DurationMsFromTail(suffix)).toBe(180250);
+  });
+
+  it('accepts an extended-size moov atom in the suffix', () => {
+    const child = movieHeaderV1(90000, 90000n * 321n);
+    const header = Buffer.alloc(16);
+    header.writeUInt32BE(1, 0);
+    header.write('moov', 4, 4, 'ascii');
+    header.writeBigUInt64BE(BigInt(header.length + child.length), 8);
+    expect(readMp4DurationMsFromTail(Buffer.concat([Buffer.alloc(10, 0x5a), header, child]))).toBe(321000);
+  });
+
+  it('rejects incomplete or false moov signatures in the suffix', () => {
+    const truncated = Buffer.alloc(20);
+    truncated.writeUInt32BE(4096, 0);
+    truncated.write('moov', 4, 4, 'ascii');
+    expect(readMp4DurationMsFromTail(truncated)).toBeNull();
+    expect(readMp4DurationMsFromTail(Buffer.from('random bytes with a moov signature but no valid atom'))).toBeNull();
   });
 
   it('returns null for malformed, incomplete, unsupported, or unknown duration headers', () => {

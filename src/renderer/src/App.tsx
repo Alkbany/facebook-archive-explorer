@@ -579,7 +579,7 @@ function App() {
       setMarketplaceListings(marketplace);
       setSavedItems(savedItems);
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
-      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
+      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId, 1, '');
     } catch {
       setInspection(null);
       setError('Could not reopen this saved backup. Its original folder may have been moved, renamed, or disconnected. Select the original folder or ZIP again to create a fresh inventory.');
@@ -1186,7 +1186,7 @@ function App() {
       if (fallback.length > 0) await loadFallbackArchiveRecords(fallback[0].sectionKey, 1);
       else { setFallbackSectionKey(''); setFallbackRecords(null); }
       if (foundConversations.length > 0) {
-        await loadConversation(foundConversations[0].sourceFileId);
+        await loadConversation(foundConversations[0].sourceFileId, 1, '');
       } else {
         conversationRequestGate.current.invalidate();
         setIsLoadingConversation(false);
@@ -1314,7 +1314,7 @@ function App() {
       await refreshImportIssues();
       await refreshImportCoverage();
       setSavedBackups(await window.desktopApi.listArchiveSnapshots());
-      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId);
+      if (foundConversations.length > 0) await loadConversation(foundConversations[0].sourceFileId, 1, '');
     } catch {
       setError('Messages data could not be imported. Check the local import report.');
     } finally {

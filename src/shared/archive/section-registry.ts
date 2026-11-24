@@ -25,7 +25,7 @@ export const ARCHIVE_SECTIONS: readonly ArchiveSectionDefinition[] = [
   { key: 'groups', title: 'Groups', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'likes_and_reactions', title: 'Likes and reactions', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'location', title: 'Location', evidence: 'no-data', sensitivity: 'sensitive' },
-  { key: 'marketplace', title: 'Marketplace', evidence: 'filename-only', sensitivity: 'personal' },
+  { key: 'marketplace', title: 'Marketplace', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'messages', title: 'Messages', evidence: 'sampled', sensitivity: 'sensitive' },
   { key: 'other_activity', title: 'Other activity', evidence: 'filename-only', sensitivity: 'personal' },
   { key: 'pages', title: 'Pages', evidence: 'sampled', sensitivity: 'personal' },
@@ -33,7 +33,7 @@ export const ARCHIVE_SECTIONS: readonly ArchiveSectionDefinition[] = [
   { key: 'photos_and_videos', title: 'Photos and videos', evidence: 'sampled', sensitivity: 'sensitive' },
   { key: 'posts', title: 'Posts', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'profile_information', title: 'Profile information', evidence: 'filename-only', sensitivity: 'sensitive' },
-  { key: 'saved_items_and_collections', title: 'Saved items and collections', evidence: 'filename-only', sensitivity: 'personal' },
+  { key: 'saved_items_and_collections', title: 'Saved items and collections', evidence: 'sampled', sensitivity: 'personal' },
   { key: 'search_history', title: 'Search history', evidence: 'filename-only', sensitivity: 'sensitive' },
   { key: 'security_and_login_information', title: 'Security and login information', evidence: 'filename-only', sensitivity: 'sensitive' },
   { key: 'your_places', title: 'Your places', evidence: 'no-data', sensitivity: 'sensitive' }
@@ -53,7 +53,9 @@ const SECTION_IMPORT_CAPABILITIES: Readonly<Record<string, SectionImportCapabili
   likes_and_reactions: 'sampled-html-json',
   photos_and_videos: 'sampled-html-json',
   groups: 'sampled-json',
-  events: 'sampled-json'
+  events: 'sampled-json',
+  marketplace: 'sampled-json',
+  saved_items_and_collections: 'sampled-json'
 };
 
 /** Describes actual importer scope; filename evidence alone never implies parser support. */

@@ -127,37 +127,78 @@ export function getMessageConversation(
     throw new Error('The conversation search query is invalid.');
   }
 
-  // Query only the selected conversation; never populate the global message FTS index.
   const normalizedQuery = normalizeSearchText(searchQuery);
-  const terms = [...new Set(normalizedQuery.match(/[\p{L}\p{N}_]+/gu) ?? [])];
-  const searchClause = searchQuery.trim().length === 0
-    ? ''
-    : terms.length === 0
-      ? 'AND 0 = 1'
-      : terms.map(() => "AND instr(COALESCE(normalized_text, ''), ?) > 0").join('\n      ');
+  const terms = [...new Set(normalizedQuery.match(/[\\p{L}\\p{N}_]+/gu) ?? [])];
+  const parameters: Array<string | number> = [sourceFileId, snapshotId];
+  let searchClause = '';
+  let transientIndexReady = false;
+
+  if (searchQuery.trim().length > 0) {
+    if (terms.length === 0) {
+      searchClause = 'AND 0 = 1';
+    } else {
+      // Message text stays private: this FTS5 table exists only in SQLite's
+      // in-memory temp database and is emptied immediately after this query.
+      database.exec('PRAGMA temp_store = MEMORY');
+      database.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS temp.conversation_message_search
+        USING fts5(record_id UNINDEXED, sender, normalized_text,
+          tokenize = 'unicode61 remove_diacritics 2')
+      `);
+      database.prepare('DELETE FROM temp.conversation_message_search').run();
+      database.prepare(`
+        INSERT INTO temp.conversation_message_search (record_id, sender, normalized_text)
+        SELECT CAST(id AS TEXT), COALESCE(title, ''), COALESCE(normalized_text, '')
+        FROM records
+        WHERE source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
+      `).run(sourceFileId, snapshotId);
+
+      searchClause = `
+        AND records.id IN (
+          SELECT CAST(record_id AS INTEGER)
+          FROM temp.conversation_message_search
+          WHERE conversation_message_search MATCH ?
+        )
+      `;
+      parameters.push(terms.map((term) => '"' + term.replace(/"/gu, '""') + '"').join(' AND '));
+      transientIndexReady = true;
+    }
+  }
+
   const baseWhere = `
-    source_file_id = ? AND snapshot_id = ? AND section_key = 'messages'
+    records.source_file_id = ? AND records.snapshot_id = ? AND records.section_key = 'messages'
     ${searchClause}
   `;
-  const parameters = [sourceFileId, snapshotId, ...terms];
-  const totalRow = database.prepare(`
-    SELECT COUNT(*) AS total FROM records WHERE ${baseWhere}
-  `).get(...parameters) as { total: number };
-  const total = Number(totalRow.total);
-  const maxPage = Math.max(1, Math.ceil(total / MESSAGE_CONVERSATION_PAGE_SIZE));
-  const page = Math.min(requestedPage, maxPage);
-  const rows = database.prepare(`
-    SELECT id, source_record_index AS sourceCardIndex, title AS sender,
-      body_text AS body, event_time_raw AS timestampRaw, payload_json AS payloadJson,
-      record_type AS recordType
-    FROM records
-    WHERE ${baseWhere}
-    ORDER BY source_record_index ASC, id ASC
-    LIMIT ? OFFSET ?
-  `).all(
-    ...parameters, MESSAGE_CONVERSATION_PAGE_SIZE,
-    (page - 1) * MESSAGE_CONVERSATION_PAGE_SIZE
-  ) as unknown as MessageRow[];
+  let total = 0;
+  let page = requestedPage;
+  let rows: MessageRow[] = [];
+
+  try {
+    const totalRow = database.prepare(`
+      SELECT COUNT(*) AS total FROM records WHERE ${baseWhere}
+    `).get(...parameters) as { total: number };
+    total = Number(totalRow.total);
+    const maxPage = Math.max(1, Math.ceil(total / MESSAGE_CONVERSATION_PAGE_SIZE));
+    page = Math.min(requestedPage, maxPage);
+    rows = database.prepare(`
+      SELECT records.id AS id,
+        records.source_record_index AS sourceCardIndex,
+        records.title AS sender, records.body_text AS body,
+        records.event_time_raw AS timestampRaw, records.payload_json AS payloadJson,
+        records.record_type AS recordType
+      FROM records
+      WHERE ${baseWhere}
+      ORDER BY records.source_record_index ASC, records.id ASC
+      LIMIT ? OFFSET ?
+    `).all(
+      ...parameters, MESSAGE_CONVERSATION_PAGE_SIZE,
+      (page - 1) * MESSAGE_CONVERSATION_PAGE_SIZE
+    ) as unknown as MessageRow[];
+  } finally {
+    if (transientIndexReady) {
+      database.prepare('DELETE FROM temp.conversation_message_search').run();
+    }
+  }
 
   const mediaByRecord = new Map<number, MessageMediaSummary[]>();
   if (rows.length > 0) {

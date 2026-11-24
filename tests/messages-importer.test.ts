@@ -195,6 +195,8 @@ describe('Messages conversation import', () => {
     insertRecord.run(snapshotId, otherSource, 0, 'Other Sender', otherBody, normalizeSearchText(otherBody), timestamp);
     const nonMatch = 'Meeting in Cairo instead';
     insertRecord.run(snapshotId, sourceFileId, 55, 'Synthetic Sender', nonMatch, normalizeSearchText(nonMatch), timestamp);
+    const partialToken = 'Meetings in Alexandria instead';
+    insertRecord.run(snapshotId, sourceFileId, 56, 'Synthetic Sender', partialToken, normalizeSearchText(partialToken), timestamp);
 
     const firstPage = getMessageConversation(database, snapshotId, sourceFileId, 1, 'MEETING Alexandria');
     const secondPage = getMessageConversation(database, snapshotId, sourceFileId, 2, 'meeting Alexandria');
@@ -207,9 +209,11 @@ describe('Messages conversation import', () => {
     expect(firstPage.records.every((record) => record.body?.includes('Alexandria'))).toBe(true);
     expect(firstPage.records.every((record) => !record.body?.includes('Cairo'))).toBe(true);
     expect(database.prepare('SELECT COUNT(*) AS count FROM record_search').get()).toMatchObject({ count: 0 });
+    expect(database.prepare('SELECT COUNT(*) AS count FROM temp.conversation_message_search').get()).toMatchObject({ count: 0 });
+    expect(database.prepare('PRAGMA temp_store').get()).toMatchObject({ temp_store: 2 });
     expect(database.prepare(
       "SELECT COUNT(*) AS count FROM records WHERE source_file_id = ? AND sensitivity = 'sensitive' AND search_enabled = 0"
-    ).get(sourceFileId)).toMatchObject({ count: 56 });
+    ).get(sourceFileId)).toMatchObject({ count: 57 });
   });
 
   it('does not import arbitrary HTML outside conversation folders', async () => {

@@ -1074,6 +1074,8 @@ function App() {
       search: 'unified-search-panel',
       files: 'archive-files-workspace',
       events: 'events-workspace',
+      marketplace: 'marketplace-workspace',
+      'saved-items': 'saved-items-workspace',
       overview: 'welcome-panel',
       other: 'fallback-records-workspace'
     };

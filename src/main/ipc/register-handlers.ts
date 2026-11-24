@@ -57,7 +57,7 @@ function getSemanticModelCacheDirectory(): string {
 }
 
 function getAiAssistantModelCacheDirectory(): string {
-  return join(app.getPath('userData'), 'models', 'assistant');
+  return join(app.getPath('userData'), 'models');
 }
 
 export function registerIpcHandlers(

@@ -97,7 +97,7 @@ function nestedOwnerName(labels: unknown[]): string | null {
 export function parseReactionsJsonExport(jsonText: string, sourceFile: string): ReactionParseResult {
   const lowerPath = sourceFile.toLocaleLowerCase();
   const fileName = basename(lowerPath);
-  if (!/^likes_and_reactions(?:_\\d+)?\\.json$/u.test(fileName)) {
+  if (!/^likes_and_reactions(?:_\d+)?\.json$/u.test(fileName)) {
     throw new Error('Unsupported reactions JSON filename.');
   }
   const parsed: unknown = JSON.parse(jsonText);

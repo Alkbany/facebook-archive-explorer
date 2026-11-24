@@ -47,12 +47,12 @@ describe('Accounts Center Likes & Reactions JSON parser', () => {
     const result = parseReactionsJsonExport(JSON.stringify([{
       timestamp: 12597863400,
       data: [{ reaction: { reaction: 'LIKE', actor: 'Jean-Luc Picard' } }],
-      title: 'Jean-Luc Picard liked William Riker\\'s post.'
+      title: "Jean-Luc Picard liked William Riker's post."
     }]), 'likes_and_reactions_1.json');
     expect(result.issues).toEqual([]);
     expect(result.records[0]).toMatchObject({
       reactionType: 'like',
-      descriptionRaw: 'Jean-Luc Picard liked William Riker\\'s post.',
+      descriptionRaw: "Jean-Luc Picard liked William Riker's post.",
       dateRaw: '12597863400'
     });
   });

@@ -61,7 +61,7 @@ export async function importReactionsSection(
     try {
       const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path);
       const parsed = file.detected_format === 'json'
-        ? parseReactionsJsonExport(sourceText.replace(/^\\uFEFF/u, ''), file.relative_path)
+        ? parseReactionsJsonExport(sourceText.replace(/^\uFEFF/u, ''), file.relative_path)
         : parseReactionsExport(sourceText, file.relative_path);
       const timestamp = new Date().toISOString();
       const insert = database.prepare(`

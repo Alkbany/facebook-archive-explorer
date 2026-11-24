@@ -61,7 +61,7 @@ export async function importCommentsSection(
     try {
       const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path);
       const parsed = file.detected_format === 'json'
-        ? parseCommentsJsonExport(sourceText.replace(/^\\uFEFF/u, ''), file.relative_path)
+        ? parseCommentsJsonExport(sourceText.replace(/^\uFEFF/u, ''), file.relative_path)
         : parseCommentsExport(sourceText, file.relative_path);
       const now = new Date().toISOString();
       const insertRecord = database.prepare(`

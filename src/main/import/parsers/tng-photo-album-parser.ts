@@ -88,6 +88,11 @@ export function parseTngPhotoAlbumJson(jsonText: string, sourceFile: string): Tn
     coverPath: cover ? safeLocalPhotoPath(cover.uri) : null,
     photos,
     invalidPhotoPaths,
-    rawPayload: parsed
+    rawPayload: {
+      name: album.name,
+      description: album.description,
+      last_modified_timestamp: album.last_modified_timestamp,
+      cover_photo: album.cover_photo
+    }
   };
 }

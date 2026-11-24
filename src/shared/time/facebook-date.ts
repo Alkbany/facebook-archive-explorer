@@ -12,11 +12,11 @@ export function facebookDateToUtc(value: string | null): string | null {
   if (!raw) return null;
 
   let milliseconds: number | null = null;
-  if (/^\\d{10}$/u.test(raw)) {
+  if (/^\d{10}$/u.test(raw)) {
     milliseconds = Number(raw) * 1000;
-  } else if (/^\\d{13}$/u.test(raw)) {
+  } else if (/^\d{13}$/u.test(raw)) {
     milliseconds = Number(raw);
-  } else if (/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d{1,3})?)?(?:Z|[+-]\\d{2}:?\\d{2})$/u.test(raw)) {
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})$/u.test(raw)) {
     const parsed = Date.parse(raw);
     if (Number.isFinite(parsed)) milliseconds = parsed;
   }
@@ -31,8 +31,8 @@ export function facebookDateToUtc(value: string | null): string | null {
 /** Returns an explicit UTC offset found in a Facebook export footer, in minutes. */
 export function facebookExportUtcOffsetMinutes(footerText: string | null): number | null {
   if (!footerText) return null;
-  const normalized = footerText.replace(/[\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]/gu, '');
-  const matches = [...normalized.matchAll(/\\bUTC\\s*([+-])\\s*(\\d{2})(?::?(\\d{2}))?(?=$|[^\\d])/giu)];
+  const normalized = footerText.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/gu, '');
+  const matches = [...normalized.matchAll(/\bUTC\s*([+-])\s*(\d{2})(?::?(\d{2}))?(?=$|[^\d])/giu)];
   if (matches.length === 0) return null;
 
   const offsets = new Set<number>();
@@ -47,7 +47,7 @@ export function facebookExportUtcOffsetMinutes(footerText: string | null): numbe
 }
 
 function normalizeFacebookDigits(value: string): string {
-  return value.replace(/[\\u0660-\\u0669\\u06F0-\\u06F9]/gu, (digit) =>
+  return value.replace(/[\u0660-\u0669\u06F0-\u06F9]/gu, (digit) =>
     String(digit.codePointAt(0)! >= 0x06f0
       ? digit.codePointAt(0)! - 0x06f0
       : digit.codePointAt(0)! - 0x0660)
@@ -67,10 +67,10 @@ export function facebookLocalizedHtmlDateToUtc(
       !Number.isInteger(offsetMinutes) || Math.abs(offsetMinutes) > 14 * 60) return null;
 
   const normalized = normalizeFacebookDigits(value)
-    .replace(/[\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]/gu, '')
-    .replace(/\\s+/gu, ' ')
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/gu, '')
+    .replace(/\s+/gu, ' ')
     .trim();
-  const match = /^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})\\s+(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\s*([صم])$/u.exec(normalized);
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([صم])$/u.exec(normalized);
   if (!match) return null;
 
   const day = Number(match[1]);

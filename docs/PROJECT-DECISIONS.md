@@ -56,7 +56,7 @@ Search is a core product feature and has four distinct levels. These levels solv
 - Reliable literal/text search for words and exact phrases.
 - Search eligible names, record titles and bodies, post/comment text, and supported metadata.
 - Search file names and archive paths where appropriate.
-- Support section, account/snapshot, and date filters where the underlying date is reliable.
+- Support section, account/snapshot, and UTC date-range filters where the underlying date is reliable. Exclude records with missing or ambiguous `event_time_utc` values while a date filter is active; never guess a timezone.
 - Preserve the existing fast local SQLite FTS5 search as the baseline.
 - Exact search remains available whether or not optional AI features are installed or enabled.
 
@@ -161,10 +161,10 @@ A feature is complete only when its implementation, tests, user-facing behavior,
 
 This section is deliberately a status snapshot, not a promise that every feature has passed real-archive validation.
 
-- Implemented Exact Search: local SQLite FTS5, quoted phrase matching, Arabic normalization, section filters, and metadata lookup for file paths, file names, and source dates.
-- Implemented Fuzzy Search: typo-tolerant token expansion and edit-distance scoring for insertion, deletion, substitution, and adjacent transposition, with a configurable threshold.
+- Implemented Exact Search: local SQLite FTS5, quoted phrase matching, Arabic normalization, section filters, metadata lookup for file paths/file names/source dates, and inclusive UTC date-range filters.
+- Implemented Fuzzy Search: typo-tolerant token expansion and edit-distance scoring for insertion, deletion, substitution, and adjacent transposition, with a configurable threshold and the same reliable UTC date-range filter.
 - Implemented message privacy control: message content is excluded from global search by default, stored in a separate index only after explicit opt-in, and removed from that index when disabled. Direct Messages-section exact scan remains available without persistent indexing.
-- Implemented Semantic Search foundation: optional multilingual local embeddings, persisted versioned vectors, incremental import-time jobs, backfill, restart recovery, and retry. Actual model inference and semantic relevance still require clean-device validation.
+- Implemented Semantic Search foundation: optional multilingual local embeddings, persisted versioned vectors, incremental import-time jobs, backfill, restart recovery, retry, and UTC date-range filtering. Actual model inference and semantic relevance still require clean-device validation.
 - Implemented AI Assistant foundation: independently optional local Qwen2.5-0.5B-Instruct, local evidence retrieval, citation-ID validation, conversation context, and source-file navigation. Real model output quality and citation completeness remain validation tasks.
 - Implemented media library pagination: 100 items by default, selectable 50/100/250, Grid/List views, and filtering before pagination.
 - Message content is eligible for assistant evidence only when the independent message-search privacy setting is enabled; neither AI feature uploads archive content to an external inference endpoint.

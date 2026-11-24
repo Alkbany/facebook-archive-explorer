@@ -5,17 +5,21 @@ on:
   push:
     branches:
       - main
+      - 'release/**'
     tags:
       - 'v*'
     paths:
       - 'src/**'
       - 'tests/**'
       - 'scripts/**'
+      - 'build/**'
+      - '.release/**'
       - 'package*.json'
       - 'electron.vite.config.ts'
       - 'tsconfig*.json'
       - '.github/workflows/windows-installer.yml'
       - 'docs/CODE-SIGNING.md'
+      - 'CHANGELOG.md'
   pull_request:
     branches:
       - main
@@ -23,11 +27,13 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'scripts/**'
+      - 'build/**'
       - 'package*.json'
       - 'electron.vite.config.ts'
       - 'tsconfig*.json'
       - '.github/workflows/windows-installer.yml'
       - 'docs/CODE-SIGNING.md'
+      - 'CHANGELOG.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,13 +47,57 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+    outputs:
+      release_tag: ${{ steps.release-metadata.outputs.tag }}
+      release_version: ${{ steps.release-metadata.outputs.version }}
+      is_prerelease: ${{ steps.release-metadata.outputs.is_prerelease }}
+      artifact_name: ${{ steps.release-metadata.outputs.artifact_name }}
+      signing_status: ${{ steps.release-metadata.outputs.signing_status }}
+      signing_note: ${{ steps.release-metadata.outputs.signing_note }}
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Resolve release metadata
+        id: release-metadata
+        if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        run: |
+          if ($env:GITHUB_REF.StartsWith('refs/heads/release/')) {
+            $tag = $env:GITHUB_REF_NAME.Substring('release/'.Length)
+          } else {
+            $tag = $env:GITHUB_REF_NAME
+          }
+
+          if ($tag -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+            throw "Invalid release tag '$tag'. Use semantic versions such as v0.1.0-beta.1 or v1.0.0."
+          }
+
+          $version = $tag.Substring(1)
+          $isPrerelease = $version.Contains('-')
+          if ($env:GITHUB_REF.StartsWith('refs/heads/release/') -and -not $isPrerelease) {
+            throw 'The release/* branch flow is reserved for pre-release versions. Stable versions must use a v* tag.'
+          }
+
+          $hasCertificate = -not [string]::IsNullOrWhiteSpace($env:WIN_CSC_LINK)
+          $artifactName = if ($isPrerelease) { 'facebook-archive-explorer-windows-beta' } else { 'facebook-archive-explorer-windows' }
+          $signingStatus = if ($hasCertificate) { 'Authenticode signing configured; verification is required.' } else { 'UNSIGNED: no trusted Windows signing certificate was configured.' }
+          $signingNote = if ($hasCertificate) { 'The packaged Windows binaries were checked for valid Authenticode signatures.' } else { 'Smart App Control may block this unsigned build when Microsoft does not already recognize its files. This is not a security bypass or a signed distribution build.' }
+
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "is_prerelease=$($isPrerelease.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
+          "signing_status=$signingStatus" >> $env:GITHUB_OUTPUT
+          "signing_note=$signingNote" >> $env:GITHUB_OUTPUT
+      - name: Set package version for versioned build
+        if: steps.release-metadata.outputs.version != ''
+        run: npm version "${{ steps.release-metadata.outputs.version }}" --no-git-tag-version --allow-same-version
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Type-check
@@ -68,35 +118,37 @@ jobs:
             $parseErrors | ForEach-Object { Write-Error $_ }
             throw 'Windows signature verification script has PowerShell syntax errors.'
           }
-      - name: Require a signing certificate for version releases
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        env:
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:WIN_CSC_LINK)) {
-            throw 'A trusted Windows code-signing certificate is required before a version release can be built.'
-          }
       - name: Build Windows NSIS installer
         run: npm run package:win
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-      - name: Verify trusted signatures before version release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Verify packaged Windows outputs
+        shell: pwsh
+        run: ./scripts/verify-windows-package.ps1
+      - name: Verify trusted signatures when a certificate is configured
+        if: (startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/')) && secrets.WIN_CSC_LINK != ''
         shell: pwsh
         run: ./scripts/verify-windows-signatures.ps1
       - name: Upload personal-use test installer
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: facebook-archive-explorer-windows-test
           path: release/*.exe
           if-no-files-found: error
           retention-days: 14
-      - name: Upload signed version installer
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
+      - name: Upload beta release installer
+        if: steps.release-metadata.outputs.is_prerelease == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: facebook-archive-explorer-windows-beta
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload stable release installer
+        if: startsWith(github.ref, 'refs/tags/v') && steps.release-metadata.outputs.is_prerelease == 'false'
+        uses: actions/upload-artifact@v7
         with:
           name: facebook-archive-explorer-windows
           path: release/*.exe
@@ -104,20 +156,43 @@ jobs:
           retention-days: 14
 
   publish-github-release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/')
     needs: build-windows-installer
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download installer artifact
-        uses: actions/download-artifact@v4
+      - name: Download versioned installer
+        uses: actions/download-artifact@v7
         with:
-          name: facebook-archive-explorer-windows
+          name: ${{ needs.build-windows-installer.outputs.artifact_name }}
           path: release
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.build-windows-installer.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
+          name: Facebook Archive Explorer ${{ needs.build-windows-installer.outputs.release_tag }}
+          prerelease: ${{ needs.build-windows-installer.outputs.is_prerelease }}
+          make_latest: ${{ needs.build-windows-installer.outputs.is_prerelease == 'true' && 'false' || 'true' }}
           generate_release_notes: true
+          append_body: true
+          body: |
+            **Windows signing:** ${{ needs.build-windows-installer.outputs.signing_status }}
+
+            ${{ needs.build-windows-installer.outputs.signing_note }}
+
+            Beta versions are early-access builds and are not the stable 1.0.0 release. The stable release will be tagged v1.0.0 only after the release-readiness checklist is complete.
           files: release/*.exe
           fail_on_unmatched_files: true
+      - name: Remove temporary release branch
+        if: startsWith(github.ref, 'refs/heads/release/')
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `heads/${branch}`
+            });

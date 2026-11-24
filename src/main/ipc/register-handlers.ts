@@ -398,6 +398,7 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.retrySemanticIndexing, async () => {
+    if (!getSemanticSearchStatus(database).enabled) throw new Error('Enable Semantic Search before retrying its index.');
     retryFailedSemanticJobs(database);
     void processSemanticIndexQueue(database, getSemanticModelCacheDirectory()).catch(() => undefined);
     return getSemanticSearchStatus(database);
@@ -448,6 +449,9 @@ export function registerIpcHandlers(
     const searchMode = (mode ?? 'exact') as ArchiveSearchMode;
     const similarityThreshold = threshold === undefined ? 0.8 : threshold as number;
     const snapshotId = selectedSnapshotId;
+    if (searchMode === 'semantic' && !getSemanticSearchStatus(database).enabled) {
+      throw new Error('Enable Semantic Search before exporting semantic results.');
+    }
     const results = searchMode === 'semantic'
       ? searchSemanticArchiveRecords(
           database,

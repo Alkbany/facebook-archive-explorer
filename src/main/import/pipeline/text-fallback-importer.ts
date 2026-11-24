@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { ImportProgressEvent } from '../../../shared/archive/inspection';
 import { getArchiveSection } from '../../../shared/archive/section-registry';
 import { normalizeSearchText } from '../../../shared/text/normalize';
-import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
+import { ArchiveReadError, readArchiveBinaryFile } from '../discovery/read-archive-file';
 import { waitIfImportPaused } from '../../ipc/import-operation-lock';
 import { reportImportProgress, type ImportProgressReporter } from './import-progress';
 
@@ -23,6 +23,25 @@ export interface TextFallbackImportSectionResult {
 
 const MAX_TEXT_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_INDEXED_TEXT_LENGTH = 20_000;
+
+function decodeTextBytes(bytes: Buffer): string {
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return bytes.subarray(2).toString('utf16le');
+  }
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const bigEndianBytes = bytes.subarray(2, bytes.length - ((bytes.length - 2) % 2));
+    const littleEndianBytes = Buffer.allocUnsafe(bigEndianBytes.length);
+    for (let index = 0; index < bigEndianBytes.length; index += 2) {
+      littleEndianBytes[index] = bigEndianBytes[index + 1];
+      littleEndianBytes[index + 1] = bigEndianBytes[index];
+    }
+    return littleEndianBytes.toString('utf16le');
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    return bytes.subarray(3).toString('utf8');
+  }
+  return bytes.toString('utf8');
+}
 
 function cleanText(value: string): string {
   return value
@@ -83,8 +102,8 @@ async function importTextFile(
     if (file.file_size_bytes !== null && file.file_size_bytes > MAX_TEXT_FILE_BYTES) {
       throw new ArchiveReadError('FILE_TOO_LARGE');
     }
-    const sourceText = await readArchiveUtf8File(archiveRoot, file.relative_path, MAX_TEXT_FILE_BYTES);
-    const withoutBom = sourceText.charCodeAt(0) === 0xfeff ? sourceText.slice(1) : sourceText;
+    const sourceBytes = await readArchiveBinaryFile(archiveRoot, file.relative_path, MAX_TEXT_FILE_BYTES);
+    const withoutBom = decodeTextBytes(sourceBytes);
     const normalizedText = cleanText(withoutBom);
     const section = getArchiveSection(file.section_key);
     const sensitivity = section?.sensitivity ?? 'sensitive';

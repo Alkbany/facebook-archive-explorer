@@ -132,3 +132,6 @@ The JSON fallback separately reads JSON files with bounded file/record/count lim
 
 
 The plain-text fallback separately processes discovered `.txt` files (including section-level `no-data.txt` notices) up to 5 MiB each. It removes a UTF-8 BOM for display, preserves the remaining source text in the local record payload, indexes at most 20,000 characters for eligible non-sensitive sections, and keeps unknown or sensitive sections out of global search. Empty files are marked empty rather than indexed. This preserves content but does not infer the semantic meaning of a text file.
+
+
+The plain-text fallback recognizes UTF-8, UTF-8 with BOM, and UTF-16 little-/big-endian files with their respective BOMs. Files without a BOM are treated as UTF-8; ambiguous legacy encodings are not guessed.

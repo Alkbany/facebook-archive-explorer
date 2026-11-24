@@ -104,6 +104,51 @@ describe('generic plain-text fallback importer', () => {
       .every((row) => row.status === 'completed' && row.parserKey === 'text_fallback' && row.recordCount === 1)).toBe(true);
   });
 
+  it('decodes UTF-16 little-endian and big-endian files with BOMs', async () => {
+    const littleEndianText = 'Group details\nUTF-16 LE content';
+    const littleEndianBytes = Buffer.concat([
+      Buffer.from([0xff, 0xfe]),
+      Buffer.from(littleEndianText, 'utf16le')
+    ]);
+
+    const bigEndianText = 'Event details\nUTF-16 BE content';
+    const bigEndianLittleEndian = Buffer.from(bigEndianText, 'utf16le');
+    const bigEndianBytes = Buffer.alloc(bigEndianLittleEndian.length + 2);
+    bigEndianBytes[0] = 0xfe;
+    bigEndianBytes[1] = 0xff;
+    for (let index = 0; index < bigEndianLittleEndian.length; index += 2) {
+      bigEndianBytes[index + 2] = bigEndianLittleEndian[index + 1];
+      bigEndianBytes[index + 3] = bigEndianLittleEndian[index];
+    }
+
+    const samples = [
+      { path: 'groups/utf16-le.txt', section: 'groups', bytes: littleEndianBytes, expected: littleEndianText },
+      { path: 'events/utf16-be.txt', section: 'events', bytes: bigEndianBytes, expected: bigEndianText }
+    ];
+    const now = new Date().toISOString();
+    for (const sample of samples) {
+      await writeFile(join(root, sample.path), sample.bytes);
+      database.prepare(`
+        INSERT INTO source_files (
+          snapshot_id, relative_path, file_name, section_key, detected_format,
+          file_size_bytes, status, discovered_at
+        ) VALUES (?, ?, ?, ?, 'text', ?, 'discovered', ?)
+      `).run(snapshotId, sample.path, sample.path.split('/').pop() ?? sample.path,
+        sample.section, sample.bytes.length, now);
+    }
+
+    const result = await importTextFallbackFilesSection(database, snapshotId, root);
+    expect(result).toMatchObject({ filesAttempted: 2, recordsImported: 2, failedFiles: 0 });
+    for (const sample of samples) {
+      const row = database.prepare(`
+        SELECT body_text AS body, payload_json AS payload
+        FROM records WHERE snapshot_id = ? AND section_key = ?
+      `).get(snapshotId, sample.section) as { body: string; payload: string };
+      expect(row.body).toBe(sample.expected);
+      expect(JSON.parse(row.payload)).toEqual({ text: sample.expected });
+    }
+  });
+
   it('rejects oversized text files safely and leaves them retryable', async () => {
     const path = 'oversized_section/large.txt';
     await writeFile(join(root, path), 'tiny placeholder', 'utf8');

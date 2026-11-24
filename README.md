@@ -2,7 +2,7 @@
 
 A local-first Windows desktop application for exploring personal Facebook data exports.
 
-> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, bounded HTML, JSON, and plain-text fallback importers, unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
+> **Status: active implementation.** The app has a working Electron shell, local SQLite storage, account/backup grouping, directory and ZIP discovery, ZIP-backed media streaming, Friends, Messages, Likes & Reactions, sampled Posts and Comments importers, bounded HTML, JSON, and plain-text fallback importers (UTF-8 and BOM-marked UTF-16), unified media inventory, local full-text search, JSON search export, snapshot comparison, and streamed audio/video.
 
 ## Product decisions
 

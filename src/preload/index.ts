@@ -52,6 +52,10 @@ const desktopApi: DesktopApi = {
   getArchiveSearchSettings: () => ipcRenderer.invoke(IPC_CHANNELS.getArchiveSearchSettings),
   setIncludeMessagesInGlobalSearch: (enabled) =>
     ipcRenderer.invoke(IPC_CHANNELS.setIncludeMessagesInGlobalSearch, enabled),
+  getSemanticSearchStatus: () => ipcRenderer.invoke(IPC_CHANNELS.getSemanticSearchStatus),
+  setSemanticSearchEnabled: (enabled) =>
+    ipcRenderer.invoke(IPC_CHANNELS.setSemanticSearchEnabled, enabled),
+  retrySemanticIndexing: () => ipcRenderer.invoke(IPC_CHANNELS.retrySemanticIndexing),
   searchRecordsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>
     ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey, mode, similarityThreshold),
   exportSearchResultsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>

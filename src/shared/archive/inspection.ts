@@ -87,6 +87,7 @@ export interface EventRecordSummary {
   startDateRaw: string | null;
   startDateUtc: string | null;
   endDateRaw: string | null;
+  endDateUtc: string | null;
   responseTimeRaw: string | null;
   rsvp: string;
   locationName: string | null;

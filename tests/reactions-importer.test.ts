@@ -79,7 +79,7 @@ describe('Likes & Reactions import', () => {
       database.prepare(`
         INSERT INTO source_files (snapshot_id, relative_path, file_name, section_key, detected_format, status, discovered_at)
         VALUES (?, ?, ?, 'likes_and_reactions', 'json', 'discovered', ?)
-      `).run(snapshotId, relativePath, relativePath.split('/').pop(), now);
+      `).run(snapshotId, relativePath, relativePath.split('/').pop() ?? relativePath, now);
     }
 
     const result = await importReactionsSection(database, snapshotId, root);

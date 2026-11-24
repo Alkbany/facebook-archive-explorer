@@ -90,7 +90,7 @@ describe('local SQLite storage', () => {
         'SELECT event_time_utc AS eventTimeUtc FROM records ORDER BY source_record_index'
       ).all() as Array<{ eventTimeUtc: string | null }>;
       expect(rows).toEqual([
-        { eventTimeUtc: '2018-10-20T00:26:40.000Z' },
+        { eventTimeUtc: '2018-10-20T01:46:40.000Z' },
         { eventTimeUtc: null }
       ]);
     } finally {

@@ -266,7 +266,7 @@ export function searchArchiveRecords(
   snapshotId: string,
   query: string,
   sectionKey: string | null = null,
-  mode: ArchiveSearchMode = 'exact',
+  mode: Exclude<ArchiveSearchMode, 'semantic'> = 'exact',
   similarityThreshold = 0.8
 ): ArchiveSearchResult[] {
   if (typeof query !== 'string' || query.length < 1 || query.length > MAX_QUERY_LENGTH) {

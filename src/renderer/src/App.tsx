@@ -28,7 +28,7 @@ import { ARCHIVE_SECTIONS, getArchiveImportCapability } from '../../shared/archi
 import { getGroupActivityMetadata } from '../../shared/archive/groups';
 import type { MessageConversationSummary, MessageRecordSummary } from '../../shared/archive/messages';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
-import type { ArchiveSearchMode, ArchiveSearchResult } from '../../shared/archive/search';
+import type { ArchiveSearchMode, ArchiveSearchResult, SemanticSearchStatus } from '../../shared/archive/search';
 import type {
   ArchiveComparisonReport,
   ArchiveComparisonChangeKind,
@@ -163,6 +163,8 @@ function App() {
   const [searchThreshold, setSearchThreshold] = useState(0.8);
   const [includeMessagesInGlobalSearch, setIncludeMessagesInGlobalSearch] = useState(false);
   const [isUpdatingMessageSearch, setIsUpdatingMessageSearch] = useState(false);
+  const [semanticSearchStatus, setSemanticSearchStatus] = useState<SemanticSearchStatus | null>(null);
+  const [isUpdatingSemanticSearch, setIsUpdatingSemanticSearch] = useState(false);
   const [searchedMode, setSearchedMode] = useState<ArchiveSearchMode>('exact');
   const [searchedThreshold, setSearchedThreshold] = useState(0.8);
   const [isSearching, setIsSearching] = useState(false);
@@ -297,6 +299,17 @@ function App() {
   useEffect(() => window.desktopApi.onImportProgress(setImportProgress), []);
 
   useEffect(() => {
+    if (!semanticSearchStatus?.enabled) return;
+    const refresh = () => {
+      void window.desktopApi.getSemanticSearchStatus()
+        .then(setSemanticSearchStatus)
+        .catch(() => undefined);
+    };
+    const interval = window.setInterval(refresh, 1_500);
+    return () => window.clearInterval(interval);
+  }, [semanticSearchStatus?.enabled]);
+
+  useEffect(() => {
     void window.desktopApi.getAppInfo()
       .then((info) => setVersion(info.appVersion))
       .catch(() => setError('Could not read application information.'));
@@ -308,6 +321,9 @@ function App() {
     void window.desktopApi.getArchiveSearchSettings()
       .then((settings) => setIncludeMessagesInGlobalSearch(settings.includeMessagesInGlobalSearch))
       .catch(() => setError('Could not load local search privacy settings.'));
+    void window.desktopApi.getSemanticSearchStatus()
+      .then(setSemanticSearchStatus)
+      .catch(() => setError('Could not load Semantic Search status.'));
   }, []);
 
   async function chooseFolder() {
@@ -631,6 +647,7 @@ function App() {
     try {
       const settings = await window.desktopApi.setIncludeMessagesInGlobalSearch(enabled);
       setIncludeMessagesInGlobalSearch(settings.includeMessagesInGlobalSearch);
+      if (!enabled && searchSection === 'messages' && (searchMode === 'fuzzy' || searchMode === 'semantic')) setSearchMode('exact');
       setSearchResults([]);
       setSearchedQuery(null);
       setSearchExportStatus('');
@@ -638,6 +655,37 @@ function App() {
       setError('The message-search privacy setting could not be updated.');
     } finally {
       setIsUpdatingMessageSearch(false);
+    }
+  }
+
+  async function updateSemanticSearchSetting(enabled: boolean) {
+    setIsUpdatingSemanticSearch(true);
+    setError(null);
+    try {
+      const status = await window.desktopApi.setSemanticSearchEnabled(enabled);
+      setSemanticSearchStatus(status);
+      setSearchResults([]);
+      setSearchedQuery(null);
+      setSearchExportStatus('');
+    } catch {
+      setError('Semantic Search could not be enabled or disabled.');
+      const status = await window.desktopApi.getSemanticSearchStatus().catch(() => null);
+      if (status) setSemanticSearchStatus(status);
+    } finally {
+      setIsUpdatingSemanticSearch(false);
+    }
+  }
+
+  async function retrySemanticIndexing() {
+    setIsUpdatingSemanticSearch(true);
+    setError(null);
+    try {
+      const status = await window.desktopApi.retrySemanticIndexing();
+      setSemanticSearchStatus(status);
+    } catch {
+      setError('Semantic indexing could not be restarted.');
+    } finally {
+      setIsUpdatingSemanticSearch(false);
     }
   }
 
@@ -1446,9 +1494,9 @@ function App() {
             <section className="unified-search-panel" id="unified-search-panel">
               <div className="media-gallery-heading">
                 <div>
-                  <p className="eyebrow">LOCAL SEARCH · EXACT + FUZZY</p>
+                  <p className="eyebrow">LOCAL SEARCH · FOUR DISTINCT LEVELS</p>
                   <h3>Search this backup</h3>
-                  <p>Exact Search finds literal words and phrases. Fuzzy Search tolerates likely typing mistakes without using an AI model.</p>
+                  <p>Use literal search, typo-tolerant matching, or optional local semantic search. The AI Assistant is a separate layer for evidence-based answers.</p>
                 </div>
                 <span>{searchResults.length.toLocaleString()} results</span>
               </div>
@@ -1466,6 +1514,33 @@ function App() {
                   </span>
                 </label>
                 {isUpdatingMessageSearch && <span>Updating private message index…</span>}
+              </div>
+              <div className="search-privacy-setting semantic-search-setting">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={semanticSearchStatus?.enabled ?? false}
+                    onChange={(event) => void updateSemanticSearchSetting(event.target.checked)}
+                    disabled={isUpdatingSemanticSearch || !semanticSearchStatus}
+                  />
+                  <span>
+                    <strong>Enable Semantic Search · download local model</strong>
+                    <small>Optional multilingual embeddings. The model and archive vectors stay on this device; enabling this starts indexing existing records and new imports.</small>
+                  </span>
+                </label>
+                <div className="semantic-search-status">
+                  {semanticSearchStatus?.phase === 'downloading' && <span>Downloading model{semanticSearchStatus.progressPercent === null ? '…' : ' · ' + Math.round(semanticSearchStatus.progressPercent) + '%'}</span>}
+                  {semanticSearchStatus?.phase === 'loading' && <span>Loading local model…</span>}
+                  {semanticSearchStatus?.phase === 'indexing' && <span>Indexing {semanticSearchStatus.completed.toLocaleString()} / {semanticSearchStatus.total.toLocaleString()} records</span>}
+                  {semanticSearchStatus?.phase === 'ready' && <span>Ready · {semanticSearchStatus.completed.toLocaleString()} records indexed</span>}
+                  {semanticSearchStatus?.phase === 'error' && <span>Indexing needs attention · {semanticSearchStatus.failed.toLocaleString()} failed</span>}
+                  {semanticSearchStatus?.phase === 'idle' && <span>Enabled · model will load when indexing starts</span>}
+                  {semanticSearchStatus?.enabled && semanticSearchStatus.failed > 0 && (
+                    <button className="secondary-button" onClick={() => void retrySemanticIndexing()} disabled={isUpdatingSemanticSearch}>
+                      Retry failed indexing
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="unified-search-controls">
                 <input value={searchQuery} onChange={(event) => {
@@ -1502,7 +1577,8 @@ function App() {
                     setSearchedQuery(null);
                   }}>
                     <option value="exact">Exact Search</option>
-                    <option value="fuzzy" disabled={searchSection === "messages" && !includeMessagesInGlobalSearch}>Fuzzy Search · typo tolerant</option>
+                    <option value="fuzzy" disabled={searchSection === 'messages' && !includeMessagesInGlobalSearch}>Fuzzy Search · typo tolerant</option>
+                    <option value="semantic" disabled={!semanticSearchStatus?.enabled || (searchSection === 'messages' && !includeMessagesInGlobalSearch)}>Semantic Search · meaning and context</option>
                   </select>
                 </label>
                 {searchMode === 'fuzzy' && (
@@ -1522,14 +1598,14 @@ function App() {
                     </select>
                   </label>
                 )}
-                <span className="search-mode-note">Exact and Fuzzy work offline and do not require an LLM. Semantic Search and AI Assistant are separate optional levels planned next.</span>
+                <span className="search-mode-note">Exact and Fuzzy need no AI. Semantic Search uses a separate optional local Embeddings model; AI Assistant is a separate optional LLM layer.</span>
               </div>
               <div className="search-results-list">
                 {searchResults.map((result) => (
                   <article className="search-result-item" key={result.id}>
                     <div className="search-result-heading">
                       <strong>{SECTION_TITLES.get(result.sectionKey) ?? result.sectionKey}</strong>
-                      <span>{result.matchType === 'fuzzy' ? 'Fuzzy match' : 'Exact match'} · {result.recordType.replaceAll('_', ' ')}</span>
+                      <span>{result.matchType === 'fuzzy' ? 'Fuzzy match' : result.matchType === 'semantic' ? 'Semantic match' : 'Exact match'} · {result.recordType.replaceAll('_', ' ')}</span>
                     </div>
                     {result.title && <strong>{result.title}</strong>}
                     {result.body && <p>{result.body}</p>}

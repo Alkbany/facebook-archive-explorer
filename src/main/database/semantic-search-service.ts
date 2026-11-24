@@ -492,7 +492,41 @@ export function searchSemanticArchiveRecords(
     dateRange.toExclusive, dateRange.toExclusive
   ) as unknown as Iterable<Record<string, unknown>>;
 
+  // Keep a bounded min-heap whose root is the worst retained match.
+  // This avoids repeatedly shifting a sorted array for every embedding when
+  // an archive contains tens of thousands of indexed records.
   const top: ArchiveSearchResult[] = [];
+  const compareResults = (left: ArchiveSearchResult, right: ArchiveSearchResult): number =>
+    right.similarity - left.similarity || left.id - right.id;
+
+  function retainCandidate(candidate: ArchiveSearchResult): void {
+    if (top.length < resultLimit) {
+      top.push(candidate);
+      let index = top.length - 1;
+      while (index > 0) {
+        const parent = Math.floor((index - 1) / 2);
+        if (compareResults(top[index], top[parent]) <= 0) break;
+        [top[index], top[parent]] = [top[parent], top[index]];
+        index = parent;
+      }
+      return;
+    }
+
+    if (compareResults(candidate, top[0]) >= 0) return;
+    top[0] = candidate;
+    let index = 0;
+    while (true) {
+      const left = (index * 2) + 1;
+      const right = left + 1;
+      let worst = index;
+      if (left < top.length && compareResults(top[left], top[worst]) > 0) worst = left;
+      if (right < top.length && compareResults(top[right], top[worst]) > 0) worst = right;
+      if (worst === index) break;
+      [top[index], top[worst]] = [top[worst], top[index]];
+      index = worst;
+    }
+  }
+
   for (const raw of candidates) {
     const blob = raw.embedding;
     const dimensions = Number(raw.dimensions);
@@ -519,25 +553,8 @@ export function searchSemanticArchiveRecords(
       matchType: 'semantic',
       similarity
     };
-    // Retain only the best offset + one-page results in stable order.
-    // Similarity ties use record ID so consecutive pages cannot reshuffle.
-    let low = 0;
-    let high = top.length;
-    while (low < high) {
-      const middle = Math.floor((low + high) / 2);
-      const current = top[middle];
-      if (candidate.similarity > current.similarity ||
-        (candidate.similarity === current.similarity && candidate.id < current.id)) {
-        high = middle;
-      } else {
-        low = middle + 1;
-      }
-    }
-    if (low < resultLimit) {
-      top.splice(low, 0, candidate);
-      if (top.length > resultLimit) top.pop();
-    }
+    retainCandidate(candidate);
   }
 
-  return top.slice(offset, resultLimit);
+  return top.sort(compareResults).slice(offset, resultLimit);
 }

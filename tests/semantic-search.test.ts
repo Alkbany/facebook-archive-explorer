@@ -128,6 +128,56 @@ describe('local semantic search indexing', () => {
     expect(results.map((record) => record.id)).toEqual([first]);
   });
 
+  it('returns stable, non-overlapping semantic pages ordered by similarity and record ID', () => {
+    setSemanticSearchEnabled(database, true);
+    const now = new Date().toISOString();
+    const insert = database.prepare(`
+      INSERT INTO semantic_embeddings (
+        record_id, snapshot_id, model_id, model_version, dimensions, embedding, created_at
+      ) VALUES (?, ?, 'Xenova/multilingual-e5-small', 'multilingual-e5-small-v1', 384, ?, ?)
+    `);
+    const ids: number[] = [];
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      for (let index = 0; index < 300; index += 1) {
+        const id = addPost(index, `Semantic candidate ${index}`, 'Synthetic ranking fixture');
+        ids.push(id);
+        const vector = new Float32Array(384);
+        vector[0] = 0.5 + (Math.floor(index / 3) / 1_000);
+        vector[1] = Math.sqrt(1 - (vector[0] * vector[0]));
+        insert.run(id, snapshotId, Buffer.from(vector.buffer), now);
+      }
+      database.exec('COMMIT');
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
+
+    const query = new Float32Array(384);
+    query[0] = 1;
+    const firstPage = searchSemanticArchiveRecords(database, snapshotId, query, null, 0.35);
+    const secondPage = searchSemanticArchiveRecords(database, snapshotId, query, null, 0.35, null, null, 250);
+    const expectedOrder: number[] = [];
+    for (let group = 99; group >= 0; group -= 1) {
+      expectedOrder.push(ids[group * 3], ids[(group * 3) + 1], ids[(group * 3) + 2]);
+    }
+
+    expect(firstPage).toHaveLength(250);
+    expect(secondPage).toHaveLength(50);
+    expect([...firstPage, ...secondPage].map((record) => record.id)).toEqual(expectedOrder);
+    expect(new Set([...firstPage, ...secondPage].map((record) => record.id)).size).toBe(300);
+  });
+
+  it('rejects semantic result offsets outside the supported paging window', () => {
+    setSemanticSearchEnabled(database, true);
+    const query = new Float32Array(384);
+    query[0] = 1;
+    expect(() => searchSemanticArchiveRecords(database, snapshotId, query, null, 0.35, null, null, -1))
+      .toThrow(/offset/i);
+    expect(() => searchSemanticArchiveRecords(database, snapshotId, query, null, 0.35, null, null, 50_001))
+      .toThrow(/offset/i);
+  });
+
   it('keeps sensitive message embeddings out unless global message search is opted in', () => {
     const messageId = addMessage(0);
     setSemanticSearchEnabled(database, true);

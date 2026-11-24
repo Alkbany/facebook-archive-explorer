@@ -9,6 +9,7 @@ Facebook Archive Explorer has two separate optional local-model features. They a
 - Quantization: Q4 ONNX model selection.
 - Query input uses the model's `query:` prefix. Archived records use `passage:`.
 - Vectors and model-versioned jobs are stored in the local SQLite database. The model files are cached under the Electron app's local user-data directory in `models`.
+- Semantic retrieval scans eligible snapshot vectors but retains only the best requested page window in a bounded top-K heap, with stable record-ID tie-breaking; it does not load every embedding into a JavaScript result array.
 - Enabling Semantic Search downloads the model, queues eligible existing records for backfill, and queues future imported records automatically.
 - Work proceeds in small batches. A crash resets unfinished jobs for restart; failed batches can be retried. Embedding failures do not roll back a successful archive import.
 - Disabling Semantic Search prevents new vector retrieval and pauses the queue. Existing vectors remain in the local database until they are rebuilt or removed as part of data lifecycle operations.

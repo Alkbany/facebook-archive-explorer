@@ -4,6 +4,7 @@
 
 ### Added
 
+- Optimize Semantic Search top-result selection with a bounded heap and stable tie-breaking; add regression coverage for 300 ranked records across non-overlapping pages and invalid offsets.
 - Add 250-result previous/next pagination for Exact, Fuzzy, and Semantic Search; page-aware JSON export now exports the currently displayed page.
 - Load Messenger conversations in ordered 50-message database pages, batch attachment lookup for each page, and keep image/sticker previews bounded per page.
 - Normalize the observed Arabic Facebook HTML date format for Posts, Comments, Likes & Reactions, and Messenger only when the same export footer provides a valid explicit UTC offset; preserve the raw date and fail closed for unsupported formats or missing offsets.

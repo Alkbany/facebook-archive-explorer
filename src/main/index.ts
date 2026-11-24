@@ -71,10 +71,10 @@ app.whenReady().then(() => {
   recoverAllInterruptedImports(database);
   registerIpcHandlers(database, databasePath, DATABASE_MIGRATIONS.length);
   if (getSemanticSearchStatus(database).enabled) {
-    void processSemanticIndexQueue(database, join(app.getPath('userData'), 'models', 'embeddings')).catch(() => undefined);
+    void processSemanticIndexQueue(database, join(app.getPath('userData'), 'models')).catch(() => undefined);
   }
   if (getAiAssistantStatus(database).enabled) {
-    void prepareAiAssistant(database, join(app.getPath('userData'), 'models', 'assistant')).catch(() => undefined);
+    void prepareAiAssistant(database, join(app.getPath('userData'), 'models')).catch(() => undefined);
   }
   registerArchiveMediaProtocol(database, () => getSelectedSnapshotId());
   createMainWindow();

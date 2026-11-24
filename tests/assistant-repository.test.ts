@@ -124,6 +124,16 @@ describe('archive assistant evidence retrieval', () => {
     ]);
   });
 
+  it('uses the newest year when a follow-up mentions a different year from earlier context', () => {
+    addPost(0, 'Project update', 'We discussed a project in Alexandria', 2022);
+    const newest = addPost(1, 'Project update', 'We discussed a project in Alexandria', 2024);
+
+    const results = retrieveArchiveAssistantEvidence(
+      database, snapshotId, 'What about 2022? What did we discuss in 2024?'
+    );
+    expect(results.map((item) => item.citation.recordId)).toEqual([newest]);
+  });
+
   it('treats a standalone four-digit year as a date filter instead of a text term', () => {
     const inYear = addPost(0, 'Family visit', 'A weekend in Alexandria', 2022);
     addPost(1, 'Family visit', 'A weekend in Alexandria', 2023);

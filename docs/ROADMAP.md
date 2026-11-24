@@ -93,7 +93,7 @@
 - [x] Exact metadata search for archive paths, file names, and raw/normalized dates where the source date is reliable.
 - [x] Fuzzy Search (no LLM): local token-vocabulary candidate lookup and Damerau-style distance scoring for missing, extra, substituted, and adjacent-transposed characters, with adjustable similarity threshold and per-result match labels.
 - [x] Message global-search privacy control: an independent opt-in setting, off by default, with a separate local FTS5 index; disabling it clears message text from that index. Section-scoped Messages search remains available as an on-demand exact scan.
-- [x] Unified Search UI exposes Exact, Fuzzy, and optional Semantic Search distinctly, with source file/card provenance and match labels.
+- [x] Unified Search UI exposes Exact, Fuzzy, and optional Semantic Search distinctly, with source file/card provenance, match labels, and 250-result offset pagination for large result sets.
 - [x] Apply inclusive UTC calendar-date filters in Exact, Fuzzy, and Semantic Search; exclude records without a reliable normalized `event_time_utc` while a date filter is active.
 - [ ] Broader Search quality and performance validation against large, complete Arabic/English Facebook exports, including false-positive analysis and date-format edge cases.
 - [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.
@@ -134,7 +134,8 @@
 - [x] Configure pull-request validation to build and upload a Windows NSIS test installer before beta changes can be merged.
 - [x] Verify SQLite database backup/restore and interrupted-import recovery tests on Windows CI.
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
-- [ ] Large-archive performance benchmarks and end-to-end testing with a complete real Facebook Backup; automated unit/build checks do not replace this validation.
+- [x] Add a repeatable 50,000-record synthetic SQLite/FTS benchmark for Exact and Fuzzy Search; report observed timings without hardware-independent pass/fail speed thresholds.
+- [ ] Benchmark full real directory and ZIP backups, including import, media indexing/streaming, search, and recovery; complete an end-to-end pass with a real Facebook Backup. Synthetic search benchmarks and unit/build checks do not replace this validation.
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
 - [x] Support optional trusted Authenticode signing and verify all packaged Windows executable binaries when signing credentials are configured; publish clearly labelled unsigned personal-use builds and beta releases otherwise.
 - [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not require a paid certificate, but unsigned binaries may be blocked by Smart App Control.

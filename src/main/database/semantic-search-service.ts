@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { mkdir } from 'node:fs/promises';
-import type { ArchiveSearchResult, SemanticSearchStatus } from '../../shared/archive/search';
+import { ARCHIVE_SEARCH_PAGE_SIZE, MAX_ARCHIVE_SEARCH_OFFSET, type ArchiveSearchResult, type SemanticSearchStatus } from '../../shared/archive/search';
 import { getUtcDateRangeBounds } from '../../shared/text/utc-date-range';
 
 export const SEMANTIC_MODEL_ID = 'Xenova/multilingual-e5-small';
@@ -8,7 +8,6 @@ export const SEMANTIC_MODEL_VERSION = 'multilingual-e5-small-v1';
 const EMBEDDING_DIMENSIONS = 384;
 const MAX_BATCH_SIZE = 8;
 const MAX_SOURCE_CHARACTERS = 4_000;
-const MAX_SEARCH_RESULTS = 250;
 const MIN_SEMANTIC_SIMILARITY = 0.35;
 
 interface EmbeddingTensor {
@@ -437,8 +436,13 @@ export function searchSemanticArchiveRecords(
   sectionKey: string | null = null,
   minimumSimilarity = MIN_SEMANTIC_SIMILARITY,
   dateFrom: string | null = null,
-  dateTo: string | null = null
+  dateTo: string | null = null,
+  offset = 0
 ): ArchiveSearchResult[] {
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > MAX_ARCHIVE_SEARCH_OFFSET) {
+    throw new Error(`Search offset must be between 0 and ${MAX_ARCHIVE_SEARCH_OFFSET}.`);
+  }
+  const resultLimit = offset + ARCHIVE_SEARCH_PAGE_SIZE;
   if (queryVector.length !== EMBEDDING_DIMENSIONS) {
     throw new Error('The semantic query vector has an unexpected dimension.');
   }
@@ -502,7 +506,7 @@ export function searchSemanticArchiveRecords(
     }
     if (similarity < minimumSimilarity) continue;
 
-    top.push({
+    const candidate: ArchiveSearchResult = {
       id: Number(raw.id),
       sectionKey: String(raw.sectionKey),
       recordType: String(raw.recordType),
@@ -514,10 +518,26 @@ export function searchSemanticArchiveRecords(
       relevance: -similarity,
       matchType: 'semantic',
       similarity
-    });
-    top.sort((left, right) => right.similarity - left.similarity);
-    if (top.length > MAX_SEARCH_RESULTS) top.pop();
+    };
+    // Retain only the best offset + one-page results in stable order.
+    // Similarity ties use record ID so consecutive pages cannot reshuffle.
+    let low = 0;
+    let high = top.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      const current = top[middle];
+      if (candidate.similarity > current.similarity ||
+        (candidate.similarity === current.similarity && candidate.id < current.id)) {
+        high = middle;
+      } else {
+        low = middle + 1;
+      }
+    }
+    if (low < resultLimit) {
+      top.splice(low, 0, candidate);
+      if (top.length > resultLimit) top.pop();
+    }
   }
 
-  return top;
+  return top.slice(offset, resultLimit);
 }

@@ -1,3 +1,6 @@
+export const ARCHIVE_SEARCH_PAGE_SIZE = 250;
+export const MAX_ARCHIVE_SEARCH_OFFSET = 50_000;
+
 export type ArchiveSearchMode = 'exact' | 'fuzzy' | 'semantic';
 export type ArchiveSearchMatchType = 'exact' | 'fuzzy' | 'semantic';
 

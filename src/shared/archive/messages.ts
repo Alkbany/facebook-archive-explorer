@@ -1,4 +1,12 @@
 export const MESSAGE_CONVERSATION_PAGE_SIZE = 50;
+export const MESSAGE_CONVERSATION_LIST_PAGE_SIZE = 50;
+
+export interface MessageConversationListPage {
+  items: MessageConversationSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
 
 export interface MessageConversationPage {
   records: MessageRecordSummary[];

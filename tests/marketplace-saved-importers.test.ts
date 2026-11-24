@@ -98,7 +98,9 @@ describe('Marketplace and Saved Items JSON importers', () => {
 
     const listings = listMarketplaceListings(database, snapshotId);
     expect(listings).toHaveLength(2);
-    expect(listings[0]).toMatchObject({
+    const mergedListing = listings.find((item) => item.facebookId === '1505220154752693');
+    expect(mergedListing).toBeDefined();
+    expect(mergedListing).toMatchObject({
       facebookId: '1505220154752693',
       title: 'Fallen City of Karez',
       price: '$50',

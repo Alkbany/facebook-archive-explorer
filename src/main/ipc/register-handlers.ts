@@ -458,14 +458,16 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC_CHANNELS.searchRecordsForSelectedBackup, async (
-    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown
+    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown, dateFrom: unknown, dateTo: unknown
   ) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before searching the archive.');
     if (
       typeof query !== 'string' ||
       !(sectionKey === null || typeof sectionKey === 'string') ||
       !(mode === undefined || mode === 'exact' || mode === 'fuzzy' || mode === 'semantic') ||
-      !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold)))
+      !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold))) ||
+      !(dateFrom === undefined || dateFrom === null || typeof dateFrom === 'string') ||
+      !(dateTo === undefined || dateTo === null || typeof dateTo === 'string')
     ) {
       throw new Error('Invalid search request.');
     }
@@ -475,7 +477,11 @@ export function registerIpcHandlers(
         throw new Error('Enable Semantic Search before using semantic queries.');
       }
       const vector = await createSemanticQueryEmbedding(query, getSemanticModelCacheDirectory());
-      return searchSemanticArchiveRecords(database, selectedSnapshotId, vector, sectionKey);
+      return searchSemanticArchiveRecords(
+        database, selectedSnapshotId, vector, sectionKey, undefined,
+        dateFrom as string | null | undefined ?? null,
+        dateTo as string | null | undefined ?? null
+      );
     }
     return searchArchiveRecords(
       database,
@@ -483,19 +489,23 @@ export function registerIpcHandlers(
       query,
       sectionKey,
       searchMode,
-      threshold === undefined ? 0.8 : threshold as number
+      threshold === undefined ? 0.8 : threshold as number,
+      dateFrom as string | null | undefined ?? null,
+      dateTo as string | null | undefined ?? null
     );
   });
 
   ipcMain.handle(IPC_CHANNELS.exportSearchResultsForSelectedBackup, async (
-    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown
+    _event, query: unknown, sectionKey: unknown, mode: unknown, threshold: unknown, dateFrom: unknown, dateTo: unknown
   ) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before exporting search results.');
     if (
       typeof query !== 'string' ||
       !(sectionKey === null || typeof sectionKey === 'string') ||
       !(mode === undefined || mode === 'exact' || mode === 'fuzzy' || mode === 'semantic') ||
-      !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold)))
+      !(threshold === undefined || (typeof threshold === 'number' && Number.isFinite(threshold))) ||
+      !(dateFrom === undefined || dateFrom === null || typeof dateFrom === 'string') ||
+      !(dateTo === undefined || dateTo === null || typeof dateTo === 'string')
     ) {
       throw new Error('Invalid export request.');
     }
@@ -510,10 +520,15 @@ export function registerIpcHandlers(
           database,
           snapshotId,
           await createSemanticQueryEmbedding(query, getSemanticModelCacheDirectory()),
-          sectionKey
+          sectionKey,
+          undefined,
+          dateFrom as string | null | undefined ?? null,
+          dateTo as string | null | undefined ?? null
         )
       : searchArchiveRecords(
-          database, snapshotId, query, sectionKey, searchMode, similarityThreshold
+          database, snapshotId, query, sectionKey, searchMode, similarityThreshold,
+          dateFrom as string | null | undefined ?? null,
+          dateTo as string | null | undefined ?? null
         );
     const save = await dialog.showSaveDialog({
       title: 'Export archive search results',
@@ -528,6 +543,8 @@ export function registerIpcHandlers(
       sectionKey,
       mode: searchMode,
       similarityThreshold,
+      dateFrom: dateFrom ?? null,
+      dateTo: dateTo ?? null,
       records: results
     };
     await writeFile(save.filePath, JSON.stringify(payload, null, 2), { encoding: 'utf8', flag: 'w' });

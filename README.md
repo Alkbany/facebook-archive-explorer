@@ -42,11 +42,16 @@ npm run package:win
 
 The development dependency installation requires an internet connection. The application is designed to process selected archives locally once installed.
 
-## Windows test installer
+## Windows builds and release versions
 
-The **Windows installer** workflow uploads an unsigned NSIS test installer from `main` for the project owner's personal testing. This is not a public-ready release. Smart App Control has no per-app allow-list, so it may block this test build. To use it on a personal device, the supported workaround is to switch **Smart App Control** off in Windows Security while using the app; keep Microsoft Defender Antivirus enabled. Recent Windows updates allow Smart App Control to be switched on again from the same settings page, but the app may be blocked again on its next launch while enforcement is on.
+The project uses Semantic Versioning with separate beta and stable channels:
 
-Open the latest successful Windows installer run in the repository's Actions tab, download the `facebook-archive-explorer-windows-test` artifact ZIP, extract it, and run the included setup file. Artifacts are retained for 14 days. This personal-use build is intentionally unsigned. Version-tag releases remain gated on a valid trusted Authenticode signature for all packaged Windows executables. See [Windows code signing](docs/CODE-SIGNING.md) for the separate public-distribution path.
+- **Beta:** `v0.1.0-beta.1`, followed by `v0.1.0-beta.2`, then later `v0.1.0-beta.n` builds. These are early-access GitHub pre-releases for testing, not the stable product release.
+- **Stable:** `v1.0.0` will be the first stable release. It will be published only after the real-export, large-archive, clean-Windows, and privacy/security release checklist is complete. Later versions follow Semantic Versioning: patch for compatible fixes, minor for compatible features, and major for breaking changes.
+
+The Windows workflow supports optional Authenticode signing. Without a trusted signing certificate, the main-branch test installer and beta releases are unsigned; the release page clearly identifies that status. **Smart App Control may block unsigned files that Microsoft does not already recognize.** It has no per-app allow-list. For personal testing on the owner's device, Smart App Control can be turned off in Windows Security while keeping Microsoft Defender Antivirus enabled. This is a local device choice, not a workaround for public distribution.
+
+The latest main-branch test installer is available in the repository's Actions tab as the `facebook-archive-explorer-windows-test` artifact ZIP (14-day retention). Beta and stable installers are attached to their GitHub Releases instead of relying only on short-lived Actions artifacts. See [Windows code signing](docs/CODE-SIGNING.md) and the [release roadmap](docs/ROADMAP.md) for details.
 
 ## Current capabilities
 

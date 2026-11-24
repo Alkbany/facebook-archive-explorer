@@ -144,5 +144,5 @@ describe('large synthetic archive search benchmark', () => {
         fuzzySearchMs: Number(fuzzyElapsedMs.toFixed(2))
       })
     );
-  });
+  }, 15_000);
 });

@@ -84,6 +84,10 @@ An image or album preview is linked only when its path is relative, remains insi
 
 FTS5 searches only records whose `search_enabled` flag is set. Message records remain excluded by default. Search results can be saved as JSON through the native save dialog. Snapshot comparison matches records by section, source-relative path, and original card index; the comparison workspace shows record-level before/after values with change-type and section filters, text/path search, pagination, and CSV/JSON export. It does not infer dates or compare binary media contents.
 
+## Opening external references
+
+Saved-item source links and event links are opened only when the user clicks the corresponding action. The renderer sends the URL through a narrow preload method; the main process accepts only well-formed HTTP/HTTPS URLs without embedded credentials and opens the validated URL with the operating system's default browser. Arbitrary renderer navigation and new windows remain denied. Import never fetches external links automatically.
+
 ## Remaining implementation and validation
 
 - Broaden schema-specific parsing beyond the reviewed structures: additional activity-card sections, more Groups/Pages formats, Marketplace listing variants, Saved Items collections, and other Facebook export sections. Current Groups, Events, Marketplace, and Saved Items importers cover only their documented JSON collections; other files remain fallback-preserved or unsupported.

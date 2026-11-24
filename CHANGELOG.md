@@ -43,6 +43,7 @@ The project uses Semantic Versioning. The `.beta.n` suffix counts repeated candi
 - Calculate saved-backup counts from current stored files and records instead of summing historical import-run totals.
 - Migrate existing generic fallback records to stable parser keys and allow reviewed importers to promote them on a parser update; preserve the attempted parser in the fallback key so unsupported files are not repeatedly reparsed on every Import All run.
 - Read MP4/MOV duration metadata from bounded prefixes and suffixes, including files whose movie metadata is stored after the media payload.
+- Persist bounded image/video metadata scan state so unsupported media is not repeatedly rechecked and later batches continue across application restarts.
 
 ## [1.0.0] - Planned stable release
 

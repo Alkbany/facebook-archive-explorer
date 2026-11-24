@@ -30,7 +30,10 @@ describe('bounded video duration indexing', () => {
   beforeEach(async () => {
     const migrations = [
       { version: 1, name: 'initial_schema', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8') },
-      { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') }
+      { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') },
+      { version: 3, name: 'backfill_verified_event_times', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/003_backfill_verified_event_times.sql'), 'utf8') },
+      { version: 4, name: 'backfill_fallback_parser_keys', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/004_backfill_fallback_parser_keys.sql'), 'utf8') },
+      { version: 5, name: 'media_metadata_scan_state', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/005_media_metadata_scan_state.sql'), 'utf8') }
     ];
     database = openAppDatabase(':memory:', migrations);
     root = await mkdtemp(join(tmpdir(), 'media-indexer-test-'));
@@ -74,9 +77,14 @@ describe('bounded video duration indexing', () => {
     await expect(indexDiscoveredImageDimensions(database, snapshotId, root)).resolves.toBe(1);
 
     const dimensions = database.prepare(
-      'SELECT width, height FROM media_assets WHERE snapshot_id = ? AND relative_path = ?'
-    ).get(snapshotId, 'photos/' + validName) as { width: number | null; height: number | null };
-    expect(dimensions).toEqual({ width: 640, height: 480 });
+      'SELECT width, height, metadata_scan_attempted AS metadataScanAttempted FROM media_assets WHERE snapshot_id = ? AND relative_path = ?'
+    ).get(snapshotId, 'photos/' + validName) as { width: number | null; height: number | null; metadataScanAttempted: number };
+    expect(dimensions).toEqual({ width: 640, height: 480, metadataScanAttempted: 1 });
+    const attempted = database.prepare(
+      'SELECT COUNT(*) AS count FROM media_assets WHERE snapshot_id = ? AND metadata_scan_attempted = 1'
+    ).get(snapshotId) as { count: number };
+    expect(attempted.count).toBe(51);
+    await expect(indexDiscoveredImageDimensions(database, snapshotId, root)).resolves.toBe(0);
   });
 
   it('finds duration metadata at the end of a non-fast-start MP4 without reading the full file', async () => {
@@ -100,8 +108,9 @@ describe('bounded video duration indexing', () => {
 
     await expect(indexDiscoveredVideoDurations(database, snapshotId, root)).resolves.toBe(1);
     const row = database.prepare(
-      'SELECT duration_ms AS durationMs FROM media_assets WHERE snapshot_id = ? AND relative_path = ?'
-    ).get(snapshotId, relativePath) as { durationMs: number | null };
-    expect(row.durationMs).toBe(98765);
+      'SELECT duration_ms AS durationMs, metadata_scan_attempted AS metadataScanAttempted FROM media_assets WHERE snapshot_id = ? AND relative_path = ?'
+    ).get(snapshotId, relativePath) as { durationMs: number | null; metadataScanAttempted: number };
+    expect(row).toEqual({ durationMs: 98765, metadataScanAttempted: 1 });
+    await expect(indexDiscoveredVideoDurations(database, snapshotId, root)).resolves.toBe(0);
   });
 });

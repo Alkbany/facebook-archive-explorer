@@ -32,6 +32,11 @@ const migrations = [
     version: 4,
     name: 'backfill_fallback_parser_keys',
     sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/004_backfill_fallback_parser_keys.sql'), 'utf8')
+  },
+  {
+    version: 5,
+    name: 'media_metadata_scan_state',
+    sql: readFileSync(resolve(process.cwd(), 'src/main/database/migrations/005_media_metadata_scan_state.sql'), 'utf8')
   }
 ] as const;
 
@@ -51,7 +56,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(initialCount.count).toBe(4);
+    expect(initialCount.count).toBe(5);
     expect(database.prepare('PRAGMA foreign_keys').get()).toMatchObject({ foreign_keys: 1 });
 
     applyMigrations(database, migrations);
@@ -60,7 +65,7 @@ describe('local SQLite storage', () => {
       'SELECT COUNT(*) AS count FROM schema_migrations'
     ).get() as { count: number };
 
-    expect(finalCount.count).toBe(4);
+    expect(finalCount.count).toBe(5);
   });
 
   it('backfills only verified Unix timestamps for records imported by older versions', () => {
@@ -149,6 +154,42 @@ describe('local SQLite storage', () => {
         { id: htmlId, parserKey: 'html_fallback' },
         { id: textId, parserKey: 'text_fallback' },
         { id: emptyId, parserKey: 'json_fallback' }
+      ]);
+    } finally {
+      legacyDatabase.close();
+    }
+  });
+
+
+  it('marks existing image and video metadata as scanned during migration', () => {
+    const legacyDatabase = openAppDatabase(':memory:', migrations.slice(0, 4));
+    try {
+      const timestamp = new Date().toISOString();
+      legacyDatabase.prepare(
+        'INSERT INTO accounts (id, display_name, created_at, updated_at) VALUES (?, ?, ?, ?)'
+      ).run('media-migration-account', 'Media migration account', timestamp, timestamp);
+      legacyDatabase.prepare(`
+        INSERT INTO archive_snapshots (
+          id, account_id, display_name, source_kind, source_path, status, created_at, updated_at
+        ) VALUES ('media-migration-snapshot', 'media-migration-account', 'Synthetic', 'directory', '/tmp/media-migration', 'completed', ?, ?)
+      `).run(timestamp, timestamp);
+      const insert = legacyDatabase.prepare(`
+        INSERT INTO media_assets (
+          snapshot_id, relative_path, media_kind, width, height, duration_ms, created_at
+        ) VALUES ('media-migration-snapshot', ?, ?, ?, ?, ?, ?)
+      `);
+      insert.run('photos/known.jpg', 'image', 640, 480, null, timestamp);
+      insert.run('videos/known.mp4', 'video', null, null, 125000, timestamp);
+      insert.run('videos/unscanned.mp4', 'video', null, null, null, timestamp);
+
+      applyMigrations(legacyDatabase, [migrations[4]]);
+      const rows = legacyDatabase.prepare(
+        'SELECT relative_path AS path, metadata_scan_attempted AS attempted FROM media_assets ORDER BY relative_path'
+      ).all() as Array<{ path: string; attempted: number }>;
+      expect(rows).toEqual([
+        { path: 'photos/known.jpg', attempted: 1 },
+        { path: 'videos/known.mp4', attempted: 1 },
+        { path: 'videos/unscanned.mp4', attempted: 0 }
       ]);
     } finally {
       legacyDatabase.close();

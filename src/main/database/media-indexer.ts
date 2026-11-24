@@ -19,120 +19,99 @@ export function indexDiscoveredMediaAssets(database: DatabaseSync, snapshotId: s
 }
 
 /**
- * Enriches a small batch of indexed images using only a bounded header prefix.
- * A per-snapshot cursor ensures unsupported files do not permanently occupy
- * the first batch and block later images from being inspected.
+ * Enriches at most 50 indexed images per gallery open using a bounded header
+ * prefix. Every attempted path is marked in SQLite, so unsupported files do
+ * not block later batches and progress survives application restarts.
  */
-const lastImageDimensionScannedPath = new WeakMap<DatabaseSync, Map<string, string>>();
-
 export async function indexDiscoveredImageDimensions(
   database: DatabaseSync,
   snapshotId: string,
   archiveRoot: string
 ): Promise<number> {
-  let snapshots = lastImageDimensionScannedPath.get(database);
-  if (!snapshots) {
-    snapshots = new Map<string, string>();
-    lastImageDimensionScannedPath.set(database, snapshots);
-  }
-  const lastScannedPath = snapshots.get(snapshotId) ?? null;
-
   const candidates = database.prepare(`
-    SELECT assets.relative_path AS relativePath
-    FROM media_assets AS assets
-    WHERE assets.snapshot_id = ? AND assets.media_kind = 'image'
-      AND assets.width IS NULL AND assets.height IS NULL
-      AND (? IS NULL OR assets.relative_path > ?)
-    ORDER BY relative_path
+    SELECT relative_path AS relativePath
+    FROM media_assets
+    WHERE snapshot_id = ? AND media_kind = 'image'
+      AND width IS NULL AND height IS NULL
+      AND metadata_scan_attempted = 0
+    ORDER BY relative_path COLLATE NOCASE
     LIMIT 50
-  `).all(snapshotId, lastScannedPath, lastScannedPath) as Array<{ relativePath: string }>;
-  const update = database.prepare(`
-    UPDATE media_assets SET width = ?, height = ?
+  `).all(snapshotId) as Array<{ relativePath: string }>;
+  const updateDimensions = database.prepare(`
+    UPDATE media_assets
+    SET width = ?, height = ?, metadata_scan_attempted = 1
+    WHERE snapshot_id = ? AND relative_path = ? AND media_kind = 'image'
+  `);
+  const markAttempted = database.prepare(`
+    UPDATE media_assets SET metadata_scan_attempted = 1
     WHERE snapshot_id = ? AND relative_path = ? AND media_kind = 'image'
   `);
 
   let indexed = 0;
   for (const item of candidates) {
-    // Advance even for malformed/unsupported images so they do not block the
-    // next batch. The selected archive is read-only for the lifetime of this snapshot.
-    snapshots.set(snapshotId, item.relativePath);
     try {
       const bytes = await readArchiveBinaryPrefix(archiveRoot, item.relativePath, 256 * 1024);
       const dimensions = readImageDimensions(bytes);
-      if (!dimensions || dimensions.width < 1 || dimensions.height < 1) continue;
-      update.run(dimensions.width, dimensions.height, snapshotId, item.relativePath);
-      indexed += 1;
+      if (dimensions && dimensions.width > 0 && dimensions.height > 0) {
+        updateDimensions.run(dimensions.width, dimensions.height, snapshotId, item.relativePath);
+        indexed += 1;
+      } else {
+        markAttempted.run(snapshotId, item.relativePath);
+      }
     } catch {
       // Metadata is optional; unreadable or unsupported media must not fail archive discovery.
+      markAttempted.run(snapshotId, item.relativePath);
     }
   }
   return indexed;
 }
 
-
-const attemptedVideoDurationScans = new WeakMap<DatabaseSync, Map<string, Set<string>>>();
-
 /**
- * Reads MP4/MOV/M4V movie headers for up to 10 previously unseen video assets
- * each time the gallery is opened. A 2 MiB prefix handles fast-start files;
- * when that misses, a 2 MiB suffix handles ordinary files with moov at the end.
- * Neither path loads the video payload in full.
+ * Reads up to 10 previously unscanned MP4/MOV/M4V assets per gallery open.
+ * A 2 MiB prefix handles fast-start files; a 2 MiB suffix handles common
+ * files with moov at the end. Attempt state is persisted in SQLite so one
+ * batch is processed only once, including across application restarts.
  */
 export async function indexDiscoveredVideoDurations(
   database: DatabaseSync,
   snapshotId: string,
   archiveRoot: string
 ): Promise<number> {
-  let snapshots = attemptedVideoDurationScans.get(database);
-  if (!snapshots) {
-    snapshots = new Map<string, Set<string>>();
-    attemptedVideoDurationScans.set(database, snapshots);
-  }
-  let attempted = snapshots.get(snapshotId);
-  if (!attempted) {
-    attempted = new Set<string>();
-    snapshots.set(snapshotId, attempted);
-  }
-
   const candidates = database.prepare(`
     SELECT relative_path AS relativePath
     FROM media_assets
-    WHERE snapshot_id = ? AND media_kind = 'video' AND duration_ms IS NULL
+    WHERE snapshot_id = ? AND media_kind = 'video'
+      AND duration_ms IS NULL AND metadata_scan_attempted = 0
       AND (
         lower(relative_path) LIKE '%.mp4'
         OR lower(relative_path) LIKE '%.mov'
         OR lower(relative_path) LIKE '%.m4v'
       )
     ORDER BY relative_path COLLATE NOCASE
+    LIMIT 10
   `).all(snapshotId) as Array<{ relativePath: string }>;
 
   const update = database.prepare(`
-    UPDATE media_assets SET duration_ms = ?
+    UPDATE media_assets
+    SET duration_ms = COALESCE(?, duration_ms), metadata_scan_attempted = 1
     WHERE snapshot_id = ? AND relative_path = ? AND media_kind = 'video'
-      AND duration_ms IS NULL
   `);
 
   let indexed = 0;
-  let scanned = 0;
   for (const item of candidates) {
-    if (attempted.has(item.relativePath)) continue;
-    attempted.add(item.relativePath);
-    scanned += 1;
+    let durationMs: number | null = null;
     try {
       const prefix = await readArchiveBinaryPrefix(archiveRoot, item.relativePath, 2 * 1024 * 1024);
-      let durationMs = readMp4DurationMs(prefix);
+      durationMs = readMp4DurationMs(prefix);
       if (durationMs === null) {
         const suffix = await readArchiveBinarySuffix(archiveRoot, item.relativePath, 2 * 1024 * 1024);
         durationMs = readMp4DurationMsFromTail(suffix);
       }
-      if (durationMs !== null) {
-        update.run(durationMs, snapshotId, item.relativePath);
-        indexed += 1;
-      }
     } catch {
       // Optional media metadata must never prevent the media gallery from opening.
     }
-    if (scanned >= 10) break;
+    update.run(durationMs, snapshotId, item.relativePath);
+    if (durationMs !== null) indexed += 1;
   }
   return indexed;
 }

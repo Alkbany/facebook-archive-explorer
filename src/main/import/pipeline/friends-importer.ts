@@ -209,7 +209,7 @@ export async function importFriendsSourceFile(
     database.exec('ROLLBACK TO friends_file_import');
     database.exec('RELEASE friends_file_import');
 
-    const failure = mapReadError(error);
+    const failure = mapReadError(error, sourceFile.detected_format);
     const timestamp = new Date().toISOString();
 
     database.exec('SAVEPOINT friends_file_failure');

@@ -120,6 +120,7 @@ export interface PostRecordSummary {
   activityRaw: string | null;
   bodyRaw: string | null;
   dateRaw: string | null;
+  eventTimeUtc: string | null;
   mediaCount: number;
 }
 
@@ -138,6 +139,7 @@ export interface CommentActivitySummary {
   bodyRaw: string | null;
   groupRaw: string | null;
   dateRaw: string | null;
+  eventTimeUtc: string | null;
 }
 
 export interface ReactionsImportSectionResult {
@@ -155,6 +157,7 @@ export interface ReactionRecordSummary {
   reactionType: string | null;
   descriptionRaw: string | null;
   dateRaw: string | null;
+  eventTimeUtc: string | null;
 }
 
 export interface MessagesImportSectionResult {

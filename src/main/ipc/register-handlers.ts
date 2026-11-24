@@ -9,7 +9,7 @@ import type { ArchiveComparisonChangeKind, ArchiveComparisonExportFormat } from 
 import type { ArchiveMediaGalleryFilter } from '../../shared/archive/media';
 import type { ArchiveSearchMode } from '../../shared/archive/search';
 import { getArchiveSection } from '../../shared/archive/section-registry';
-import type { AiAssistantComparisonSelection, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
+import type { ArchiveAssistantComparisonSelection, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import {
   beginDiscoverySession,
   completeDiscoverySession,

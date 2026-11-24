@@ -60,10 +60,10 @@ const desktopApi: DesktopApi = {
   setAiAssistantEnabled: (enabled) => ipcRenderer.invoke(IPC_CHANNELS.setAiAssistantEnabled, enabled),
   askArchiveAssistant: (question, sectionKey, history) =>
     ipcRenderer.invoke(IPC_CHANNELS.askArchiveAssistant, question, sectionKey, history),
-  searchRecordsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>
-    ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey, mode, similarityThreshold),
-  exportSearchResultsForSelectedBackup: (query, sectionKey, mode, similarityThreshold) =>
-    ipcRenderer.invoke(IPC_CHANNELS.exportSearchResultsForSelectedBackup, query, sectionKey, mode, similarityThreshold),
+  searchRecordsForSelectedBackup: (query, sectionKey, mode, similarityThreshold, dateFrom, dateTo) =>
+    ipcRenderer.invoke(IPC_CHANNELS.searchRecordsForSelectedBackup, query, sectionKey, mode, similarityThreshold, dateFrom, dateTo),
+  exportSearchResultsForSelectedBackup: (query, sectionKey, mode, similarityThreshold, dateFrom, dateTo) =>
+    ipcRenderer.invoke(IPC_CHANNELS.exportSearchResultsForSelectedBackup, query, sectionKey, mode, similarityThreshold, dateFrom, dateTo),
   compareArchiveSnapshots: (baselineSnapshotId, comparedSnapshotId) =>
     ipcRenderer.invoke(IPC_CHANNELS.compareArchiveSnapshots, baselineSnapshotId, comparedSnapshotId),
   listArchiveComparisonChanges: (baselineSnapshotId, comparedSnapshotId, filter, sectionKey, query, page) =>

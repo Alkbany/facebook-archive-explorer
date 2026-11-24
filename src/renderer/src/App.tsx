@@ -982,6 +982,14 @@ function App() {
     }
   }
 
+  async function openExternalLink(url: string) {
+    try {
+      await window.desktopApi.openExternalUrl(url);
+    } catch {
+      setError('This external link could not be opened. Only valid HTTP and HTTPS links are allowed.');
+    }
+  }
+
   async function loadEvents() {
     setIsLoadingEvents(true);
     try {
@@ -3023,7 +3031,7 @@ function App() {
                           <div key={item.id + '-' + index}>
                             {context.name && <strong>{context.name}</strong>}
                             {context.source && <span>{context.source}</span>}
-                            {context.url && <a href={context.url} target="_blank" rel="noreferrer">Open saved source</a>}
+                            {context.url && <button type="button" className="text-button" onClick={() => void openExternalLink(context.url!)}>Open saved source</button>}
                           </div>
                         ))}
                       </div>
@@ -3082,7 +3090,7 @@ function App() {
                       <small>Ends: {new Date(record.endDateUtc).toLocaleString()}</small>
                     )}
                     {record.url && /^https?:\/\//iu.test(record.url) && (
-                      <a href={record.url} target="_blank" rel="noreferrer">Open Facebook event</a>
+                      <button type="button" className="text-button" onClick={() => void openExternalLink(record.url!)}>Open Facebook event</button>
                     )}
                     <div className="event-source-list">
                       <span>{record.sources.length} original source {record.sources.length === 1 ? 'record' : 'records'}</span>

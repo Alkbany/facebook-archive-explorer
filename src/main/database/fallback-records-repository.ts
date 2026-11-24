@@ -27,7 +27,7 @@ export function listFallbackRecordSections(
     'SELECT section_key AS sectionKey, COUNT(*) AS recordCount, ' +
     "CASE MAX(CASE WHEN sensitivity = 'sensitive' THEN 3 WHEN sensitivity = 'personal' THEN 2 ELSE 1 END) " +
     "WHEN 3 THEN 'sensitive' WHEN 2 THEN 'personal' ELSE 'standard' END AS sensitivity " +
-    'FROM records WHERE snapshot_id = ? AND record_type IN (?, ?) ' +
+    'FROM records WHERE snapshot_id = ? AND record_type IN (?, ?, ?) ' +
     'GROUP BY section_key ORDER BY section_key COLLATE NOCASE'
   ).all(snapshotId, ...FALLBACK_RECORD_TYPES) as unknown as FallbackArchiveSectionSummary[];
 }
@@ -49,7 +49,7 @@ export function listFallbackArchiveRecords(
 
   const count = database.prepare(
     'SELECT COUNT(*) AS total FROM records ' +
-    'WHERE snapshot_id = ? AND section_key = ? AND record_type IN (?, ?)'
+    'WHERE snapshot_id = ? AND section_key = ? AND record_type IN (?, ?, ?)'
   ).get(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES) as { total: number };
 
   const total = count.total;
@@ -65,7 +65,7 @@ export function listFallbackArchiveRecords(
     'length(records.payload_json) > 20000 AS payloadTruncated ' +
     'FROM records INNER JOIN source_files AS source ' +
     'ON source.id = records.source_file_id AND source.snapshot_id = records.snapshot_id ' +
-    'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?) ' +
+    'WHERE records.snapshot_id = ? AND records.section_key = ? AND records.record_type IN (?, ?, ?) ' +
     'ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC ' +
     'LIMIT ? OFFSET ?'
   ).all(snapshotId, sectionKey, ...FALLBACK_RECORD_TYPES, PAGE_SIZE, (page - 1) * PAGE_SIZE) as unknown as Array<Omit<FallbackArchiveRecord, 'payloadTruncated'> & { payloadTruncated: number }>;

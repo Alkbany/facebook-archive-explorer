@@ -2907,8 +2907,8 @@ function App() {
                         {record.address && <span>{record.address}</span>}
                       </div>
                     )}
-                    {record.endDateRaw && (
-                      <small>End: {new Date(Number(record.endDateRaw) * 1000).toLocaleString()}</small>
+                    {record.endDateUtc && (
+                      <small>Ends: {new Date(record.endDateUtc).toLocaleString()}</small>
                     )}
                     {record.url && /^https?:\/\//iu.test(record.url) && (
                       <a href={record.url} target="_blank" rel="noreferrer">Open Facebook event</a>

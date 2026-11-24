@@ -5,7 +5,7 @@ import { deflateRawSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { inspectArchiveZip } from '../src/main/import/discovery/zip-inventory';
 import { getZipEntrySize, openZipEntryReadStream, readZipEntryBuffer } from '../src/main/import/discovery/zip-archive';
-import { readArchiveBinaryFile, readArchiveBinaryPrefix, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
+import { readArchiveBinaryFile, readArchiveBinaryPrefix, readArchiveBinarySuffix, readArchiveUtf8File } from '../src/main/import/discovery/read-archive-file';
 
 interface ZipFixtureEntry { name: string; content: Buffer; externalAttributes?: number; compressionMethod?: 0 | 8; }
 
@@ -121,6 +121,12 @@ describe('ZIP archive reader and inventory', () => {
         .resolves.toEqual(compressedPayload.subarray(0, 6));
       await expect(readArchiveBinaryPrefix(zipPath, 'photos/stored.png', 7))
         .resolves.toEqual(storedPayload.subarray(0, 7));
+      await expect(readArchiveBinarySuffix(zipPath, 'photos/compressed.jpg', 8))
+        .resolves.toEqual(compressedPayload.subarray(compressedPayload.length - 8));
+      await expect(readArchiveBinarySuffix(zipPath, 'photos/stored.png', 9))
+        .resolves.toEqual(storedPayload.subarray(storedPayload.length - 9));
+      await expect(readArchiveBinarySuffix(zipPath, 'photos/stored.png', 0))
+        .rejects.toThrow('suffix limit');
     } finally {
       await rm(root, { recursive: true, force: true });
     }

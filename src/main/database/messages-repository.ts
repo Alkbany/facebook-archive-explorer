@@ -188,15 +188,18 @@ export function listArchiveMediaGallery(
   database: DatabaseSync,
   snapshotId: string,
   filter: ArchiveMediaGalleryFilter = 'all',
-  requestedPage = 1
+  requestedPage = 1,
+  searchQuery = ''
 ): ArchiveMediaGalleryPage {
   const pageSize = 50;
   const page = Number.isSafeInteger(requestedPage) ? Math.max(1, Math.min(1_000_000, requestedPage)) : 1;
+  const query = searchQuery.trim().slice(0, 180);
   const totalRow = database.prepare(`
     SELECT COUNT(*) AS total
     FROM media_assets
     WHERE snapshot_id = ? AND (? = 'all' OR media_kind = ?)
-  `).get(snapshotId, filter, filter) as { total: number };
+      AND (? = '' OR instr(lower(relative_path), lower(?)) > 0)
+  `).get(snapshotId, filter, filter, query, query) as { total: number };
   const total = Number(totalRow.total);
   const maxPage = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, maxPage);
@@ -225,9 +228,10 @@ export function listArchiveMediaGallery(
     LEFT JOIN primary_links AS links ON links.media_asset_id = assets.id AND links.link_rank = 1
     LEFT JOIN records ON records.id = links.record_id AND records.snapshot_id = assets.snapshot_id
     WHERE assets.snapshot_id = ? AND (? = 'all' OR assets.media_kind = ?)
+      AND (? = '' OR instr(lower(assets.relative_path), lower(?)) > 0)
     ORDER BY sourcePath COLLATE NOCASE, assets.relative_path COLLATE NOCASE, assets.id ASC
     LIMIT ? OFFSET ?
-  `).all(snapshotId, filter, filter, pageSize, (safePage - 1) * pageSize);
+  `).all(snapshotId, filter, filter, query, query, pageSize, (safePage - 1) * pageSize);
 
   return {
     items: items as unknown as ArchiveMediaGalleryPage['items'],

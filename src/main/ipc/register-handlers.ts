@@ -1,5 +1,5 @@
 import { app, dialog, ipcMain } from 'electron';
-import { basename, extname } from 'node:path';
+import { basename, extname, join } from 'node:path';
 import { realpath, stat, writeFile } from 'node:fs/promises';
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC_CHANNELS, type AppInfo, type DirectorySelectionResult } from '../../shared/desktop-api';

@@ -110,6 +110,7 @@ The detailed snapshot-comparison browser and CSV/JSON comparison export, Archive
 - [Data model](docs/DATA-MODEL.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Approved project decisions](docs/PROJECT-DECISIONS.md)
+- [Local AI features and privacy](docs/LOCAL-AI.md)
 - [Windows code signing](docs/CODE-SIGNING.md)
 
 

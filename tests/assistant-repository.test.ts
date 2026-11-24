@@ -20,7 +20,7 @@ const migrationFiles = [
 
 const migrations = migrationFiles.map((fileName, index) => ({
   version: index + 1,
-  name: fileName.replace(/^\\d+_/u, '').replace(/\\.sql$/u, ''),
+  name: fileName.slice(4, -4),
   sql: readFileSync(join(process.cwd(), 'src/main/database/migrations', fileName), 'utf8')
 }));
 

@@ -23,7 +23,10 @@ describe('archive section catalogue', () => {
     expect(getArchiveImportCapability('photos_and_videos')).toBe('sampled-html-json');
     expect(getArchiveImportCapability('groups')).toBe('sampled-json');
     expect(getArchiveSection('groups')?.evidence).toBe('sampled');
-    expect(getArchiveImportCapability('events')).toBe('generic-fallback');
+    expect(getArchiveImportCapability('events')).toBe('sampled-json');
+    expect(getArchiveSection('events')?.evidence).toBe('sampled');
+    expect(getArchiveImportCapability('marketplace')).toBe('sampled-json');
+    expect(getArchiveImportCapability('saved_items_and_collections')).toBe('sampled-json');
     expect(getArchiveImportCapability('unknown-section')).toBe('generic-fallback');
   });
 

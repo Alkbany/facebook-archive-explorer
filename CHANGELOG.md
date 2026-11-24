@@ -2,20 +2,14 @@
 
 ## Unreleased
 
-### Tests
-
-- Add a cross-section Import All regression fixture for Events, Marketplace, and Saved Items, verifying their SQLite records and source-file completion states in one snapshot.
-
 ### Added
 
 - Normalize the observed Arabic Facebook HTML date format for Posts, Comments, Likes & Reactions, and Messenger only when the same export footer provides a valid explicit UTC offset; preserve the raw date and fail closed for unsupported formats or missing offsets.
+- Add a cross-section Import All regression fixture for Events, Marketplace, and Saved Items, verifying their SQLite records and source-file completion states in one snapshot.
 
 ### Fixed
 
 - Deduplicate linked Messenger attachments by archive-relative path and preserve media type from the actual image/audio/video element; add regression coverage for linked photos and MP4 audio.
-
-### Fixed
-
 - Preserve a Marketplace description supplied by the matched label/value details file when the primary `items_selling_v2` record has no description; add a regression test and document the seller-data privacy boundary.
 - Make saved-item and event links functional through validated, user-initiated HTTP/HTTPS opening in the system browser; reject unsafe URL schemes and embedded credentials.
 

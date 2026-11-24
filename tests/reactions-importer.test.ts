@@ -65,11 +65,11 @@ describe('Likes & Reactions import', () => {
     const firstPath = relativeBase + '/likes_and_reactions.json';
     const secondPath = relativeBase + '/likes_and_reactions_1.json';
     await writeFile(join(root, firstPath), JSON.stringify([{
-      timestamp: 12597863400,
+      timestamp: 1540000000,
       label_values: [{ label: 'Reaction', value: 'Like' }, { label: 'Name', value: 'Synthetic target' }]
     }]), 'utf8');
     await writeFile(join(root, secondPath), JSON.stringify([{
-      timestamp: 12597863400,
+      timestamp: 1540000000,
       data: [{ reaction: { reaction: 'LOVE', actor: 'Synthetic account' } }],
       title: 'Synthetic account reacted to a photo.'
     }]), 'utf8');
@@ -87,6 +87,8 @@ describe('Likes & Reactions import', () => {
     const visible = listReactionRecords(database, snapshotId);
     expect(visible).toHaveLength(2);
     expect(visible.map((record) => record.reactionType)).toEqual(['like', 'love']);
+    const normalizedTimes = database.prepare('SELECT event_time_utc AS value FROM records WHERE snapshot_id = ? ORDER BY id').all(snapshotId) as Array<{ value: string | null }>;
+    expect(normalizedTimes).toEqual([{ value: '2018-10-20T00:26:40.000Z' }, { value: '2018-10-20T00:26:40.000Z' }]);
   });
 
   it('marks unrecognized reaction pages as unsupported', async () => {

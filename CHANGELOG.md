@@ -5,6 +5,7 @@
 ### Fixed
 
 - Preserve a Marketplace description supplied by the matched label/value details file when the primary `items_selling_v2` record has no description; add a regression test and document the seller-data privacy boundary.
+- Make saved-item and event links functional through validated, user-initiated HTTP/HTTPS opening in the system browser; reject unsafe URL schemes and embedded credentials.
 
 
 All notable changes to Facebook Archive Explorer are documented here.

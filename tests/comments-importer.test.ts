@@ -67,9 +67,9 @@ describe('Comments import', () => {
     const absolutePath = join(root, relativePath);
     const source = {
       comments_v2: [{
-        timestamp: 12597674400,
+        timestamp: 1540000000,
         title: 'Synthetic account commented on a synthetic post.',
-        data: [{ comment: { timestamp: 12597674400, comment: 'Synthetic comment body', author: 'Synthetic account' } }]
+        data: [{ comment: { timestamp: 1540000000, comment: 'Synthetic comment body', author: 'Synthetic account' } }]
       }]
     };
     await mkdir(join(root, 'your_facebook_activity', 'comments_and_reactions'), { recursive: true });

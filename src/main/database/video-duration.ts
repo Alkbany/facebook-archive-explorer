@@ -55,10 +55,21 @@ function parseMovieHeaderDuration(buffer: Buffer, box: AtomBox): number | null {
   return Math.round(milliseconds);
 }
 
+function parseMovieBoxDuration(buffer: Buffer, atom: AtomBox): number | null {
+  let childOffset = atom.payloadStart;
+  while (childOffset + 8 <= atom.end) {
+    const child = readAtom(buffer, childOffset, atom.end);
+    if (!child) return null;
+    if (child.type === 'mvhd') return parseMovieHeaderDuration(buffer, child);
+    if (child.end <= childOffset) return null;
+    childOffset = child.end;
+  }
+  return null;
+}
+
 /**
- * Reads MP4/MOV/M4V duration from an ISO-BMFF movie header.
- * The caller supplies a bounded prefix; files whose movie metadata is beyond
- * that prefix intentionally return null instead of loading the entire video.
+ * Reads MP4/MOV/M4V duration from an ISO-BMFF movie header in a bounded prefix.
+ * Fast-start files commonly place moov near the start of the file.
  */
 export function readMp4DurationMs(buffer: Buffer): number | null {
   let offset = 0;
@@ -66,20 +77,43 @@ export function readMp4DurationMs(buffer: Buffer): number | null {
     const atom = readAtom(buffer, offset, buffer.length);
     if (!atom) return null;
 
-    if (atom.type === 'moov') {
-      let childOffset = atom.payloadStart;
-      while (childOffset + 8 <= atom.end) {
-        const child = readAtom(buffer, childOffset, atom.end);
-        if (!child) return null;
-        if (child.type === 'mvhd') return parseMovieHeaderDuration(buffer, child);
-        if (child.end <= childOffset) return null;
-        childOffset = child.end;
-      }
-      return null;
-    }
+    if (atom.type === 'moov') return parseMovieBoxDuration(buffer, atom);
 
+    // A top-level atom extending beyond the supplied prefix means later bytes
+    // are not at a known atom boundary, so do not scan arbitrary payload data.
     if (atom.end <= offset || atom.end >= buffer.length) return null;
     offset = atom.end;
+  }
+  return null;
+}
+
+/**
+ * Finds and validates a complete moov atom inside a bounded suffix. This
+ * supports ordinary non-fast-start MP4/MOV/M4V files without reading the full
+ * video into memory. Candidate signatures are accepted only when the atom's
+ * declared size fits completely inside the supplied suffix.
+ */
+export function readMp4DurationMsFromTail(buffer: Buffer): number | null {
+  let typeOffset = buffer.indexOf('moov', 4, 'ascii');
+  while (typeOffset >= 4) {
+    const atomOffset = typeOffset - 4;
+    const atom = readAtom(buffer, atomOffset, buffer.length);
+    if (atom?.type === 'moov') {
+      const size32 = buffer.readUInt32BE(atomOffset);
+      const declaredSize = size32 === 0
+        ? buffer.length - atomOffset
+        : size32 === 1 && atomOffset + 16 <= buffer.length
+          ? Number(buffer.readBigUInt64BE(atomOffset + 8))
+          : size32;
+      const complete = Number.isSafeInteger(declaredSize) &&
+        declaredSize >= atom.payloadStart - atomOffset &&
+        atomOffset + declaredSize <= buffer.length;
+      if (complete) {
+        const duration = parseMovieBoxDuration(buffer, atom);
+        if (duration !== null) return duration;
+      }
+    }
+    typeOffset = buffer.indexOf('moov', typeOffset + 4, 'ascii');
   }
   return null;
 }

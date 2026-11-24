@@ -445,6 +445,12 @@ export function searchSemanticArchiveRecords(
   if (queryVector.length !== EMBEDDING_DIMENSIONS) {
     throw new Error('The semantic query vector has an unexpected dimension.');
   }
+  const semanticEnabled = database.prepare(
+    "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'semantic_search_enabled'"
+  ).get() as { value: string } | undefined;
+  if (semanticEnabled?.value !== 'true') {
+    throw new Error('Semantic Search is not enabled.');
+  }
   if (sectionKey === 'messages') {
     const enabled = database.prepare(
       "SELECT setting_value AS value FROM app_settings WHERE setting_key = 'include_messages_in_global_search'"

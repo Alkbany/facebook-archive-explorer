@@ -142,7 +142,7 @@ function eventCandidate(
   };
   const url = text(event.url) ?? text(event.href);
   const identity = startRaw
-    ? title.toLocaleLowerCase().replace(/\\s+/gu, ' ') + '|' + startRaw
+    ? title.toLocaleLowerCase().replace(/\\s+/gu, ' ') + '|' + (facebookDateToUtc(startRaw) ?? startRaw)
     : title.toLocaleLowerCase().replace(/\\s+/gu, ' ') + '|unknown|' + filePath + '|' + sourceIndex;
   const payload = {
     event_key: identity,
@@ -213,7 +213,7 @@ function parseEventFile(jsonText: string, fileName: string, relativePath: string
   } else {
     const row = parsed as Record<string, unknown>;
     const rows = !Array.isArray(parsed) ? (
-      (row.your_events_v2 ?? row.events_you_hosted_v2 ?? row.events_hosted_v2)
+      (row.your_events_v2 ?? row.events_you_hosted_v2 ?? row.events_hosted_v2 ?? row.events_you_hosted)
     ) : parsed;
     if (Array.isArray(rows)) {
       recognized = true;
@@ -362,7 +362,8 @@ export async function importEventsJsonSection(
           'warning', { skippedItems: parsed.invalidItems });
       }
 
-      const finalStatus = imported === 0 ? 'empty' : 'completed';
+      const unsupportedOnly = imported === 0 && parsed.invalidItems > 0;
+      const finalStatus = unsupportedOnly ? 'unsupported' : imported === 0 ? 'empty' : 'completed';
       database.prepare(
         "UPDATE source_files SET status = ?, parser_key = 'events_tng_json', record_count = ?, safe_error_code = NULL, processed_at = ? " +
         'WHERE id = ? AND snapshot_id = ?'
@@ -373,6 +374,7 @@ export async function importEventsJsonSection(
       ).run(timestamp, imported, runId);
       database.exec('RELEASE events_json_file');
       summary.recordsImported += imported;
+      if (unsupportedOnly) summary.unsupportedFiles += 1;
     } catch (error) {
       database.exec('ROLLBACK TO events_json_file');
       database.exec('RELEASE events_json_file');

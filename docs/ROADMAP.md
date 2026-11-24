@@ -127,6 +127,7 @@
 - [x] Combine bounded lexical BM25 and optional semantic retrieval rankings with reciprocal-rank fusion, deduplicating records and assigning citation IDs only after final ranking.
 - [x] Add question-focused AI Assistant comparison across two saved backups of the same account, with separate evidence retrieval and snapshot-labelled source citations. A synthetic integration test verifies retrieval, labels, prompt scope, and citation provenance; the complete diff remains in the dedicated archive comparison view.
 - [x] Require every generated sentence or non-heading line to include at least one valid retrieved citation; withhold the complete answer when coverage is incomplete.
+- [x] Add regression coverage that instruction-like archive text remains inside the untrusted JSON evidence block and is not promoted into the system prompt.
 - [x] Keep Exact and Fuzzy Search independent of the AI Assistant enable/disable setting; model loading and inference remain optional paths.
 - [x] Add automated fault-injection coverage proving assistant model-load and inference failures leave archive evidence browsing, Exact Search, and Fuzzy Search usable.
 - [ ] Validate the same failure paths manually on a clean Windows device with the packaged application.

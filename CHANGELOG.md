@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add a prompt/data-boundary regression test proving instruction-like Facebook archive text remains untrusted evidence in the local AI Assistant context.
 - Add AI Assistant comparison mode for two backups of the same account, with independent retrieval and source citations labelled by snapshot.
 - Add service-level integration coverage for cross-snapshot retrieval, backup provenance, prompt scope, and citation validation without requiring a model download.
 - Require complete sentence-level citation coverage for AI Assistant answers; withhold a generated response if any statement lacks a valid source ID.

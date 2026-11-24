@@ -610,11 +610,12 @@ function App() {
     setSearchedQuery(null);
     setError(null);
     try {
-      const results = await window.desktopApi.searchRecordsForSelectedBackup(query, section, searchMode, searchThreshold);
+      const effectiveMode = searchSection === 'messages' && !includeMessagesInGlobalSearch ? 'exact' : searchMode;
+      const results = await window.desktopApi.searchRecordsForSelectedBackup(query, section, effectiveMode, searchThreshold);
       setSearchResults(results);
       setSearchedQuery(query);
       setSearchedSection(searchSection);
-      setSearchedMode(searchMode);
+      setSearchedMode(effectiveMode);
       setSearchedThreshold(searchThreshold);
     } catch {
       setSearchResults([]);
@@ -1477,6 +1478,7 @@ function App() {
                   maxLength={180} placeholder="Search names, posts, comments, or reactions…" aria-label="Search archive text" />
                 <select value={searchSection} onChange={(event) => {
                   setSearchSection(event.target.value);
+                  if (event.target.value === 'messages' && !includeMessagesInGlobalSearch) setSearchMode('exact');
                   setSearchResults([]);
                   setSearchedQuery(null);
                   setSearchExportStatus('');

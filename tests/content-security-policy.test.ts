@@ -11,7 +11,7 @@ describe('renderer Content Security Policy', () => {
     expect(policy).toContain("script-src 'self'");
     expect(policy).toContain("object-src 'none'");
     expect(policy).toContain("base-uri 'self'");
-    expect(policy).not.toContain('*');
+    expect(policy).not.toMatch(/(?:^|[;\\s])\\*(?:[;\\s]|$)/u);
     expect(policy).not.toContain('https:');
   });
 

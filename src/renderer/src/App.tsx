@@ -2454,7 +2454,7 @@ function App() {
                 {postsImport.mediaReferences} media references · {postsImport.unsupportedFiles} unsupported · {postsImport.failedFiles} failed
               </p>
             )}
-            {(postsImport || postRecords.length > 0) && (
+            {(postsImport || postTotal > 0 || postAppliedFilter !== '' || postDateFrom !== '' || postDateTo !== '') && (
               <section className="conversation-workspace" id="posts-explorer">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -2650,7 +2650,7 @@ function App() {
                 {commentsImport.unsupportedFiles} unsupported · {commentsImport.failedFiles} failed
               </p>
             )}
-            {(commentsImport || commentRecords.length > 0) && (
+            {(commentsImport || commentTotal > 0 || commentAppliedFilter !== '' || commentDateFrom !== '' || commentDateTo !== '') && (
               <section className="conversation-workspace">
                 <div className="conversation-workspace-heading">
                   <div>
@@ -2699,7 +2699,7 @@ function App() {
                 {reactionsImport.unsupportedFiles} unsupported · {reactionsImport.failedFiles} failed
               </p>
             )}
-            {(reactionsImport || reactionRecords.length > 0) && (
+            {(reactionsImport || reactionTotal > 0 || reactionAppliedFilter !== '' || reactionDateFrom !== '' || reactionDateTo !== '') && (
               <section className="conversation-workspace">
                 <div className="conversation-workspace-heading">
                   <div>

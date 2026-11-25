@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add a Windows CI lifecycle smoke test that silently installs the generated NSIS package, starts the installed application, and silently uninstalls it.
 - Add a prompt/data-boundary regression test proving instruction-like Facebook archive text remains untrusted evidence in the local AI Assistant context.
 - Add AI Assistant comparison mode for two backups of the same account, with independent retrieval and source citations labelled by snapshot.
 - Add service-level integration coverage for cross-snapshot retrieval, backup provenance, prompt scope, and citation validation without requiring a model download.

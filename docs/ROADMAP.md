@@ -142,7 +142,9 @@
 - [x] Export and restore the local application database with integrity checks and a pre-restore recovery point.
 - [x] Add a repeatable 50,000-record synthetic SQLite/FTS benchmark for Exact and Fuzzy Search; report observed timings without hardware-independent pass/fail speed thresholds.
 - [ ] Benchmark full real directory and ZIP backups, including import, media indexing/streaming, search, and recovery; complete an end-to-end pass with a real Facebook Backup. Synthetic search benchmarks and unit/build checks do not replace this validation.
-- [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device.
+- [x] Add Windows CI lifecycle smoke coverage for silent install, application process startup, and uninstall of the generated NSIS installer.
+- [ ] Pass the hosted Windows lifecycle smoke test after verifying the application process tree exits and NSIS completes file cleanup.
+- [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device. The hosted-runner smoke test does not replace a clean-device manual pass.
 - [x] Support optional trusted Authenticode signing and verify all packaged Windows executable binaries when signing credentials are configured; publish clearly labelled unsigned personal-use builds and beta releases otherwise.
 - [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not require a paid certificate, but unsigned binaries may be blocked by Smart App Control.
 - [ ] (Only if public distribution is planned) Verify signed release behavior on a clean Windows 11 device.

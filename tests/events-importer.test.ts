@@ -141,6 +141,10 @@ describe('Accounts Center Events JSON importer', () => {
 
     const result = await importEventsJsonSection(database, snapshotId, root);
     expect(result.recordsImported).toBe(1);
+    const importedPayload = database.prepare(
+      "SELECT payload_json AS payload FROM records WHERE snapshot_id = ? AND section_key = 'events' AND title = ?"
+    ).get(snapshotId, 'Synthetic event with credential-bearing URL') as { payload: string };
+    expect((JSON.parse(importedPayload.payload) as { url: string | null }).url).toBeNull();
     expect(listEventRecords(database, snapshotId)).toMatchObject([{
       title: 'Synthetic event with credential-bearing URL',
       url: null

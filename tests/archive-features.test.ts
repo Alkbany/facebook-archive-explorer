@@ -270,9 +270,12 @@ describe('archive-wide media, search, and comparison', () => {
     expect(reactionsLast.items).toHaveLength(5);
     expect(reactionsLast.items[4].sourceCardIndex).toBe(2_104);
 
-    const commentSearch = listCommentActivities(database, baselineId, 1, 'searchable group');
+    const commentSearch = listCommentActivities(database, baselineId, 1, 'comment body 2104');
     expect(commentSearch.total).toBe(1);
     expect(commentSearch.items[0].sourceCardIndex).toBe(2_104);
+    const commentDateFilter = listCommentActivities(database, baselineId, 1, '', '2023-11-14', '2023-11-14');
+    expect(commentDateFilter.total).toBe(1);
+    expect(commentDateFilter.items[0].sourceCardIndex).toBe(2_104);
     const reactionSearch = listReactionRecords(database, baselineId, 1, 'description 204');
     expect(reactionSearch.total).toBe(11);
     expect(() => listPostRecords(database, baselineId, 0)).toThrow(/page/i);

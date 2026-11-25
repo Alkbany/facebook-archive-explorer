@@ -188,7 +188,8 @@ describe('Marketplace and Saved Items JSON importers', () => {
             title: 'Sample User saved a video.',
             attachments: [{ data: [
               { external_context: { name: 'Saved video', url: 'https://www.facebook.com/watch/?v=12345' } },
-              { external_context: { name: 'Unsafe link', url: 'javascript:alert(1)' } }
+              { external_context: { name: 'Unsafe link', url: 'javascript:alert(1)' } },
+              { external_context: { name: 'Credential-bearing link', url: 'https://user:password@example.com/private' } }
             ] }]
           }
         ]
@@ -206,8 +207,28 @@ describe('Marketplace and Saved Items JSON importers', () => {
     });
     expect(items[1].contexts).toEqual([
       { name: 'Saved video', url: 'https://www.facebook.com/watch/?v=12345', source: null },
-      { name: 'Unsafe link', url: null, source: null }
+      { name: 'Unsafe link', url: null, source: null },
+      { name: 'Credential-bearing link', url: null, source: null }
     ]);
+  });
+
+  it('filters credential-bearing URLs from previously stored Saved Items payloads', async () => {
+    const sourceFileId = await addJsonFile('saved_items_and_collections',
+      'your_facebook_activity/saved_items_and_collections/legacy_saved_items.json',
+      'legacy_saved_items.json', { saves_v2: [] });
+    const now = new Date().toISOString();
+    database.prepare(
+      'INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type, ' +
+      'title, body_text, normalized_text, event_time_raw, event_time_utc, sensitivity, search_enabled, payload_json, created_at) ' +
+      "VALUES (?, ?, 0, 'saved_items_and_collections', 'saved_item', ?, NULL, NULL, NULL, NULL, 'personal', 1, ?, ?)"
+    ).run(snapshotId, sourceFileId, 'Legacy saved item', JSON.stringify({
+      contexts: [{ name: 'Legacy private URL', source: 'example.com', url: 'https://user:password@example.com/private' }]
+    }), now);
+
+    expect(listSavedItems(database, snapshotId)).toMatchObject([{
+      title: 'Legacy saved item',
+      contexts: [{ name: 'Legacy private URL', source: 'example.com', url: null }]
+    }]);
   });
 
   it('keeps unknown Saved Items layouts in the generic fallback', async () => {

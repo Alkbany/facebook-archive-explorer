@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Normalize reviewed Groups activity timestamps to UTC only when the shared date parser can interpret them unambiguously; preserve raw values and avoid timezone guesses.
+
 ### Changed
 
 - Run the main type-check, unit-test, and Electron build workflow on Windows instead of Ubuntu to match the Windows-only desktop product target.

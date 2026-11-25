@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # This is a Windows desktop application. Keep validation on Windows too;
+    # the separate Windows installer workflow owns packaging and NSIS smoke tests.
+    runs-on: windows-latest
     steps:
       - name: Check out source
         uses: actions/checkout@v7

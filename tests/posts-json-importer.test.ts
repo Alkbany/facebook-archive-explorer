@@ -85,9 +85,10 @@ describe('TNG Posts JSON importer', () => {
       failedFiles: 0
     });
 
-    const posts = listPostRecords(database, snapshotId);
-    expect(posts).toHaveLength(1);
-    expect(posts[0]).toMatchObject({
+    const postsPage = listPostRecords(database, snapshotId);
+    expect(postsPage).toMatchObject({ page: 1, pageSize: 100, total: 1 });
+    expect(postsPage.items).toHaveLength(1);
+    expect(postsPage.items[0]).toMatchObject({
       activityRaw: 'Jean-Luc Picard added 1 new photo.',
       bodyRaw: 'Two views of the bridge before alpha shift.\nThe bridge at dawn.',
       dateRaw: '1540000000',
@@ -139,11 +140,13 @@ describe('TNG Posts JSON importer', () => {
 
     const result = await importPostsSection(database, snapshotId, root);
     expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, failedFiles: 0 });
-    expect(listPostRecords(database, snapshotId)).toHaveLength(1);
-    expect(listPostRecords(database, snapshotId)[0]).toMatchObject({
+    const postsPage = listPostRecords(database, snapshotId);
+    expect(postsPage.total).toBe(1);
+    expect(postsPage.items).toHaveLength(1);
+    expect(postsPage.items[0]).toMatchObject({
       activityRaw: 'Jean-Luc Picard added 1 new photo.'
     });
-    expect(listPostRecords(database, snapshotId)[0].bodyRaw).toContain('The bridge at dawn.');
+    expect(postsPage.items[0].bodyRaw).toContain('The bridge at dawn.');
     expect(database.prepare('SELECT status, parser_key AS parserKey FROM source_files WHERE id = ?')
       .get(sourceFile.id)).toEqual({ status: 'completed', parserKey: 'posts_reviewed' });
     expect(database.prepare("SELECT COUNT(*) AS count FROM record_search WHERE record_search MATCH 'fallbackjsonbody'")

@@ -11,17 +11,39 @@ $installDirectory = Join-Path $smokeRoot 'installed'
 $appExecutable = Join-Path $installDirectory 'Facebook Archive Explorer.exe'
 $taskkill = Join-Path $env:SystemRoot 'System32\taskkill.exe'
 
-function Stop-ProcessTree([System.Diagnostics.Process]$Process) {
-  if ($null -eq $Process) { return }
-  $Process.Refresh()
-  if (-not $Process.HasExited) {
-    & $taskkill /PID $Process.Id /T /F 2>$null | Out-Null
+function Get-InstalledAppProcesses {
+  @(Get-CimInstance Win32_Process -Filter "Name = 'Facebook Archive Explorer.exe'" |
+    Where-Object {
+      $_.ExecutablePath -and
+      [string]::Equals($_.ExecutablePath, $appExecutable, [System.StringComparison]::OrdinalIgnoreCase)
+    })
+}
+
+function Stop-InstalledAppProcesses {
+  foreach ($process in (Get-InstalledAppProcesses)) {
+    & $taskkill /PID $process.ProcessId /T /F 2>$null | Out-Null
+  }
+}
+
+function Wait-ForInstalledAppExit([int]$TimeoutSeconds) {
+  $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+  do {
+    $remaining = @(Get-InstalledAppProcesses)
+    if ($remaining.Count -eq 0) { return }
+    Stop-InstalledAppProcesses
+    Start-Sleep -Milliseconds 500
+  } while ([DateTime]::UtcNow -lt $deadline)
+
+  $remaining = @(Get-InstalledAppProcesses)
+  if ($remaining.Count -gt 0) {
+    $pids = ($remaining | ForEach-Object { $_.ProcessId }) -join ', '
+    throw "The installed application still has running processes: $pids"
   }
 }
 
 function Wait-ForProcess([System.Diagnostics.Process]$Process, [int]$TimeoutMilliseconds, [string]$Description) {
   if (-not $Process.WaitForExit($TimeoutMilliseconds)) {
-    Stop-ProcessTree $Process
+    & $taskkill /PID $Process.Id /T /F 2>$null | Out-Null
     throw "$Description did not finish within $TimeoutMilliseconds ms."
   }
 }
@@ -49,7 +71,9 @@ try {
   if ($appProcess.WaitForExit(15000)) {
     throw "The installed application exited during startup with code $($appProcess.ExitCode)."
   }
-  Stop-ProcessTree $appProcess
+
+  Stop-InstalledAppProcesses
+  Wait-ForInstalledAppExit 30
 
   $uninstallers = @(Get-ChildItem -LiteralPath $installDirectory -File -Filter 'Uninstall*.exe')
   if ($uninstallers.Count -ne 1) {
@@ -62,17 +86,21 @@ try {
     throw "NSIS uninstall failed with exit code $($uninstallerProcess.ExitCode)."
   }
 
+  # NSIS may complete its final file cleanup just after the uninstaller process exits.
+  $uninstallDeadline = [DateTime]::UtcNow.AddSeconds(30)
+  while ((Test-Path -LiteralPath $appExecutable) -and [DateTime]::UtcNow -lt $uninstallDeadline) {
+    Start-Sleep -Milliseconds 500
+  }
   if (Test-Path -LiteralPath $appExecutable) {
-    throw 'The application executable remains after uninstall.'
+    $remainingProcesses = @(Get-InstalledAppProcesses)
+    $pids = ($remainingProcesses | ForEach-Object { $_.ProcessId }) -join ', '
+    throw "The application executable remains after uninstall. Remaining process IDs: $pids"
   }
 
   Write-Host 'Windows installer lifecycle smoke test passed: install, launch, and uninstall.'
 }
 finally {
-  $runningApp = Get-Variable -Name appProcess -Scope Local -ValueOnly -ErrorAction SilentlyContinue
-  if ($null -ne $runningApp) {
-    Stop-ProcessTree $runningApp
-  }
+  Stop-InstalledAppProcesses
   if (Test-Path -LiteralPath $smokeRoot) {
     Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
   }

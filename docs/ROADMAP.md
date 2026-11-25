@@ -99,7 +99,7 @@
 - [x] Bound Semantic Search result ranking to the requested page window with deterministic record-ID tie-breaking, avoiding repeated sorted-array insertion for large indexed snapshots.
 - [x] Apply inclusive UTC calendar-date filters in Exact, Fuzzy, and Semantic Search; exclude records without a reliable normalized `event_time_utc` while a date filter is active.
 - [ ] Broader Search quality and performance validation against large, complete Arabic/English Facebook exports, including false-positive analysis and date-format edge cases.
-- [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, and Likes & Reactions imports; retain raw source values unchanged.
+- [x] Store normalized UTC event timestamps for unambiguous Unix seconds/milliseconds and timezone-qualified ISO values in Posts, Comments, Likes & Reactions, and reviewed Groups activity imports; retain raw source values unchanged.
 - [x] Add date-range controls to Posts, Comments, and Likes & Reactions using stored normalized UTC timestamps. Records with only raw/localized date strings are excluded while a date range is active rather than assigned a guessed timezone.
 - [x] Normalize the observed Arabic D/M/YYYY 12-hour HTML dates in Posts, Comments, Likes & Reactions, and Messages only when the same file's Facebook footer explicitly supplies a valid UTC offset; preserve raw dates and leave unsupported/missing-offset values unnormalized.
 - [ ] Validate and expand additional localized HTML date formats, offsets, and historical daylight-saving semantics only when the source export supplies sufficient evidence.

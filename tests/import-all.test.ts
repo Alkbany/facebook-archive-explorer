@@ -17,7 +17,8 @@ describe('Import all supported data', () => {
   beforeEach(async () => {
     const migrations = [
       { version: 1, name: 'initial_schema', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8') },
-      { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') }
+      { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') },
+      { version: 6, name: 'search_preferences', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8') }
     ];
     database = openAppDatabase(':memory:', migrations);
     root = await mkdtemp(join(tmpdir(), 'import-all-test-'));

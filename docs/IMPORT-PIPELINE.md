@@ -92,7 +92,7 @@ FTS5 searches only records whose `search_enabled` flag is set. Message records r
 
 ## Opening external references
 
-Saved-item source links and event links are opened only when the user clicks the corresponding action. The renderer sends the URL through a narrow preload method; the main process accepts only well-formed HTTP/HTTPS URLs without embedded credentials and opens the validated URL with the operating system's default browser. Arbitrary renderer navigation and new windows remain denied. Import never fetches external links automatically.
+Saved-item source links and event links are normalized through the shared external-URL validator during import and again when records are read, so legacy database entries receive the same protection. Only well-formed HTTP/HTTPS URLs up to 4,096 characters without embedded credentials are retained as links. Opening still requires an explicit user click and passes through the main-process validator before the operating system's default browser is called. Arbitrary renderer navigation and new windows remain denied. Import never fetches external links automatically.
 
 ## Remaining implementation and validation
 

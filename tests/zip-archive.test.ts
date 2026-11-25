@@ -174,6 +174,42 @@ describe('ZIP archive reader and inventory', () => {
     }
   });
 
+  it('skips Unix symbolic links during ZIP inventory and rejects reading them', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'archive-zip-symlink-'));
+    try {
+      const zipPath = join(root, 'symlink.zip');
+      const linkedTarget = Buffer.from('../outside/secret.html');
+      const safePost = Buffer.from('<html>safe</html>');
+      await writeFile(zipPath, makeDeflatedZip([
+        {
+          name: 'linked/secret.html',
+          content: linkedTarget,
+          // Unix S_IFLNK | 0777 in the upper 16 bits of the ZIP external attributes.
+          externalAttributes: (0o120777 << 16) >>> 0
+        },
+        { name: 'posts/your_posts.html', content: safePost }
+      ]));
+
+      const discovered: string[] = [];
+      const report = await inspectArchiveZip(zipPath, {
+        snapshotId: 'snapshot-zip-symlink',
+        accountId: 'account-zip-symlink',
+        onFilesFound: (files) => discovered.push(...files.map((file) => file.relativePath))
+      });
+
+      expect(report.skippedSymlinks).toBe(1);
+      expect(report.totalFiles).toBe(1);
+      expect(report.sectionFileCounts).toEqual({ posts: 1 });
+      expect(discovered).toEqual(['posts/your_posts.html']);
+      await expect(readZipEntryBuffer(zipPath, 'linked/secret.html', 1024))
+        .rejects.toMatchObject({ code: 'SYMLINK_NOT_ALLOWED' });
+      await expect(readArchiveUtf8File(zipPath, 'linked/secret.html', 1024))
+        .rejects.toMatchObject({ code: 'SYMLINK_NOT_ALLOWED' });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('inventories ZIP files by section and format without reading their payloads', async () => {
     const root = await mkdtemp(join(tmpdir(), 'archive-zip-inventory-'));
     try {

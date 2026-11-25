@@ -12,6 +12,7 @@ The Git repository is for source code and generic documentation only. Never comm
 
 - Ask the user to select the source directory or ZIP explicitly.
 - Never modify, rename, move, or delete original export files.
+- Directory and ZIP inventory skip symbolic-link entries. ZIP reads reject Unix symbolic-link entries rather than interpreting their stored target text as file content.
 - Resolve relative paths against the correct export root and reject path traversal.
 - Do not follow symlinks outside the selected archive root.
 - Do not scan unrelated folders or fetch external URLs embedded in exports.

@@ -35,6 +35,7 @@
 - Deduplicate linked Messenger attachments by archive-relative path and preserve media type from the actual image/audio/video element; add regression coverage for linked photos and MP4 audio.
 - Preserve a Marketplace description supplied by the matched label/value details file when the primary `items_selling_v2` record has no description; add a regression test and document the seller-data privacy boundary.
 - Make saved-item and event links functional through validated, user-initiated HTTP/HTTPS opening in the system browser; reject unsafe URL schemes and embedded credentials.
+- Use one credential-safe HTTP(S) URL validator for Events and Saved Items at import and read time, including existing local records; reject embedded credentials and oversized links.
 - Normalize reviewed Groups activity timestamps to UTC only when the shared date parser can interpret them unambiguously; preserve raw values and avoid timezone guesses.
 
 

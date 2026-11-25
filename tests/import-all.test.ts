@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importAllSupportedData, importPhotosAndVideosSection, recoverAllInterruptedImports } from '../src/main/import/pipeline/import-all';
+import { searchArchiveRecords } from '../src/main/database/search-repository';
 import type { ImportProgressEvent } from '../src/shared/archive/inspection';
 
 describe('Import all supported data', () => {
@@ -146,6 +147,16 @@ describe('Import all supported data', () => {
         recordType: 'json_item'
       })
     ]));
+    const dateFilteredGroups = searchArchiveRecords(
+      database, snapshotId, 'verified Unix-seconds', 'groups', 'exact', 0.8,
+      '2009-12-03', '2009-12-03'
+    );
+    expect(dateFilteredGroups).toEqual([
+      expect.objectContaining({
+        title: 'Jean-Luc Picard posted a dated group entry.',
+        dateRaw: '1259820000'
+      })
+    ]);
     const indexedUrl = database.prepare(
       "SELECT record_id FROM record_search WHERE record_search MATCH 'privateexample'"
     ).all();

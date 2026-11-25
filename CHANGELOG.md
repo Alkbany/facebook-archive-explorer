@@ -23,6 +23,7 @@
 - Normalize the observed Arabic Facebook HTML date format for Posts, Comments, Likes & Reactions, and Messenger only when the same export footer provides a valid explicit UTC offset; preserve the raw date and fail closed for unsupported formats or missing offsets.
 - Add a cross-section Import All regression fixture for Events, Marketplace, and Saved Items, verifying their SQLite records and source-file completion states in one snapshot.
 - Add a repeatable 50,000-record synthetic Exact/Fuzzy Search benchmark that records lookup timings without machine-dependent speed thresholds.
+- Replace fixed activity-feed limits with 100-record SQLite pages for Posts, Comments, and Likes & Reactions, including full-archive text/date filters and total counts.
 - Verify Arabic Fuzzy Search against indexed SQLite records: diacritic/alef variants normalize consistently, a one-character typo is found at a permissive threshold, and a stricter threshold rejects it.
 
 ### Fixed

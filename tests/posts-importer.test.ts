@@ -65,7 +65,7 @@ describe('Posts import', () => {
       media_kind: 'image',
       source_file_id: binarySource.id
     });
-    expect(listPostRecords(database, snapshotId)).toMatchObject([{ bodyRaw: 'نص منشور تجريبي', mediaCount: 1 }]);
+    expect(listPostRecords(database, snapshotId).items).toMatchObject([{ bodyRaw: 'نص منشور تجريبي', mediaCount: 1 }]);
   });
 
 

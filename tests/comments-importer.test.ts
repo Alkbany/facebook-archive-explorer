@@ -57,7 +57,7 @@ describe('Comments import', () => {
       event_time_raw: '١٩/٠٢/٢٠١٩ ٧:٣٩ ص'
     });
     expect(JSON.parse(record.payload_json)).toMatchObject({ group_raw: 'pubg mobile - egypt™' });
-    expect(listCommentActivities(database, snapshotId)).toMatchObject([
+    expect(listCommentActivities(database, snapshotId).items).toMatchObject([
       { bodyRaw: 'مش فونيكس دا نظام\nولا ايموليتور', groupRaw: 'pubg mobile - egypt™' }
     ]);
   });
@@ -82,7 +82,7 @@ describe('Comments import', () => {
 
     const result = await importCommentsSection(database, snapshotId, root);
     expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 1, unsupportedFiles: 0, failedFiles: 0 });
-    expect(listCommentActivities(database, snapshotId)).toMatchObject([{
+    expect(listCommentActivities(database, snapshotId).items).toMatchObject([{
       activityRaw: 'Synthetic account commented on a synthetic post.',
       bodyRaw: 'Synthetic comment body',
       dateRaw: '1540000000',

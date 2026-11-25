@@ -55,8 +55,9 @@ describe('Likes & Reactions import', () => {
     });
     expect(record.payload_json).toContain('reaction/love.png');
     const visible = listReactionRecords(database, snapshotId);
-    expect(visible).toHaveLength(1);
-    expect(visible[0]).toMatchObject({ reactionType: 'love', descriptionRaw: 'Synthetic reaction description', dateRaw: 'Raw reaction date' });
+    expect(visible).toMatchObject({ page: 1, pageSize: 100, total: 1 });
+    expect(visible.items).toHaveLength(1);
+    expect(visible.items[0]).toMatchObject({ reactionType: 'love', descriptionRaw: 'Synthetic reaction description', dateRaw: 'Raw reaction date' });
   });
 
   it('imports both observed TNG JSON files into the existing reactions activity list', async () => {
@@ -85,9 +86,10 @@ describe('Likes & Reactions import', () => {
     const result = await importReactionsSection(database, snapshotId, root);
     expect(result).toMatchObject({ filesAttempted: 2, recordsImported: 2, unsupportedFiles: 0, failedFiles: 0 });
     const visible = listReactionRecords(database, snapshotId);
-    expect(visible).toHaveLength(2);
-    expect(visible.map((record) => record.reactionType)).toEqual(['like', 'love']);
-    expect(visible.map((record) => record.eventTimeUtc)).toEqual([
+    expect(visible.total).toBe(2);
+    expect(visible.items).toHaveLength(2);
+    expect(visible.items.map((record) => record.reactionType)).toEqual(['like', 'love']);
+    expect(visible.items.map((record) => record.eventTimeUtc)).toEqual([
       '2018-10-20T01:46:40.000Z',
       '2018-10-20T01:46:40.000Z'
     ]);

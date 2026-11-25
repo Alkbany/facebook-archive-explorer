@@ -90,6 +90,10 @@ An image or album preview is linked only when its path is relative, remains insi
 
 FTS5 searches only records whose `search_enabled` flag is set. Message records remain excluded by default. Search results can be saved as JSON through the native save dialog. Snapshot comparison matches records by section, source-relative path, and original card index; the comparison workspace shows record-level before/after values with change-type and section filters, text/path search, pagination, and CSV/JSON export. It does not infer dates or compare binary media contents.
 
+## Activity feed pagination
+
+Posts, Comments, and Likes & Reactions are read from SQLite in bounded pages of 100 records. The page response includes the filtered total, so the UI can navigate beyond the previous fixed limits. Text filtering uses stored normalized text and source paths; date filters use the same half-open UTC range as global search and exclude records without a verified UTC value whenever a date bound is active. Filtering and counting occur in SQLite rather than only against the currently displayed page.
+
 ## Opening external references
 
 Saved-item source links and event links are normalized through the shared external-URL validator during import and again when records are read, so legacy database entries receive the same protection. Only well-formed HTTP/HTTPS URLs up to 4,096 characters without embedded credentials are retained as links. Opening still requires an explicit user click and passes through the main-process validator before the operating system's default browser is called. Arbitrary renderer navigation and new windows remain denied. Import never fetches external links automatically.

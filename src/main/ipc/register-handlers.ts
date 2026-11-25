@@ -820,9 +820,13 @@ export function registerIpcHandlers(
     );
   });
 
-  ipcMain.handle(IPC_CHANNELS.listPostsForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listPostsForSelectedBackup, (_event, requestedPage: unknown = 1, query: unknown = '', dateFrom: unknown = null, dateTo: unknown = null) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing posts.');
-    return listPostRecords(database, selectedSnapshotId);
+    if (!Number.isSafeInteger(requestedPage) || (requestedPage as number) < 1 || (requestedPage as number) > 50_000) throw new Error('Invalid Posts page.');
+    if (typeof query !== 'string' || query.length > 180) throw new Error('Invalid Posts filter.');
+    if (dateFrom !== null && typeof dateFrom !== 'string') throw new Error('Invalid Posts start date.');
+    if (dateTo !== null && typeof dateTo !== 'string') throw new Error('Invalid Posts end date.');
+    return listPostRecords(database, selectedSnapshotId, requestedPage as number, query, dateFrom as string | null, dateTo as string | null);
   });
 
   ipcMain.handle(IPC_CHANNELS.importPostsForSelectedBackup, async (event) => {
@@ -834,9 +838,13 @@ export function registerIpcHandlers(
     }));
   });
 
-  ipcMain.handle(IPC_CHANNELS.listCommentsForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listCommentsForSelectedBackup, (_event, requestedPage: unknown = 1, query: unknown = '', dateFrom: unknown = null, dateTo: unknown = null) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing comments.');
-    return listCommentActivities(database, selectedSnapshotId);
+    if (!Number.isSafeInteger(requestedPage) || (requestedPage as number) < 1 || (requestedPage as number) > 50_000) throw new Error('Invalid Comments page.');
+    if (typeof query !== 'string' || query.length > 180) throw new Error('Invalid Comments filter.');
+    if (dateFrom !== null && typeof dateFrom !== 'string') throw new Error('Invalid Comments start date.');
+    if (dateTo !== null && typeof dateTo !== 'string') throw new Error('Invalid Comments end date.');
+    return listCommentActivities(database, selectedSnapshotId, requestedPage as number, query, dateFrom as string | null, dateTo as string | null);
   });
 
   ipcMain.handle(IPC_CHANNELS.importCommentsForSelectedBackup, async (event) => {
@@ -848,9 +856,13 @@ export function registerIpcHandlers(
     }));
   });
 
-  ipcMain.handle(IPC_CHANNELS.listReactionsForSelectedBackup, () => {
+  ipcMain.handle(IPC_CHANNELS.listReactionsForSelectedBackup, (_event, requestedPage: unknown = 1, query: unknown = '', dateFrom: unknown = null, dateTo: unknown = null) => {
     if (!selectedSnapshotId) throw new Error('Inspect a backup before viewing reactions.');
-    return listReactionRecords(database, selectedSnapshotId);
+    if (!Number.isSafeInteger(requestedPage) || (requestedPage as number) < 1 || (requestedPage as number) > 50_000) throw new Error('Invalid Likes & Reactions page.');
+    if (typeof query !== 'string' || query.length > 180) throw new Error('Invalid Likes & Reactions filter.');
+    if (dateFrom !== null && typeof dateFrom !== 'string') throw new Error('Invalid Likes & Reactions start date.');
+    if (dateTo !== null && typeof dateTo !== 'string') throw new Error('Invalid Likes & Reactions end date.');
+    return listReactionRecords(database, selectedSnapshotId, requestedPage as number, query, dateFrom as string | null, dateTo as string | null);
   });
 
   ipcMain.handle(IPC_CHANNELS.importReactionsForSelectedBackup, async (event) => {

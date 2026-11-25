@@ -62,6 +62,10 @@ The sampled Posts and Comments card structures have DOM-based parsers and snapsh
 
 For the reviewed Arabic legacy HTML date form (`D/M/YYYY h:mm ص|م`), the parsers also read an explicit `UTC±HH[:MM]` value from that same file's `._4t5o` export footer. Importers convert the date to UTC using that fixed stated offset, while retaining the original date string. The same rule is used for HTML Messenger and Likes & Reactions cards. If the footer has no valid single offset, or the raw date is not in the reviewed Arabic format, the UTC value remains null. No timezone is taken from Windows settings and no historical DST rule is inferred. TNG Unix timestamps and timezone-qualified ISO values continue through the existing numeric/ISO converter.
 
+## Groups JSON importer
+
+The reviewed Accounts Center Groups importer preserves each source timestamp as exported and also fills the normalized UTC field when the value is an unambiguous Unix timestamp or timezone-qualified ISO value accepted by the shared Facebook date converter. Unrecognized numeric widths and unsupported date strings remain available in the raw field with a null UTC value; the importer never guesses a timezone.
+
 ## Unified media indexing
 
 After directory or ZIP discovery, every file classified as image, video, or audio is registered in `media_assets` using its discovered source-file row. This does not open or copy media bytes. The media browser shows both unlinked files and associations created by supported record importers. Image previews remain bounded; audio and video use the local byte-range protocol where the browser supports the codec.

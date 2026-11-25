@@ -33,6 +33,7 @@ import { MESSAGE_CONVERSATION_LIST_PAGE_SIZE, MESSAGE_CONVERSATION_PAGE_SIZE, ty
 import { createRequestGate } from '../../shared/request-gate';
 import type { ArchiveMediaGalleryFilter, ArchiveMediaGalleryItem } from '../../shared/archive/media';
 import { ARCHIVE_SEARCH_PAGE_SIZE, MAX_ARCHIVE_SEARCH_OFFSET, type ArchiveSearchMode, type ArchiveSearchResult, type SemanticSearchStatus } from '../../shared/archive/search';
+import { ACTIVITY_RECORD_PAGE_SIZE } from '../../shared/archive/inspection';
 import type { AiAssistantStatus, ArchiveAssistantAnswer, AiAssistantHistoryMessage } from '../../shared/archive/assistant';
 import type {
   ArchiveComparisonReport,
@@ -91,6 +92,28 @@ function ActivityDateFilters(props: {
         <input type="date" value={props.to} min={props.from || undefined} onChange={(event) => props.onToChange(event.target.value)} />
       </label>
       <span>Filters use normalized UTC dates; records with raw-only dates are excluded while a range is active.</span>
+    </div>
+  );
+}
+
+function ActivityFeedPagination(props: {
+  page: number;
+  total: number;
+  isLoading: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  const pageCount = Math.max(1, Math.ceil(props.total / ACTIVITY_RECORD_PAGE_SIZE));
+  if (pageCount <= 1 && props.total === 0) return null;
+  const first = props.total === 0 ? 0 : (props.page - 1) * ACTIVITY_RECORD_PAGE_SIZE + 1;
+  const last = Math.min(props.page * ACTIVITY_RECORD_PAGE_SIZE, props.total);
+  return (
+    <div className="conversation-list-pagination">
+      <span>{props.total === 0 ? '0 records' : `Showing ${first.toLocaleString()}–${last.toLocaleString()} of ${props.total.toLocaleString()}`}</span>
+      <div>
+        <button className="secondary-button" onClick={() => props.onPageChange(props.page - 1)} disabled={props.isLoading || props.page <= 1}>Previous</button>
+        <span>Page {props.page} / {pageCount}</span>
+        <button className="secondary-button" onClick={() => props.onPageChange(props.page + 1)} disabled={props.isLoading || props.page >= pageCount}>Next</button>
+      </div>
     </div>
   );
 }
@@ -223,11 +246,19 @@ function App() {
   const [activeNavigation, setActiveNavigation] = useState('overview');
   const [postsImport, setPostsImport] = useState<PostsImportSectionResult | null>(null);
   const [postRecords, setPostRecords] = useState<PostRecordSummary[]>([]);
+  const [postPage, setPostPage] = useState(1);
+  const [postTotal, setPostTotal] = useState(0);
+  const [postAppliedFilter, setPostAppliedFilter] = useState('');
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [postFilter, setPostFilter] = useState('');
   const [postDateFrom, setPostDateFrom] = useState('');
   const [postDateTo, setPostDateTo] = useState('');
   const [commentsImport, setCommentsImport] = useState<CommentsImportSectionResult | null>(null);
   const [commentRecords, setCommentRecords] = useState<CommentActivitySummary[]>([]);
+  const [commentPage, setCommentPage] = useState(1);
+  const [commentTotal, setCommentTotal] = useState(0);
+  const [commentAppliedFilter, setCommentAppliedFilter] = useState('');
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentFilter, setCommentFilter] = useState('');
   const [commentDateFrom, setCommentDateFrom] = useState('');
   const [commentDateTo, setCommentDateTo] = useState('');
@@ -237,6 +268,10 @@ function App() {
   const [reactionsImport, setReactionsImport] = useState<ReactionsImportSectionResult | null>(null);
   const [photosImport, setPhotosImport] = useState<PhotoAlbumsImportSectionResult | null>(null);
   const [reactionRecords, setReactionRecords] = useState<ReactionRecordSummary[]>([]);
+  const [reactionPage, setReactionPage] = useState(1);
+  const [reactionTotal, setReactionTotal] = useState(0);
+  const [reactionAppliedFilter, setReactionAppliedFilter] = useState('');
+  const [isLoadingReactions, setIsLoadingReactions] = useState(false);
   const [reactionFilter, setReactionFilter] = useState('');
   const [reactionDateFrom, setReactionDateFrom] = useState('');
   const [reactionDateTo, setReactionDateTo] = useState('');
@@ -276,6 +311,9 @@ function App() {
   const [conversationSearch, setConversationSearch] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const conversationRequestGate = useRef(createRequestGate());
+  const postsRequestGate = useRef(createRequestGate());
+  const commentsRequestGate = useRef(createRequestGate());
+  const reactionsRequestGate = useRef(createRequestGate());
   const [activeMedia, setActiveMedia] = useState<{ id: number; mediaKind: string; relativePath: string; dataUrl: string | null; streamUrl: string | null; loading: boolean; error: string | null } | null>(null);
   const [isImportingFriends, setIsImportingFriends] = useState(false);
   const [isImportingAll, setIsImportingAll] = useState(false);
@@ -536,16 +574,34 @@ function App() {
     setFriendTypeFilter('all');
     setFriendQuery('');
     setFriendPage(1);
+    postsRequestGate.current.invalidate();
+    commentsRequestGate.current.invalidate();
+    reactionsRequestGate.current.invalidate();
     setPostsImport(null);
     setPostRecords([]);
+    setPostPage(1);
+    setPostTotal(0);
     setPostFilter('');
+    setPostAppliedFilter('');
+    setPostDateFrom('');
+    setPostDateTo('');
     setCommentsImport(null);
     setCommentRecords([]);
+    setCommentPage(1);
+    setCommentTotal(0);
     setCommentFilter('');
+    setCommentAppliedFilter('');
+    setCommentDateFrom('');
+    setCommentDateTo('');
     setMessagesImport(null);
     setReactionsImport(null);
     setReactionRecords([]);
+    setReactionPage(1);
+    setReactionTotal(0);
     setReactionFilter('');
+    setReactionAppliedFilter('');
+    setReactionDateFrom('');
+    setReactionDateTo('');
     setConversations([]);
     setConversationMessages([]);
     setSelectedConversationId(null);
@@ -565,9 +621,9 @@ function App() {
       if (saved) setAccountName(saved.accountName);
       setInspection(report);
       const [posts, comments, reactions, foundConversations, media, issues, coverage, albums, friends, files, fallback, events, marketplace, savedItems] = await Promise.all([
-        window.desktopApi.listPostsForSelectedBackup(),
-        window.desktopApi.listCommentsForSelectedBackup(),
-        window.desktopApi.listReactionsForSelectedBackup(),
+        window.desktopApi.listPostsForSelectedBackup(1, '', null, null),
+        window.desktopApi.listCommentsForSelectedBackup(1, '', null, null),
+        window.desktopApi.listReactionsForSelectedBackup(1, '', null, null),
         window.desktopApi.listMessagesForSelectedBackup(1, ''),
         window.desktopApi.listMediaForSelectedBackup('all', 1, ''),
         window.desktopApi.listImportIssuesForSelectedBackup(),
@@ -580,9 +636,15 @@ function App() {
         window.desktopApi.listMarketplaceForSelectedBackup(),
         window.desktopApi.listSavedItemsForSelectedBackup()
       ]);
-      setPostRecords(posts);
-      setCommentRecords(comments);
-      setReactionRecords(reactions);
+      setPostRecords(posts.items);
+      setPostPage(posts.page);
+      setPostTotal(posts.total);
+      setCommentRecords(comments.items);
+      setCommentPage(comments.page);
+      setCommentTotal(comments.total);
+      setReactionRecords(reactions.items);
+      setReactionPage(reactions.page);
+      setReactionTotal(reactions.total);
       setConversations(foundConversations.items);
       setConversationsPage(foundConversations.page);
       setConversationsTotal(foundConversations.total);
@@ -993,7 +1055,7 @@ function App() {
     try {
       const result = await window.desktopApi.importPostsForSelectedBackup();
       setPostsImport(result);
-      setPostRecords(await window.desktopApi.listPostsForSelectedBackup());
+      await loadPostActivity(1, postAppliedFilter);
       await refreshMediaGallery();
       await refreshImportIssues();
       await refreshImportCoverage();
@@ -1011,7 +1073,7 @@ function App() {
     try {
       const result = await window.desktopApi.importCommentsForSelectedBackup();
       setCommentsImport(result);
-      setCommentRecords(await window.desktopApi.listCommentsForSelectedBackup());
+      await loadCommentActivity(1, commentAppliedFilter);
       await refreshMediaGallery();
       await refreshImportIssues();
       await refreshImportCoverage();
@@ -1197,9 +1259,9 @@ function App() {
       setPhotosImport(result.sections.photosAndVideos);
 
       const [posts, comments, reactions, foundConversations, albums, friends, fallback, events, marketplace, savedItems] = await Promise.all([
-        window.desktopApi.listPostsForSelectedBackup(),
-        window.desktopApi.listCommentsForSelectedBackup(),
-        window.desktopApi.listReactionsForSelectedBackup(),
+        window.desktopApi.listPostsForSelectedBackup(1, '', null, null),
+        window.desktopApi.listCommentsForSelectedBackup(1, '', null, null),
+        window.desktopApi.listReactionsForSelectedBackup(1, '', null, null),
         window.desktopApi.listMessagesForSelectedBackup(1, ''),
         window.desktopApi.listPhotoAlbumsForSelectedBackup(),
         window.desktopApi.listFriendsDirectoryForSelectedBackup('all', '', 1),
@@ -1208,9 +1270,15 @@ function App() {
         window.desktopApi.listMarketplaceForSelectedBackup(),
         window.desktopApi.listSavedItemsForSelectedBackup()
       ]);
-      setPostRecords(posts);
-      setCommentRecords(comments);
-      setReactionRecords(reactions);
+      setPostRecords(posts.items);
+      setPostPage(posts.page);
+      setPostTotal(posts.total);
+      setCommentRecords(comments.items);
+      setCommentPage(comments.page);
+      setCommentTotal(comments.total);
+      setReactionRecords(reactions.items);
+      setReactionPage(reactions.page);
+      setReactionTotal(reactions.total);
       setConversations(foundConversations.items);
       setConversationsPage(foundConversations.page);
       setConversationsTotal(foundConversations.total);
@@ -1251,6 +1319,63 @@ function App() {
       setIsImportingAll(false);
     }
   }
+
+  async function loadPostActivity(page = 1, query = postAppliedFilter, dateFrom = postDateFrom, dateTo = postDateTo) {
+    const requestId = postsRequestGate.current.begin();
+    setIsLoadingPosts(true);
+    try {
+      const result = await window.desktopApi.listPostsForSelectedBackup(page, query, dateFrom || null, dateTo || null);
+      if (!postsRequestGate.current.isCurrent(requestId)) return;
+      setPostRecords(result.items);
+      setPostPage(result.page);
+      setPostTotal(result.total);
+      setPostAppliedFilter(query);
+    } catch {
+      if (postsRequestGate.current.isCurrent(requestId)) setError('Posts could not be loaded from the selected backup.');
+    } finally {
+      if (postsRequestGate.current.isCurrent(requestId)) setIsLoadingPosts(false);
+    }
+  }
+
+  function applyPostFilter() { void loadPostActivity(1, postFilter.trim()); }
+
+  async function loadCommentActivity(page = 1, query = commentAppliedFilter, dateFrom = commentDateFrom, dateTo = commentDateTo) {
+    const requestId = commentsRequestGate.current.begin();
+    setIsLoadingComments(true);
+    try {
+      const result = await window.desktopApi.listCommentsForSelectedBackup(page, query, dateFrom || null, dateTo || null);
+      if (!commentsRequestGate.current.isCurrent(requestId)) return;
+      setCommentRecords(result.items);
+      setCommentPage(result.page);
+      setCommentTotal(result.total);
+      setCommentAppliedFilter(query);
+    } catch {
+      if (commentsRequestGate.current.isCurrent(requestId)) setError('Comments could not be loaded from the selected backup.');
+    } finally {
+      if (commentsRequestGate.current.isCurrent(requestId)) setIsLoadingComments(false);
+    }
+  }
+
+  function applyCommentFilter() { void loadCommentActivity(1, commentFilter.trim()); }
+
+  async function loadReactionActivity(page = 1, query = reactionAppliedFilter, dateFrom = reactionDateFrom, dateTo = reactionDateTo) {
+    const requestId = reactionsRequestGate.current.begin();
+    setIsLoadingReactions(true);
+    try {
+      const result = await window.desktopApi.listReactionsForSelectedBackup(page, query, dateFrom || null, dateTo || null);
+      if (!reactionsRequestGate.current.isCurrent(requestId)) return;
+      setReactionRecords(result.items);
+      setReactionPage(result.page);
+      setReactionTotal(result.total);
+      setReactionAppliedFilter(query);
+    } catch {
+      if (reactionsRequestGate.current.isCurrent(requestId)) setError('Likes & Reactions could not be loaded from the selected backup.');
+    } finally {
+      if (reactionsRequestGate.current.isCurrent(requestId)) setIsLoadingReactions(false);
+    }
+  }
+
+  function applyReactionFilter() { void loadReactionActivity(1, reactionFilter.trim()); }
 
   async function loadConversationDirectory(page = 1, query = conversationAppliedFilter) {
     const requestId = conversationListRequestGate.current.begin();
@@ -1341,7 +1466,7 @@ function App() {
     try {
       const result = await window.desktopApi.importReactionsForSelectedBackup();
       setReactionsImport(result);
-      setReactionRecords(await window.desktopApi.listReactionsForSelectedBackup());
+      await loadReactionActivity(1, reactionAppliedFilter);
       await refreshMediaGallery();
       await refreshImportIssues();
       await refreshImportCoverage();
@@ -2341,15 +2466,18 @@ function App() {
                     <h3>Posts</h3>
                     <p>Facebook activity headings and raw exported dates are preserved. Only safe local archive media references are linked.</p>
                   </div>
-                  <span>{postRecords.length.toLocaleString()} records</span>
+                  <span>{postTotal.toLocaleString()} records</span>
                 </div>
-                <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} placeholder="Filter posts…" />
-                <ActivityDateFilters from={postDateFrom} to={postDateTo} onFromChange={setPostDateFrom} onToChange={setPostDateTo} />
+                <div className="conversation-message-search-controls">
+                  <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyPostFilter(); }} placeholder="Filter posts…" />
+                  <button className="secondary-button" onClick={applyPostFilter} disabled={isLoadingPosts}>Find</button>
+                  {postAppliedFilter && <button className="text-button" onClick={() => { setPostFilter(''); void loadPostActivity(1, ''); }} disabled={isLoadingPosts}>Clear</button>}
+                </div>
+                <ActivityDateFilters from={postDateFrom} to={postDateTo}
+                  onFromChange={(value) => { setPostDateFrom(value); void loadPostActivity(1, postAppliedFilter, value, postDateTo); }}
+                  onToChange={(value) => { setPostDateTo(value); void loadPostActivity(1, postAppliedFilter, postDateFrom, value); }} />
                 <div className="media-gallery-list">
-                  {postRecords.filter((record) =>
-                    [record.activityRaw, record.bodyRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(postFilter.trim().toLocaleLowerCase()) &&
-                    isUtcDateInRange(record.eventTimeUtc, postDateFrom, postDateTo)
-                  ).map((record) => (
+                  {postRecords.map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">P</div>
                       <div className="media-gallery-copy">
@@ -2360,6 +2488,7 @@ function App() {
                     </article>
                   ))}
                 </div>
+                <ActivityFeedPagination page={postPage} total={postTotal} isLoading={isLoadingPosts} onPageChange={(page) => void loadPostActivity(page)} />
               </section>
             )}
 
@@ -2533,15 +2662,18 @@ function App() {
                     <h3>Comments &amp; replies</h3>
                     <p>Facebook's original activity description is preserved; group names are separated from your comment text.</p>
                   </div>
-                  <span>{commentRecords.length.toLocaleString()} records</span>
+                  <span>{commentTotal.toLocaleString()} records</span>
                 </div>
-                <input className="conversation-filter" value={commentFilter} onChange={(event) => setCommentFilter(event.target.value)} placeholder="Filter comments…" />
-                <ActivityDateFilters from={commentDateFrom} to={commentDateTo} onFromChange={setCommentDateFrom} onToChange={setCommentDateTo} />
+                <div className="conversation-message-search-controls">
+                  <input className="conversation-filter" value={commentFilter} onChange={(event) => setCommentFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyCommentFilter(); }} placeholder="Filter comments…" />
+                  <button className="secondary-button" onClick={applyCommentFilter} disabled={isLoadingComments}>Find</button>
+                  {commentAppliedFilter && <button className="text-button" onClick={() => { setCommentFilter(''); void loadCommentActivity(1, ''); }} disabled={isLoadingComments}>Clear</button>}
+                </div>
+                <ActivityDateFilters from={commentDateFrom} to={commentDateTo}
+                  onFromChange={(value) => { setCommentDateFrom(value); void loadCommentActivity(1, commentAppliedFilter, value, commentDateTo); }}
+                  onToChange={(value) => { setCommentDateTo(value); void loadCommentActivity(1, commentAppliedFilter, commentDateFrom, value); }} />
                 <div className="media-gallery-list">
-                  {commentRecords.filter((record) =>
-                    [record.activityRaw, record.bodyRaw, record.groupRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(commentFilter.trim().toLocaleLowerCase()) &&
-                    isUtcDateInRange(record.eventTimeUtc, commentDateFrom, commentDateTo)
-                  ).map((record) => (
+                  {commentRecords.map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">C</div>
                       <div className="media-gallery-copy">
@@ -2552,8 +2684,9 @@ function App() {
                       </div>
                     </article>
                   ))}
-                  {commentRecords.length === 0 && <p className="conversation-empty">No comment activities were imported from the recognized files.</p>}
+                  {commentRecords.length === 0 && <p className="conversation-empty">No comment activities match the current filters.</p>}
                 </div>
+                <ActivityFeedPagination page={commentPage} total={commentTotal} isLoading={isLoadingComments} onPageChange={(page) => void loadCommentActivity(page)} />
               </section>
             )}
             <div className="friends-import-action">
@@ -2579,15 +2712,18 @@ function App() {
                     <h3>Likes &amp; Reactions</h3>
                     <p>Original descriptions and exported dates are retained; unrecognized reaction images are left unclassified.</p>
                   </div>
-                  <span>{reactionRecords.length.toLocaleString()} records</span>
+                  <span>{reactionTotal.toLocaleString()} records</span>
                 </div>
-                <input className="conversation-filter" value={reactionFilter} onChange={(event) => setReactionFilter(event.target.value)} placeholder="Filter reactions…" />
-                <ActivityDateFilters from={reactionDateFrom} to={reactionDateTo} onFromChange={setReactionDateFrom} onToChange={setReactionDateTo} />
+                <div className="conversation-message-search-controls">
+                  <input className="conversation-filter" value={reactionFilter} onChange={(event) => setReactionFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyReactionFilter(); }} placeholder="Filter reactions…" />
+                  <button className="secondary-button" onClick={applyReactionFilter} disabled={isLoadingReactions}>Find</button>
+                  {reactionAppliedFilter && <button className="text-button" onClick={() => { setReactionFilter(''); void loadReactionActivity(1, ''); }} disabled={isLoadingReactions}>Clear</button>}
+                </div>
+                <ActivityDateFilters from={reactionDateFrom} to={reactionDateTo}
+                  onFromChange={(value) => { setReactionDateFrom(value); void loadReactionActivity(1, reactionAppliedFilter, value, reactionDateTo); }}
+                  onToChange={(value) => { setReactionDateTo(value); void loadReactionActivity(1, reactionAppliedFilter, reactionDateFrom, value); }} />
                 <div className="media-gallery-list">
-                  {reactionRecords.filter((record) =>
-                    [record.reactionType, record.descriptionRaw, record.dateRaw, record.sourcePath].join(' ').toLocaleLowerCase().includes(reactionFilter.trim().toLocaleLowerCase()) &&
-                    isUtcDateInRange(record.eventTimeUtc, reactionDateFrom, reactionDateTo)
-                  ).map((record) => (
+                  {reactionRecords.map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">{record.reactionType === 'love' ? '♥' : record.reactionType === 'haha' ? '☺' : '●'}</div>
                       <div className="media-gallery-copy">
@@ -2598,6 +2734,7 @@ function App() {
                     </article>
                   ))}
                 </div>
+                <ActivityFeedPagination page={reactionPage} total={reactionTotal} isLoading={isLoadingReactions} onPageChange={(page) => void loadReactionActivity(page)} />
               </section>
             )}
             {messagesImport && (

@@ -1,10 +1,86 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { ReactionRecordSummary } from '../../shared/archive/inspection';
+import type { ActivityRecordsPage, CommentActivitySummary, PostRecordSummary, ReactionRecordSummary } from '../../shared/archive/inspection';
+import { ACTIVITY_RECORD_PAGE_SIZE } from '../../shared/archive/inspection';
+import { normalizeSearchText } from '../../shared/text/normalize';
+import { getUtcDateRangeBounds } from '../../shared/text/utc-date-range';
 import { facebookDateToUtc } from '../../shared/time/facebook-date';
 import { normalizeSafeExternalUrl } from '../../shared/text/safe-external-url';
 
-export function listReactionRecords(database: DatabaseSync, snapshotId: string): ReactionRecordSummary[] {
-  return database.prepare(`
+interface ActivityPageArguments {
+  page: number;
+  query: string;
+  dateFrom: string | null;
+  dateTo: string | null;
+}
+
+function validateActivityPageArguments(
+  page: number,
+  query: string,
+  dateFrom: string | null,
+  dateTo: string | null
+): ActivityPageArguments {
+  if (!Number.isSafeInteger(page) || page < 1 || page > 50_000) {
+    throw new Error('Activity page must be between 1 and 50,000.');
+  }
+  if (typeof query !== 'string' || query.length > 180) {
+    throw new Error('Activity filter must be 180 characters or fewer.');
+  }
+  const from = dateFrom === '' ? null : dateFrom;
+  const to = dateTo === '' ? null : dateTo;
+  getUtcDateRangeBounds(from, to);
+  return { page, query: normalizeSearchText(query.trim()), dateFrom: from, dateTo: to };
+}
+
+function activityPageFilter(arguments_: ActivityPageArguments): {
+  sql: string;
+  values: Array<string | null>;
+} {
+  const bounds = getUtcDateRangeBounds(arguments_.dateFrom, arguments_.dateTo);
+  const query = arguments_.query;
+  return {
+    sql: `
+      AND (? = '' OR
+        instr(COALESCE(records.normalized_text, ''), ?) > 0 OR
+        instr(lower(COALESCE(source.relative_path, '')), lower(?)) > 0 OR
+        instr(lower(COALESCE(records.event_time_raw, '')), lower(?)) > 0)
+      AND (? IS NULL OR records.event_time_utc >= ?)
+      AND (? IS NULL OR records.event_time_utc < ?)
+    `,
+    values: [
+      query, query, query, query,
+      bounds.fromInclusive, bounds.fromInclusive,
+      bounds.toExclusive, bounds.toExclusive
+    ]
+  };
+}
+
+function getActivityPageResult<T>(
+  items: T[],
+  page: number,
+  total: number
+): ActivityRecordsPage<T> {
+  return { items, page, pageSize: ACTIVITY_RECORD_PAGE_SIZE, total };
+}
+
+export function listReactionRecords(
+  database: DatabaseSync,
+  snapshotId: string,
+  page = 1,
+  query = '',
+  dateFrom: string | null = null,
+  dateTo: string | null = null
+): ActivityRecordsPage<ReactionRecordSummary> {
+  const arguments_ = validateActivityPageArguments(page, query, dateFrom, dateTo);
+  const filter = activityPageFilter(arguments_);
+  const totalRow = database.prepare(`
+    SELECT COUNT(*) AS total
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ? AND records.section_key = 'likes_and_reactions'
+  ${filter.sql}
+  `).get(snapshotId, ...filter.values) as { total: number };
+  const rows = database.prepare(`
     SELECT records.id AS id, records.source_file_id AS sourceFileId,
       source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex,
@@ -15,13 +91,35 @@ export function listReactionRecords(database: DatabaseSync, snapshotId: string):
     INNER JOIN source_files AS source ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id
     WHERE records.snapshot_id = ? AND records.section_key = 'likes_and_reactions'
+  ${filter.sql}
     ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
-    LIMIT 1000
-  `).all(snapshotId) as unknown as ReactionRecordSummary[];
+    LIMIT ? OFFSET ?
+  `).all(
+    snapshotId, ...filter.values, ACTIVITY_RECORD_PAGE_SIZE,
+    (arguments_.page - 1) * ACTIVITY_RECORD_PAGE_SIZE
+  ) as unknown as ReactionRecordSummary[];
+  return getActivityPageResult(rows, arguments_.page, totalRow.total);
 }
 
-export function listPostRecords(database: DatabaseSync, snapshotId: string): import('../../shared/archive/inspection').PostRecordSummary[] {
-  return database.prepare(`
+export function listPostRecords(
+  database: DatabaseSync,
+  snapshotId: string,
+  page = 1,
+  query = '',
+  dateFrom: string | null = null,
+  dateTo: string | null = null
+): ActivityRecordsPage<PostRecordSummary> {
+  const arguments_ = validateActivityPageArguments(page, query, dateFrom, dateTo);
+  const filter = activityPageFilter(arguments_);
+  const totalRow = database.prepare(`
+    SELECT COUNT(*) AS total
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ? AND records.section_key = 'posts'
+  ${filter.sql}
+  `).get(snapshotId, ...filter.values) as { total: number };
+  const rows = database.prepare(`
     SELECT records.id AS id, source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex,
       records.title AS activityRaw, records.body_text AS bodyRaw,
@@ -32,15 +130,36 @@ export function listPostRecords(database: DatabaseSync, snapshotId: string): imp
       AND source.snapshot_id = records.snapshot_id
     LEFT JOIN record_media ON record_media.record_id = records.id
     WHERE records.snapshot_id = ? AND records.section_key = 'posts'
+  ${filter.sql}
     GROUP BY records.id
     ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
-    LIMIT 1000
-  `).all(snapshotId) as unknown as import('../../shared/archive/inspection').PostRecordSummary[];
+    LIMIT ? OFFSET ?
+  `).all(
+    snapshotId, ...filter.values, ACTIVITY_RECORD_PAGE_SIZE,
+    (arguments_.page - 1) * ACTIVITY_RECORD_PAGE_SIZE
+  ) as unknown as PostRecordSummary[];
+  return getActivityPageResult(rows, arguments_.page, totalRow.total);
 }
 
- 
-export function listCommentActivities(database: DatabaseSync, snapshotId: string): import('../../shared/archive/inspection').CommentActivitySummary[] {
-  return database.prepare(`
+export function listCommentActivities(
+  database: DatabaseSync,
+  snapshotId: string,
+  page = 1,
+  query = '',
+  dateFrom: string | null = null,
+  dateTo: string | null = null
+): ActivityRecordsPage<CommentActivitySummary> {
+  const arguments_ = validateActivityPageArguments(page, query, dateFrom, dateTo);
+  const filter = activityPageFilter(arguments_);
+  const totalRow = database.prepare(`
+    SELECT COUNT(*) AS total
+    FROM records
+    INNER JOIN source_files AS source ON source.id = records.source_file_id
+      AND source.snapshot_id = records.snapshot_id
+    WHERE records.snapshot_id = ? AND records.section_key = 'comments'
+  ${filter.sql}
+  `).get(snapshotId, ...filter.values) as { total: number };
+  const rows = database.prepare(`
     SELECT records.id AS id, source.relative_path AS sourcePath,
       records.source_record_index AS sourceCardIndex,
       records.title AS activityRaw, records.body_text AS bodyRaw,
@@ -50,9 +169,14 @@ export function listCommentActivities(database: DatabaseSync, snapshotId: string
     INNER JOIN source_files AS source ON source.id = records.source_file_id
       AND source.snapshot_id = records.snapshot_id
     WHERE records.snapshot_id = ? AND records.section_key = 'comments'
+  ${filter.sql}
     ORDER BY source.relative_path COLLATE NOCASE, records.source_record_index ASC
-    LIMIT 2000
-  `).all(snapshotId) as unknown as import('../../shared/archive/inspection').CommentActivitySummary[];
+    LIMIT ? OFFSET ?
+  `).all(
+    snapshotId, ...filter.values, ACTIVITY_RECORD_PAGE_SIZE,
+    (arguments_.page - 1) * ACTIVITY_RECORD_PAGE_SIZE
+  ) as unknown as CommentActivitySummary[];
+  return getActivityPageResult(rows, arguments_.page, totalRow.total);
 }
 
 export function listPhotoAlbums(

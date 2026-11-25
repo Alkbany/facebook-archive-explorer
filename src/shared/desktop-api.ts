@@ -37,7 +37,8 @@ import type {
   MarketplaceListingSummary,
   SavedItemSummary,
   FallbackArchiveSectionSummary,
-  FallbackArchiveRecordsPage
+  FallbackArchiveRecordsPage,
+  ActivityRecordsPage
 } from './archive/inspection';
 
 export interface AppInfo {
@@ -134,7 +135,7 @@ export interface DesktopApi {
   importAllSupportedDataForSelectedBackup(): Promise<ImportAllSupportedDataResult>;
   importPhotosAndVideosForSelectedBackup(): Promise<PhotoAlbumsImportSectionResult>;
   importPostsForSelectedBackup(): Promise<PostsImportSectionResult>;
-  listPostsForSelectedBackup(): Promise<PostRecordSummary[]>;
+  listPostsForSelectedBackup(page?: number, query?: string, dateFrom?: string | null, dateTo?: string | null): Promise<ActivityRecordsPage<PostRecordSummary>>;
   listEventsForSelectedBackup(): Promise<EventRecordSummary[]>;
   importEventsForSelectedBackup(): Promise<JsonImportSectionResult>;
   listMarketplaceForSelectedBackup(): Promise<MarketplaceListingSummary[]>;
@@ -142,10 +143,10 @@ export interface DesktopApi {
   listSavedItemsForSelectedBackup(): Promise<SavedItemSummary[]>;
   importSavedItemsForSelectedBackup(): Promise<JsonImportSectionResult>;
   importCommentsForSelectedBackup(): Promise<CommentsImportSectionResult>;
-  listCommentsForSelectedBackup(): Promise<CommentActivitySummary[]>;
+  listCommentsForSelectedBackup(page?: number, query?: string, dateFrom?: string | null, dateTo?: string | null): Promise<ActivityRecordsPage<CommentActivitySummary>>;
   importMessagesForSelectedBackup(): Promise<MessagesImportSectionResult>;
   importReactionsForSelectedBackup(): Promise<ReactionsImportSectionResult>;
-  listReactionsForSelectedBackup(): Promise<ReactionRecordSummary[]>;
+  listReactionsForSelectedBackup(page?: number, query?: string, dateFrom?: string | null, dateTo?: string | null): Promise<ActivityRecordsPage<ReactionRecordSummary>>;
   listPhotoAlbumsForSelectedBackup(): Promise<PhotoAlbumRecordSummary[]>;
   getPhotoAlbumDetailForSelectedBackup(albumRecordId: number): Promise<PhotoAlbumDetailView>;
   listMessagesForSelectedBackup(page?: number, searchQuery?: string): Promise<MessageConversationListPage>;

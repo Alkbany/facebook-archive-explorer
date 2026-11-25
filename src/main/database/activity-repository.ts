@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { ReactionRecordSummary } from '../../shared/archive/inspection';
 import { facebookDateToUtc } from '../../shared/time/facebook-date';
+import { normalizeSafeExternalUrl } from '../../shared/text/safe-external-url';
 
 export function listReactionRecords(database: DatabaseSync, snapshotId: string): ReactionRecordSummary[] {
   return database.prepare(`
@@ -285,7 +286,7 @@ export function listEventRecords(
       address: typeof place.address === 'string' ? place.address : null,
       latitude: typeof place.latitude === 'number' && Number.isFinite(place.latitude) ? place.latitude : null,
       longitude: typeof place.longitude === 'number' && Number.isFinite(place.longitude) ? place.longitude : null,
-      url: typeof payload.url === 'string' ? payload.url : null,
+      url: normalizeSafeExternalUrl(payload.url),
       sources: [source]
     };
 

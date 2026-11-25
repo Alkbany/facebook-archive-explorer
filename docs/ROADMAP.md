@@ -104,6 +104,7 @@
 - [x] Normalize the observed Arabic D/M/YYYY 12-hour HTML dates in Posts, Comments, Likes & Reactions, and Messages only when the same file's Facebook footer explicitly supplies a valid UTC offset; preserve raw dates and leave unsupported/missing-offset values unnormalized.
 - [ ] Validate and expand additional localized HTML date formats, offsets, and historical daylight-saving semantics only when the source export supplies sufficient evidence.
 - [x] Searchable Likes & Reactions activity panel with snapshot-scoped results.
+- [x] Paginate Posts, Comments, and Likes & Reactions feeds in SQLite-backed pages of 100, with database-side text/date filtering and total counts instead of silent fixed 1,000/2,000-record caps.
 - [x] Sampled Photos & Videos root album index import, searchable album summaries, and cover-image association.
 - [x] Sampled album-detail parsing, photo captions/dates, comment records, and local photo browsing.
 - [x] Aggregate archive comparison for imported records from two snapshots of the same account.

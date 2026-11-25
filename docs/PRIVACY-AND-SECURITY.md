@@ -24,7 +24,8 @@ The Git repository is for source code and generic documentation only. Never comm
 - Keep the renderer sandbox enabled.
 - Validate all IPC arguments in the main process.
 - Expose only typed, purpose-specific preload methods.
-- Deny unexpected navigation and new windows.
+- Deny unexpected navigation, cross-origin redirects, subframe redirects, and new windows.
+- Deny browser permissions through the default session; archive browsing does not require camera, microphone, geolocation, notifications, or MIDI.
 - In packaged builds, always load the bundled renderer and ignore `ELECTRON_RENDERER_URL`. Unpackaged development may use only a loopback HTTP renderer URL without embedded credentials.
 - Serve archive audio/video through a dedicated custom protocol using opaque media IDs, selected-snapshot checks, path validation, MIME allowlists, and HTTP byte-range responses. The renderer CSP allows the `archive-media:` scheme only under `media-src`; it is not enabled for scripts, images, or general network connections.
 - Never expose unrestricted `ipcRenderer`, `fs`, `process`, or database handles to the renderer.

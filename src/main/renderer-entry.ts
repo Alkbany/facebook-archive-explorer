@@ -7,6 +7,19 @@ export type RendererEntry =
  * to load environment-configured or remote content with its privileged preload.
  * Unpackaged development builds may use only a loopback HTTP dev server.
  */
+export function isAllowedRendererNavigation(
+  targetUrl: string,
+  currentUrl: string,
+  developmentOrigin: string | null
+): boolean {
+  if (developmentOrigin === null) return targetUrl === currentUrl;
+  try {
+    return new URL(targetUrl).origin === developmentOrigin;
+  } catch {
+    return false;
+  }
+}
+
 export function resolveRendererEntry(
   isPackaged: boolean,
   configuredUrl: string | undefined

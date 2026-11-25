@@ -22,6 +22,7 @@
 
 ### Fixed
 
+- Block cross-origin renderer redirects and deny all browser permission requests/checks by default because the archive explorer does not require browser device permissions.
 - Prevent packaged applications from loading an environment-configured renderer URL with the privileged preload; allow the override only for loopback HTTP in unpackaged development.
 - Mark an empty local AI response as an assistant error instead of leaving the UI in a misleading ready state; add regression coverage for status and continued archive search.
 - Allow the local `archive-media:` protocol in the renderer Content Security Policy for audio/video playback without widening script, image, or connection sources.

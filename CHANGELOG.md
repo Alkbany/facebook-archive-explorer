@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Run the main type-check, unit-test, and Electron build workflow on Windows instead of Ubuntu to match the Windows-only desktop product target.
+
 ### Added
 
 - Add a Windows CI lifecycle smoke test that silently installs the generated NSIS package, starts the installed application, and silently uninstalls it.

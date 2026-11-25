@@ -105,3 +105,8 @@ finally {
     Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
   }
 }
+
+# GitHub Actions propagates the last native command's exit code from PowerShell.
+# Cleanup may call taskkill after a process has already exited; the successful
+# lifecycle assertions above are the authoritative result for this script.
+$global:LASTEXITCODE = 0

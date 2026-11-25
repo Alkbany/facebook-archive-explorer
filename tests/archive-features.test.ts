@@ -7,6 +7,7 @@ import { getOrCreateAccount, listArchiveSnapshots } from '../src/main/database/a
 import { indexDiscoveredMediaAssets } from '../src/main/database/media-indexer';
 import { getMessageConversation, listArchiveMediaGallery } from '../src/main/database/messages-repository';
 import { searchArchiveRecords } from '../src/main/database/search-repository';
+import { normalizeSearchText } from '../src/shared/text/normalize';
 import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch } from '../src/main/database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../src/main/database/comparison-repository';
 
@@ -205,6 +206,38 @@ describe('archive-wide media, search, and comparison', () => {
       expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
     ]);
     expect(searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.95)).toHaveLength(0);
+  });
+
+  it('matches Arabic alef and diacritic variants and tolerates a one-character Arabic typo in Fuzzy Search', () => {
+    const posts = addSource(baselineId, 'posts/arabic-travel.html', 'html', 'posts');
+    const title = 'الإسكندرية رحلة';
+    const body = 'زيارة تاريخية للمدينة';
+    addPost(baselineId, posts, 0, title, body);
+    database.prepare('UPDATE records SET normalized_text = ? WHERE source_file_id = ?').run(
+      normalizeSearchText(title + ' ' + body),
+      posts
+    );
+
+    const normalizedVariant = searchArchiveRecords(
+      database, baselineId, 'اَلْإِسْكَنْدَرِيَّة', 'posts', 'exact'
+    );
+    expect(normalizedVariant).toEqual([
+      expect.objectContaining({ title, matchType: 'exact' })
+    ]);
+
+    const typo = searchArchiveRecords(
+      database, baselineId, 'الاسكندريه', 'posts', 'fuzzy', 0.8
+    );
+    expect(typo).toEqual([
+      expect.objectContaining({ title, matchType: 'fuzzy', similarity: expect.any(Number) })
+    ]);
+    expect(typo[0].similarity).toBeGreaterThanOrEqual(0.8);
+    expect(typo[0].similarity).toBeLessThan(1);
+
+    // A stricter threshold should not silently merge the different final letter.
+    expect(searchArchiveRecords(
+      database, baselineId, 'الاسكندريه', 'posts', 'fuzzy', 0.95
+    )).toHaveLength(0);
   });
 
   it('filters Exact Search by inclusive UTC calendar days and excludes ambiguous timestamps', () => {

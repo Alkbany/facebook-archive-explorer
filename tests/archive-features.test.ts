@@ -7,6 +7,7 @@ import { getOrCreateAccount, listArchiveSnapshots } from '../src/main/database/a
 import { indexDiscoveredMediaAssets } from '../src/main/database/media-indexer';
 import { getMessageConversation, listArchiveMediaGallery } from '../src/main/database/messages-repository';
 import { searchArchiveRecords } from '../src/main/database/search-repository';
+import { listPostRecords, listCommentActivities, listReactionRecords } from '../src/main/database/activity-repository';
 import { getArchiveSearchSettings, setIncludeMessagesInGlobalSearch } from '../src/main/database/search-settings-repository';
 import { compareArchiveSnapshots, listArchiveComparisonChanges } from '../src/main/database/comparison-repository';
 
@@ -205,6 +206,76 @@ describe('archive-wide media, search, and comparison', () => {
       expect.objectContaining({ title: 'Alexandria trip', matchType: 'fuzzy' })
     ]);
     expect(searchArchiveRecords(database, baselineId, 'Alexandrea', null, 'fuzzy', 0.95)).toHaveLength(0);
+  });
+
+  it('paginates large Posts, Comments, and Reactions feeds without fixed record caps', () => {
+    const postsSource = addSource(baselineId, 'posts/large-posts.html', 'html', 'posts');
+    const commentsSource = addSource(baselineId, 'comments/large-comments.html', 'html', 'comments');
+    const reactionsSource = addSource(baselineId, 'likes_and_reactions/large-reactions.html', 'html', 'likes_and_reactions');
+    const now = new Date().toISOString();
+    const insertComment = database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, event_time_raw, event_time_utc,
+        sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, ?, 'comments', 'comment_activity', ?, ?, ?, ?, ?, 'personal', 1, ?, ?)
+    `);
+    const insertReaction = database.prepare(`
+      INSERT INTO records (
+        snapshot_id, source_file_id, source_record_index, section_key, record_type,
+        title, body_text, normalized_text, event_time_raw, event_time_utc,
+        sensitivity, search_enabled, payload_json, created_at
+      ) VALUES (?, ?, ?, 'likes_and_reactions', 'reaction', ?, ?, ?, ?, ?, 'personal', 1, '{}', ?)
+    `);
+
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      for (let index = 0; index < 2_105; index += 1) {
+        addPost(baselineId, postsSource, index, `Post ${index}`, `A large post body ${index}`);
+        insertComment.run(
+          baselineId, commentsSource, index, `Comment activity ${index}`,
+          `Comment body ${index}`, `comment activity ${index} comment body ${index}`,
+          String(1_700_000_000 + index), index === 2_104 ? '2023-11-14T22:13:24.000Z' : null,
+          JSON.stringify({ group_raw: index === 2_104 ? 'Searchable Group' : null }), now
+        );
+        insertReaction.run(
+          baselineId, reactionsSource, index, index % 2 === 0 ? 'like' : 'love',
+          `Reaction description ${index}`, `reaction description ${index}`,
+          String(1_700_000_000 + index), null, now
+        );
+      }
+      database.exec('COMMIT');
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
+
+    const postsFirst = listPostRecords(database, baselineId, 1);
+    const postsMiddle = listPostRecords(database, baselineId, 11);
+    const postsLast = listPostRecords(database, baselineId, 22);
+    expect(postsFirst).toMatchObject({ page: 1, pageSize: 100, total: 2_105 });
+    expect(postsMiddle.items).toHaveLength(100);
+    expect(postsLast.items).toHaveLength(5);
+    expect(new Set([...postsFirst.items, ...postsMiddle.items, ...postsLast.items].map((item) => item.id)).size).toBe(205);
+
+    const commentsFirst = listCommentActivities(database, baselineId, 1);
+    const commentsLast = listCommentActivities(database, baselineId, 22);
+    expect(commentsFirst.total).toBe(2_105);
+    expect(commentsLast.items).toHaveLength(5);
+    expect(commentsLast.items[0].sourceCardIndex).toBe(2_100);
+
+    const reactionsFirst = listReactionRecords(database, baselineId, 1);
+    const reactionsLast = listReactionRecords(database, baselineId, 22);
+    expect(reactionsFirst.total).toBe(2_105);
+    expect(reactionsLast.items).toHaveLength(5);
+    expect(reactionsLast.items[4].sourceCardIndex).toBe(2_104);
+
+    const commentSearch = listCommentActivities(database, baselineId, 1, 'searchable group');
+    expect(commentSearch.total).toBe(1);
+    expect(commentSearch.items[0].sourceCardIndex).toBe(2_104);
+    const reactionSearch = listReactionRecords(database, baselineId, 1, 'description 204');
+    expect(reactionSearch.total).toBe(11);
+    expect(() => listPostRecords(database, baselineId, 0)).toThrow(/page/i);
   });
 
   it('filters Exact Search by inclusive UTC calendar days and excludes ambiguous timestamps', () => {

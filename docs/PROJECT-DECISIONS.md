@@ -33,6 +33,7 @@ A section is not complete merely because its files are discovered or preserved b
 ## 3. Desktop UI and UX
 
 - Windows desktop application using Electron, React, and TypeScript.
+- Windows is the supported build and validation platform. CI verification and installer packaging run on Windows GitHub-hosted runners; do not add Linux/macOS build targets or Linux-specific release tasks unless the product owner explicitly changes this decision.
 - The interface must be a genuinely modern desktop application. Do not reproduce Facebook's exported HTML appearance or treat a sidebar/color refresh as a complete redesign.
 - Workspaces should be cohesive and interconnected, with consistent navigation, search, filters, pagination, detail views, and source references.
 - Do not remove useful existing functionality merely to simplify a redesign.

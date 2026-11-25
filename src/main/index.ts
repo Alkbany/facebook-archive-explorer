@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol } from 'electron';
+import { app, BrowserWindow, protocol, session } from 'electron';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { openAppDatabase } from './database/connection';
@@ -9,7 +9,7 @@ import { recoverInterruptedDatabaseSwap } from './database/backup';
 import { recoverAllInterruptedImports } from './import/pipeline/import-all';
 import { getSemanticSearchStatus, processSemanticIndexQueue } from './database/semantic-search-service';
 import { getAiAssistantStatus, prepareAiAssistant } from './database/ai-assistant-service';
-import { resolveRendererEntry } from './renderer-entry';
+import { isAllowedRendererNavigation, resolveRendererEntry } from './renderer-entry';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'archive-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -39,18 +39,19 @@ function createMainWindow(): BrowserWindow {
   const rendererEntry = resolveRendererEntry(app.isPackaged, process.env.ELECTRON_RENDERER_URL);
   const developmentOrigin = rendererEntry.kind === 'development-url' ? rendererEntry.origin : null;
 
-  window.webContents.on('will-navigate', (event, targetUrl) => {
-    if (developmentOrigin) {
-      try {
-        if (new URL(targetUrl).origin === developmentOrigin) return;
-      } catch {
-        // Invalid navigation URLs are denied.
-      }
-    } else if (targetUrl === window.webContents.getURL()) {
-      return;
-    }
+  const allowNavigation = (targetUrl: string) => isAllowedRendererNavigation(
+    targetUrl,
+    window.webContents.getURL(),
+    developmentOrigin
+  );
 
-    event.preventDefault();
+  window.webContents.on('will-navigate', (event, targetUrl) => {
+    if (!allowNavigation(targetUrl)) event.preventDefault();
+  });
+
+  // Redirects are a separate Electron navigation event.
+  window.webContents.on('will-redirect', (event, targetUrl, _isInPlace, isMainFrame) => {
+    if (!isMainFrame || !allowNavigation(targetUrl)) event.preventDefault();
   });
 
   if (rendererEntry.kind === 'development-url') void window.loadURL(rendererEntry.url);
@@ -66,6 +67,12 @@ function createMainWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   app.setAppUserModelId('com.alkbany.facebookarchiveexplorer');
+
+  // The archive explorer does not require browser device permissions.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(false);
+  });
+  session.defaultSession.setPermissionCheckHandler(() => false);
   const databasePath = join(app.getPath('userData'), 'data', 'facebook-archive-explorer.sqlite');
   recoverInterruptedDatabaseSwap(databasePath);
   database = openAppDatabase(databasePath, DATABASE_MIGRATIONS);

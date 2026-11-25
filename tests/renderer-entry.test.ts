@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { resolveRendererEntry } from '../src/main/renderer-entry';
+import { isAllowedRendererNavigation, resolveRendererEntry } from '../src/main/renderer-entry';
+
+describe('isAllowedRendererNavigation', () => {
+  it('allows only the current bundled file URL in a packaged application', () => {
+    const currentUrl = 'file:///app/out/renderer/index.html';
+    expect(isAllowedRendererNavigation(currentUrl, currentUrl, null)).toBe(true);
+    expect(isAllowedRendererNavigation('https://attacker.example/', currentUrl, null)).toBe(false);
+    expect(isAllowedRendererNavigation('file:///app/other.html', currentUrl, null)).toBe(false);
+  });
+
+  it('allows only same-origin navigation in the local development renderer', () => {
+    const origin = 'http://localhost:5173';
+    expect(isAllowedRendererNavigation('http://localhost:5173/settings', origin + '/', origin)).toBe(true);
+    expect(isAllowedRendererNavigation('http://localhost:5174/', origin + '/', origin)).toBe(false);
+    expect(isAllowedRendererNavigation('https://attacker.example/', origin + '/', origin)).toBe(false);
+    expect(isAllowedRendererNavigation('not a URL', origin + '/', origin)).toBe(false);
+  });
+});
 
 describe('resolveRendererEntry', () => {
   it('always uses the bundled local renderer in a packaged application', () => {

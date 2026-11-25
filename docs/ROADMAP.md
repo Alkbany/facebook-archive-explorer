@@ -7,6 +7,7 @@
 ## Milestone 0 — Foundation
 
 - [x] Confirm Electron + React + TypeScript architecture.
+- [x] Run application verification CI on `windows-latest`; keep the product build and installer validation Windows-focused with no Linux build target.
 - [x] Upgrade the app runtime from end-of-life Electron 37 to supported Electron 45.4.1; CI verifies the sandboxed preload, tests, renderer/main build, and Windows installer.
 - [x] Define local-first privacy and repository safety rules.
 - [x] Build the desktop shell and verify its production build in CI.
@@ -143,7 +144,7 @@
 - [x] Add a repeatable 50,000-record synthetic SQLite/FTS benchmark for Exact and Fuzzy Search; report observed timings without hardware-independent pass/fail speed thresholds.
 - [ ] Benchmark full real directory and ZIP backups, including import, media indexing/streaming, search, and recovery; complete an end-to-end pass with a real Facebook Backup. Synthetic search benchmarks and unit/build checks do not replace this validation.
 - [x] Add Windows CI lifecycle smoke coverage for silent install, application process startup, and uninstall of the generated NSIS installer.
-- [ ] Pass the hosted Windows lifecycle smoke test after verifying the application process tree exits and NSIS completes file cleanup.
+- [x] Pass the hosted Windows lifecycle smoke test after verifying the application process tree exits and NSIS completes file cleanup (Windows installer workflow run `45685589885`, including install, launch, uninstall, and cleanup).
 - [ ] Manual install, launch, upgrade, and uninstall smoke tests on a clean Windows device. The hosted-runner smoke test does not replace a clean-device manual pass.
 - [x] Support optional trusted Authenticode signing and verify all packaged Windows executable binaries when signing credentials are configured; publish clearly labelled unsigned personal-use builds and beta releases otherwise.
 - [ ] (Only if public distribution is planned) Configure a trusted signing identity and complete code-signing provider onboarding. Personal-use builds do not require a paid certificate, but unsigned binaries may be blocked by Smart App Control.

@@ -129,6 +129,41 @@ describe('Accounts Center Events JSON importer', () => {
     expect(events.find((item) => item.title === 'An unanswered synthetic invitation')?.rsvp).toBe('invited');
   });
 
+  it('rejects credential-bearing event URLs during import and when reading legacy records', async () => {
+    const relativePath = 'your_facebook_activity/events/your_events.json';
+    const sourceFileId = await addJsonFile(relativePath, 'your_events.json', {
+      your_events_v2: [{
+        name: 'Synthetic event with credential-bearing URL',
+        start_timestamp: 1_800_000_000,
+        url: 'https://user:password@example.com/event'
+      }]
+    });
+
+    const result = await importEventsJsonSection(database, snapshotId, root);
+    expect(result.recordsImported).toBe(1);
+    const importedPayload = database.prepare(
+      "SELECT payload_json AS payload FROM records WHERE snapshot_id = ? AND section_key = 'events' AND title = ?"
+    ).get(snapshotId, 'Synthetic event with credential-bearing URL') as { payload: string };
+    expect((JSON.parse(importedPayload.payload) as { url: string | null }).url).toBeNull();
+    expect(listEventRecords(database, snapshotId)).toMatchObject([{
+      title: 'Synthetic event with credential-bearing URL',
+      url: null
+    }]);
+
+    // Simulate an older local database created before import-time URL normalization.
+    const now = new Date().toISOString();
+    database.prepare(
+      'INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type, ' +
+      'title, body_text, normalized_text, event_time_raw, event_time_utc, sensitivity, search_enabled, payload_json, created_at) ' +
+      "VALUES (?, ?, 1, 'events', 'event', ?, NULL, NULL, NULL, NULL, 'personal', 1, ?, ?)"
+    ).run(snapshotId, sourceFileId, 'Legacy event with credential URL', JSON.stringify({
+      event_key: 'legacy-event', rsvp: 'joined', url: 'https://user:password@example.com/legacy'
+    }), now);
+
+    expect(listEventRecords(database, snapshotId).find((item) => item.title === 'Legacy event with credential URL')?.url)
+      .toBeNull();
+  });
+
   it('reads label-value hosted events but never uses the Event host Name as the event title', async () => {
     await addJsonFile(
       'your_facebook_activity/events/events_you_hosted.json',

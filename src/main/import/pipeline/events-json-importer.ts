@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { facebookDateToUtc } from '../../../shared/time/facebook-date';
+import { normalizeSafeExternalUrl } from '../../../shared/text/safe-external-url';
 import { normalizeSearchText } from '../../../shared/text/normalize';
 import type { ImportProgressEvent, JsonImportSectionResult } from '../../../shared/archive/inspection';
 import { clearSourceFileRecords } from './source-file-records';
@@ -140,7 +141,7 @@ function eventCandidate(
     latitude,
     longitude
   };
-  const url = text(event.url) ?? text(event.href);
+  const url = normalizeSafeExternalUrl(event.url) ?? normalizeSafeExternalUrl(event.href);
   const identity = startRaw
     ? title.toLocaleLowerCase().replace(/\\s+/gu, ' ') + '|' + (facebookDateToUtc(startRaw) ?? startRaw)
     : title.toLocaleLowerCase().replace(/\\s+/gu, ' ') + '|unknown|' + filePath + '|' + sourceIndex;

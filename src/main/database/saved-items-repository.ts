@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { SavedItemContextSummary, SavedItemSummary } from '../../shared/archive/inspection';
+import { normalizeSafeExternalUrl } from '../../shared/text/safe-external-url';
 
 interface SavedPayload {
   contexts?: unknown;
@@ -14,16 +15,6 @@ function parsePayload(value: string): SavedPayload {
   }
 }
 
-function safeUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
 function parseContexts(value: unknown): SavedItemContextSummary[] {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 100).flatMap((raw) => {
@@ -31,7 +22,7 @@ function parseContexts(value: unknown): SavedItemContextSummary[] {
     const context = raw as Record<string, unknown>;
     const item: SavedItemContextSummary = {
       name: typeof context.name === 'string' ? context.name : null,
-      url: safeUrl(context.url),
+      url: normalizeSafeExternalUrl(context.url),
       source: typeof context.source === 'string' ? context.source : null
     };
     return item.name || item.url || item.source ? [item] : [];

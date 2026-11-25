@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { facebookDateToUtc } from '../../../shared/time/facebook-date';
 import { normalizeSearchText } from '../../../shared/text/normalize';
+import { normalizeSafeExternalUrl } from '../../../shared/text/safe-external-url';
 import type { ImportProgressEvent, JsonImportSectionResult } from '../../../shared/archive/inspection';
 import { clearSourceFileRecords } from './source-file-records';
 import { ArchiveReadError, readArchiveUtf8File } from '../discovery/read-archive-file';
@@ -45,17 +46,6 @@ function timestampString(value: unknown): string | null {
   return stamp >= 100_000_000 ? String(stamp) : null;
 }
 
-function safeUrl(value: unknown): string | null {
-  const raw = cleanText(value, 4_000);
-  if (!raw) return null;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
 function extractContexts(value: unknown): SavedContext[] {
   if (!Array.isArray(value)) return [];
   const contexts: SavedContext[] = [];
@@ -70,7 +60,7 @@ function extractContexts(value: unknown): SavedContext[] {
       const context = external as Record<string, unknown>;
       const item: SavedContext = {
         name: cleanText(context.name),
-        url: safeUrl(context.url),
+        url: normalizeSafeExternalUrl(context.url),
         source: cleanText(context.source, 500)
       };
       if (item.name || item.url || item.source) contexts.push(item);

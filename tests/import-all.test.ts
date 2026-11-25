@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAppDatabase } from '../src/main/database/connection';
 import { getOrCreateAccount } from '../src/main/database/archive-repository';
 import { importAllSupportedData, importPhotosAndVideosSection, recoverAllInterruptedImports } from '../src/main/import/pipeline/import-all';
+import { searchArchiveRecords } from '../src/main/database/search-repository';
 import type { ImportProgressEvent } from '../src/shared/archive/inspection';
 
 describe('Import all supported data', () => {
@@ -16,7 +17,8 @@ describe('Import all supported data', () => {
   beforeEach(async () => {
     const migrations = [
       { version: 1, name: 'initial_schema', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/001_initial_schema.sql'), 'utf8') },
-      { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') }
+      { version: 2, name: 'unique_account_display_names', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/002_account_names.sql'), 'utf8') },
+      { version: 6, name: 'search_preferences', sql: await readFile(join(process.cwd(), 'src/main/database/migrations/006_search_preferences.sql'), 'utf8') }
     ];
     database = openAppDatabase(':memory:', migrations);
     root = await mkdtemp(join(tmpdir(), 'import-all-test-'));
@@ -71,6 +73,10 @@ describe('Import all supported data', () => {
             title: 'Jean-Luc Picard posted in Starfleet Academy Alumni.',
             data: [{ post: 'Class of 2327 reunion.' }],
             attachments: [{ data: [{ external_context: { url: 'https://private.example/menu' } }] }]
+          }, {
+            timestamp: 1259820000,
+            title: 'Jean-Luc Picard posted a dated group entry.',
+            data: [{ post: 'This entry has a verified Unix-seconds timestamp.' }]
           }]
         }
       },
@@ -108,19 +114,27 @@ describe('Import all supported data', () => {
     const result = await importAllSupportedData(database, snapshotId, root);
     expect(result.sections.groups).toMatchObject({
       filesAttempted: 3,
-      recordsImported: 3,
+      recordsImported: 4,
       unsupportedFiles: 0,
       failedFiles: 0
     });
     const rows = database.prepare(
-      "SELECT title, body_text AS body, event_time_raw AS dateRaw, record_type AS recordType " +
+      "SELECT title, body_text AS body, event_time_raw AS dateRaw, event_time_utc AS dateUtc, record_type AS recordType " +
       "FROM records WHERE snapshot_id = ? AND section_key = 'groups' ORDER BY source_file_id"
-    ).all(snapshotId) as Array<{ title: string; body: string | null; dateRaw: string; recordType: string }>;
+    ).all(snapshotId) as Array<{ title: string; body: string | null; dateRaw: string; dateUtc: string | null; recordType: string }>;
     expect(rows).toEqual(expect.arrayContaining([
       expect.objectContaining({
         title: 'Jean-Luc Picard posted in Starfleet Academy Alumni.',
         body: 'Class of 2327 reunion.',
         dateRaw: '12598200000',
+        dateUtc: null,
+        recordType: 'json_item'
+      }),
+      expect.objectContaining({
+        title: 'Jean-Luc Picard posted a dated group entry.',
+        body: 'This entry has a verified Unix-seconds timestamp.',
+        dateRaw: '1259820000',
+        dateUtc: '2009-12-03T06:00:00.000Z',
         recordType: 'json_item'
       }),
       expect.objectContaining({
@@ -134,6 +148,16 @@ describe('Import all supported data', () => {
         recordType: 'json_item'
       })
     ]));
+    const dateFilteredGroups = searchArchiveRecords(
+      database, snapshotId, 'verified Unix-seconds', 'groups', 'exact', 0.8,
+      '2009-12-03', '2009-12-03'
+    );
+    expect(dateFilteredGroups).toEqual([
+      expect.objectContaining({
+        title: 'Jean-Luc Picard posted a dated group entry.',
+        dateRaw: '1259820000'
+      })
+    ]);
     const indexedUrl = database.prepare(
       "SELECT record_id FROM record_search WHERE record_search MATCH 'privateexample'"
     ).all();

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { facebookDateToUtc } from '../../../shared/time/facebook-date';
 import { clearSourceFileRecords } from './source-file-records';
 import type { ImportProgressEvent, JsonImportSectionResult } from '../../../shared/archive/inspection';
 import { normalizeSearchText } from '../../../shared/text/normalize';
@@ -18,6 +19,7 @@ interface GroupRecord {
   title: string | null;
   body: string | null;
   dateRaw: string | null;
+  dateUtc: string | null;
   payload: string;
   sourceIndex: number;
 }
@@ -86,6 +88,7 @@ function parseGroupItem(value: unknown, schema: string, sourceIndex: number): Gr
     title,
     body,
     dateRaw,
+    dateUtc: facebookDateToUtc(dateRaw),
     payload: JSON.stringify(value),
     sourceIndex
   };
@@ -196,10 +199,10 @@ export async function importGroupsJsonSection(
       const insert = database.prepare(
         'INSERT INTO records (snapshot_id, source_file_id, source_record_index, section_key, record_type, ' +
         'title, body_text, normalized_text, event_time_raw, event_time_utc, sensitivity, search_enabled, payload_json, created_at) ' +
-        "VALUES (?, ?, ?, 'groups', 'json_item', ?, ?, ?, ?, NULL, 'personal', 1, ?, ?) " +
+        "VALUES (?, ?, ?, 'groups', 'json_item', ?, ?, ?, ?, ?, 'personal', 1, ?, ?) " +
         'ON CONFLICT(source_file_id, source_record_index) DO UPDATE SET ' +
         'title = excluded.title, body_text = excluded.body_text, normalized_text = excluded.normalized_text, ' +
-        'event_time_raw = excluded.event_time_raw, event_time_utc = NULL, sensitivity = excluded.sensitivity, ' +
+        'event_time_raw = excluded.event_time_raw, event_time_utc = excluded.event_time_utc, sensitivity = excluded.sensitivity, ' +
         'search_enabled = excluded.search_enabled, payload_json = excluded.payload_json, created_at = excluded.created_at'
       );
 
@@ -214,7 +217,7 @@ export async function importGroupsJsonSection(
         const normalized = normalizeSearchText([record.title, record.body].filter(Boolean).join(' '));
         insert.run(
           snapshotId, file.id, record.sourceIndex, record.title, record.body,
-          normalized, record.dateRaw, record.payload, timestamp
+          normalized, record.dateRaw, record.dateUtc, record.payload, timestamp
         );
         imported += 1;
       }

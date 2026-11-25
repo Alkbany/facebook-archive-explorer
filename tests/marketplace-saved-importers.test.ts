@@ -197,6 +197,12 @@ describe('Marketplace and Saved Items JSON importers', () => {
 
     const result = await importSavedItemsJsonSection(database, snapshotId, root);
     expect(result).toMatchObject({ filesAttempted: 1, recordsImported: 2, unsupportedFiles: 0, failedFiles: 0 });
+    const storedPayload = database.prepare(
+      "SELECT payload_json AS payload FROM records WHERE snapshot_id = ? AND section_key = 'saved_items_and_collections' AND source_record_index = 1"
+    ).get(snapshotId) as { payload: string };
+    const storedContexts = (JSON.parse(storedPayload.payload) as { contexts: Array<{ name: string | null; url: string | null }> }).contexts;
+    expect(storedContexts.find((context) => context.name === 'Credential-bearing link')?.url).toBeNull();
+
     const items = listSavedItems(database, snapshotId);
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({

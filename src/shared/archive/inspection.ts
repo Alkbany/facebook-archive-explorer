@@ -180,6 +180,15 @@ export interface PhotoAlbumDetailView {
   photos: PhotoAlbumPhotoSummary[];
 }
 
+export const ACTIVITY_RECORD_PAGE_SIZE = 100;
+
+export interface ActivityRecordsPage<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 export interface PostRecordSummary {
   id: number;
   sourcePath: string;

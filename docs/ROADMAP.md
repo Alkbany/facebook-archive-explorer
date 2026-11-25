@@ -75,6 +75,7 @@
 - [x] Link photos parsed from supported album-detail pages to local media assets; unsupported album layouts remain unlinked.
 - [x] Import TNG `posts/album/{id}.json` files into the existing album browser with local cover/photo links and preserved raw metadata.
 - [x] Events: reviewed TNG JSON variants for responses (`event_responses_v2`), invitations (`events_invited_v2`), and hosted event lists (`your_events_v2` / label-value event blocks), with RSVP preservation, duplicate merging, source provenance, and fallback for unknown shapes.
+- [x] Normalize reviewed Groups activity Unix timestamps into UTC when unambiguous, while retaining original values and leaving unsupported timestamps unconverted.
 - [x] Marketplace listing support: import `items_selling_v2` from `items_sold.json` and join `your_marketplace_items.json` label/value details by normalized title + UTC creation time. Unknown Marketplace files and conversation/search-history formats remain generic fallback.
 - [x] Fill missing Marketplace description fields from the matched label/value details record when the primary listing record omits them; preserve the combined source provenance and keep seller data out of the rendered/searchable listing fields.
 - [x] Saved Items support: import `saves_v2` from `your_saved_items.json`, preserving external-context names, source domains, and validated HTTP(S) links. Other collection formats remain generic fallback.

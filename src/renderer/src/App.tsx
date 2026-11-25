@@ -55,16 +55,6 @@ const ARCHIVE_FILE_STATUS_LABELS: Record<Exclude<ArchiveFileStatus, 'all'>, stri
   skipped: 'Skipped'
 };
 
-function isUtcDateInRange(value: string | null, from: string, to: string): boolean {
-  if (!from && !to) return true;
-  if (!value) return false;
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return false;
-  if (from && timestamp < Date.parse(`${from}T00:00:00.000Z`)) return false;
-  if (to && timestamp > Date.parse(`${to}T23:59:59.999Z`)) return false;
-  return true;
-}
-
 function formatActivityDate(dateRaw: string | null, eventTimeUtc: string | null): string {
   if (!eventTimeUtc) return dateRaw ?? 'Date not provided';
   const date = new Date(eventTimeUtc);
@@ -422,7 +412,13 @@ function App() {
 
   async function chooseFolder() {
     conversationRequestGate.current.invalidate();
+    postsRequestGate.current.invalidate();
+    commentsRequestGate.current.invalidate();
+    reactionsRequestGate.current.invalidate();
     setIsLoadingConversation(false);
+    setIsLoadingPosts(false);
+    setIsLoadingComments(false);
+    setIsLoadingReactions(false);
     setIsChoosingFolder(true);
     setError(null);
     setInspection(null);
@@ -2469,7 +2465,7 @@ function App() {
                   <span>{postTotal.toLocaleString()} records</span>
                 </div>
                 <div className="conversation-message-search-controls">
-                  <input className="conversation-filter" value={postFilter} onChange={(event) => setPostFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyPostFilter(); }} placeholder="Filter posts…" />
+                  <input className="conversation-filter" value={postFilter} maxLength={180} onChange={(event) => setPostFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyPostFilter(); }} placeholder="Filter posts…" />
                   <button className="secondary-button" onClick={applyPostFilter} disabled={isLoadingPosts}>Find</button>
                   {postAppliedFilter && <button className="text-button" onClick={() => { setPostFilter(''); void loadPostActivity(1, ''); }} disabled={isLoadingPosts}>Clear</button>}
                 </div>
@@ -2477,7 +2473,7 @@ function App() {
                   onFromChange={(value) => { setPostDateFrom(value); void loadPostActivity(1, postAppliedFilter, value, postDateTo); }}
                   onToChange={(value) => { setPostDateTo(value); void loadPostActivity(1, postAppliedFilter, postDateFrom, value); }} />
                 <div className="media-gallery-list">
-                  {postRecords.map((record) => (
+                  {postRecords.length === 0 ? <p className="conversation-empty">No posts match the current filters.</p> : postRecords.map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">P</div>
                       <div className="media-gallery-copy">
@@ -2665,7 +2661,7 @@ function App() {
                   <span>{commentTotal.toLocaleString()} records</span>
                 </div>
                 <div className="conversation-message-search-controls">
-                  <input className="conversation-filter" value={commentFilter} onChange={(event) => setCommentFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyCommentFilter(); }} placeholder="Filter comments…" />
+                  <input className="conversation-filter" value={commentFilter} maxLength={180} onChange={(event) => setCommentFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyCommentFilter(); }} placeholder="Filter comments…" />
                   <button className="secondary-button" onClick={applyCommentFilter} disabled={isLoadingComments}>Find</button>
                   {commentAppliedFilter && <button className="text-button" onClick={() => { setCommentFilter(''); void loadCommentActivity(1, ''); }} disabled={isLoadingComments}>Clear</button>}
                 </div>
@@ -2684,7 +2680,6 @@ function App() {
                       </div>
                     </article>
                   ))}
-                  {commentRecords.length === 0 && <p className="conversation-empty">No comment activities match the current filters.</p>}
                 </div>
                 <ActivityFeedPagination page={commentPage} total={commentTotal} isLoading={isLoadingComments} onPageChange={(page) => void loadCommentActivity(page)} />
               </section>
@@ -2715,7 +2710,7 @@ function App() {
                   <span>{reactionTotal.toLocaleString()} records</span>
                 </div>
                 <div className="conversation-message-search-controls">
-                  <input className="conversation-filter" value={reactionFilter} onChange={(event) => setReactionFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyReactionFilter(); }} placeholder="Filter reactions…" />
+                  <input className="conversation-filter" value={reactionFilter} maxLength={180} onChange={(event) => setReactionFilter(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') applyReactionFilter(); }} placeholder="Filter reactions…" />
                   <button className="secondary-button" onClick={applyReactionFilter} disabled={isLoadingReactions}>Find</button>
                   {reactionAppliedFilter && <button className="text-button" onClick={() => { setReactionFilter(''); void loadReactionActivity(1, ''); }} disabled={isLoadingReactions}>Clear</button>}
                 </div>
@@ -2723,7 +2718,7 @@ function App() {
                   onFromChange={(value) => { setReactionDateFrom(value); void loadReactionActivity(1, reactionAppliedFilter, value, reactionDateTo); }}
                   onToChange={(value) => { setReactionDateTo(value); void loadReactionActivity(1, reactionAppliedFilter, reactionDateFrom, value); }} />
                 <div className="media-gallery-list">
-                  {reactionRecords.map((record) => (
+                  {reactionRecords.length === 0 ? <p className="conversation-empty">No reactions match the current filters.</p> : reactionRecords.map((record) => (
                     <article className="media-gallery-item" key={record.id}>
                       <div className="media-gallery-icon">{record.reactionType === 'love' ? '♥' : record.reactionType === 'haha' ? '☺' : '●'}</div>
                       <div className="media-gallery-copy">
